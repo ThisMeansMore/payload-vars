@@ -1,6 +1,6 @@
 # payload-vars
 
-Extract typed variables from parsed JSON templates and render them with runtime values. This ESM package has no runtime dependencies and works in modern browsers and Node.js 18+.
+Validate JSON templates, extract typed variables, and render them with runtime values. This ESM package has no runtime dependencies and supports browsers and Node.js 18+.
 
 ## Install
 
@@ -8,111 +8,72 @@ Extract typed variables from parsed JSON templates and render them with runtime 
 npm install payload-vars
 ```
 
-## Syntax and types
+## Basic usage
 
-A variable occupies an entire JSON string: `{{variableName:type}}`. Names match `[A-Za-z_][A-Za-z0-9_]*`. Whitespace variants and partial interpolation are invalid. Strings without `{{` or `}}` are constants.
+```js
+import { PayloadTemplate } from 'payload-vars';
+```
 
-| Type | Accepted values | Nullable variant |
-| --- | --- | --- |
-| `string` | Any string, including `""` | `string?`: `""`, `null`, missing or `undefined` becomes `null` |
-| `number` | Finite number | `number?`: `""`, `null`, missing or `undefined` becomes `null`; `0` stays `0` |
-| `boolean` | `true` or `false` | `boolean?`: `""`, `null`, missing or `undefined` becomes `null`; `false` stays `false` |
-| `string[]` | Array of strings | `string[]?`: `[]`, `null`, missing or `undefined` becomes `null` |
-| `number[]` | Array of finite numbers | `number[]?`: `[]`, `null`, missing or `undefined` becomes `null` |
+### 1. JSON with variables
 
-Arrays cannot contain `null`. Non-nullable empty arrays stay empty. Values are never coerced. Literal JSON `null` is valid.
+Start with unformatted variable expressions.
 
-## API
-
-```ts
-import {
-  extractPayloadVariables,
-  renderPayloadTemplate,
-  PayloadTemplateError,
-  type JsonValue,
-  type JsonObject,
-  type JsonPrimitive,
-  type PayloadVariable,
-  type PayloadVariableType,
-  type PayloadTemplateIssue,
-} from 'payload-vars';
-
-const template: JsonValue = {
-  orderId: '{{orderId:string}}',
-  details: {
-    amount: '{{amount:number}}',
-    copiedAmount: '{{amount:number}}',
-  },
-  products: '{{products:string[]}}',
-  comment: '{{comment:string?}}',
+```js
+const rawTemplate = {
+  orderId: '{{ orderId : string }}',
+  products: '{{products:string[??omit]??throw}}',
 };
+```
 
-extractPayloadVariables(template);
-// [
-//   { name: 'orderId', type: 'string' },
-//   { name: 'amount', type: 'number' },
-//   { name: 'products', type: 'string[]' },
-//   { name: 'comment', type: 'string?' },
-// ]
+### 2. Validation
 
-const payload = renderPayloadTemplate(template, {
-  orderId: 'ORD-123',
-  amount: 19.95,
-  products: ['A', 'B'],
-  comment: '',
-});
+Construct a validated template and inspect its normalized formatting.
+
+```js
+const template = new PayloadTemplate(rawTemplate);
+const normalized = template.toJSON();
 // {
-//   orderId: 'ORD-123',
-//   details: { amount: 19.95, copiedAmount: 19.95 },
-//   products: ['A', 'B'],
-//   comment: null,
+//   orderId: '{{orderId:string}}',
+//   products: '{{products:string[ ?? omit ] ?? throw}}',
 // }
 ```
 
-Both functions accept already parsed JSON values. Extraction traverses nested objects and arrays in first occurrence order. Repeated variables must have identical complete types, including `?`. Rendering ignores unused variables and creates a fresh result without mutating inputs.
+### 3. Extraction
 
-## Errors
+Extract variable contracts from the validated template.
 
-`PayloadTemplateError.issue` is a discriminated union with stable codes and details:
-
-| Code | Details |
-| --- | --- |
-| `INVALID_PLACEHOLDER` | `path`, `placeholder` |
-| `UNSUPPORTED_TYPE` | `path`, `variableName`, `declaredType` |
-| `VARIABLE_TYPE_CONFLICT` | `variableName`, `declaredType`, `declaredAt`, `conflictingType`, `conflictingAt` |
-| `MISSING_VARIABLE` | `variableName`, `expectedType`, `templatePaths` |
-| `INVALID_VARIABLE_TYPE` | `variableName`, `expectedType`, `actualType`, `templatePaths`, optional `valuePath` |
-
-Paths start at `$`, use `.key` for identifier keys, and `[0]` for array positions. Other object keys use bracketed JSON strings such as `$["order-id"]`. `templatePaths` lists every use of a repeated variable. An invalid array element has a `valuePath` such as `$[2]`. Runtime values are not included in errors.
-
-```ts
-try {
-  const payload = renderPayloadTemplate(template, variables);
-} catch (error) {
-  if (error instanceof PayloadTemplateError) {
-    switch (error.issue.code) {
-      case 'MISSING_VARIABLE':
-        // Consumer-specific handling
-        break;
-    }
-  }
-
-  throw error;
-}
+```js
+const variables = template.extractVariables();
+// [
+//   {
+//     name: 'orderId',
+//     type: 'string',
+//     declaration: '{{orderId:string}}',
+//   },
+//   {
+//     name: 'products',
+//     type: 'string[]',
+//     memberFallback: { operator: '??', action: 'omit' },
+//     valueFallback: { operator: '??', action: 'throw' },
+//     declaration: '{{products:string[ ?? omit ] ?? throw}}',
+//   },
+// ]
 ```
 
-## Limits
+### 4. Rendering
 
-Raw JSON parsing, date validation, formatters, partial interpolation, object variables, `boolean[]`, nullable array elements, and non-empty modifiers are outside this API. Dates can be passed as strings without semantic validation. Templates must be parsed JSON trees.
+Render the resulting object with runtime values.
 
-## Development
-
-```sh
-npm install
-npm run typecheck
-npm test
-npm run build
-npm pack --dry-run
+```js
+const payload = template.render({
+  orderId: 'ORD-123',
+  products: ['A', null, 'B'],
+});
+// { orderId: 'ORD-123', products: ['A', 'B'] }
 ```
 
-The package follows semantic versioning. Error codes and issue shapes are public API.
+Placeholders occupy an entire string. Types are `string`, `number`, `boolean`, `string[]`, and `number[]`. Use `??` for nullish fallback or `||` for falsy fallback, with actions `null`, `omit`, or `throw`. Invalid templates throw `PayloadTemplateError`; inputs are never mutated.
+
+TypeScript infers `render()` inputs from literal templates. Use `as const` on separately declared templates to preserve their literal types; see the [TypeScript guide](docs/typescript.md).
+
+See the [syntax guide](docs/syntax.md), [API and errors](docs/api.md), and [migration and development guide](docs/development.md) for details.

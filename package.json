@@ -20,6 +20,7 @@
   },
   "files": [
     "dist",
+    "docs",
     "README.md",
     "LICENSE"
   ],
@@ -33,10 +34,15 @@
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "scripts": {
-    "build": "tsc -p tsconfig.json",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "npm run build && node --test test/*.spec.js",
-    "prepack": "npm run build"
+    "build": "node --input-type=module -e \"import { rmSync } from 'node:fs'; rmSync('dist', { recursive: true, force: true });\" && tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit && npm run test:types",
+    "test": "npm run build && npm run test:types && node --test test/*.spec.js",
+    "prepack": "npm run build",
+    "test:types": "tsc -p test/types/tsconfig.json",
+    "preversion": "npm test",
+    "release:patch": "npm version patch && npm publish",
+    "release:minor": "npm version minor && npm publish",
+    "release:major": "npm version major && npm publish"
   },
   "devDependencies": {
     "typescript": "^5.9.3"

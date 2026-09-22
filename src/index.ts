@@ -1,5 +1,5 @@
-export { extractPayloadVariables } from './extract-payload-variables.js';
-export { renderPayloadTemplate } from './render-payload-template.js';
+export { PayloadTemplate } from './payload-template.js';
 export { PayloadTemplateError } from './payload-template.error.js';
-export type { JsonPrimitive, JsonValue, JsonObject, PayloadVariable,
-  PayloadVariableType, PayloadTemplateIssue } from './payload-template.types.js';
+export type { JsonPrimitive, JsonValue, JsonTemplateValue, JsonObject, BaseType, FallbackExpression,
+  ParsedVariableExpression, PayloadVariable, PayloadVariableType, PayloadTemplateIssue } from './payload-template.types.js';
+export type { PayloadTemplateVariables } from './payload-template-input.types.js';

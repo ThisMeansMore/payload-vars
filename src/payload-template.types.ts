@@ -2,18 +2,37 @@ export type JsonPrimitive = string | number | boolean | null;
 export type JsonValue = JsonPrimitive | JsonObject | JsonValue[];
 export interface JsonObject { [key: string]: JsonValue }
 
-export type PayloadVariableType =
-  | 'string' | 'number' | 'boolean' | 'string[]' | 'number[]'
-  | 'string?' | 'number?' | 'boolean?' | 'string[]?' | 'number[]?';
+/** JSON template input, including deeply readonly literal templates. */
+export type JsonTemplateValue = JsonPrimitive | { readonly [key: string]: JsonTemplateValue } | readonly JsonTemplateValue[];
 
-export interface PayloadVariable {
-  name: string;
-  type: PayloadVariableType;
+export type BaseType = 'string' | 'number' | 'boolean' | 'string[]' | 'number[]';
+export type PayloadVariableType = BaseType;
+export interface FallbackExpression {
+  operator: '??' | '||';
+  action: 'null' | 'omit' | 'throw';
 }
-
+export interface ParsedVariableExpression {
+  name: string;
+  type: BaseType;
+  memberFallback?: FallbackExpression;
+  valueFallback?: FallbackExpression;
+}
+export interface PayloadVariable extends ParsedVariableExpression {
+  /** Complete canonical placeholder, including its name and fallback expressions. */
+  declaration: string;
+}
+interface RuntimeIssue {
+  variableName: string;
+  declaration: string;
+  expectedType: BaseType;
+  templatePaths: string[];
+}
 export type PayloadTemplateIssue =
   | { code: 'INVALID_PLACEHOLDER'; path: string; placeholder: string }
   | { code: 'UNSUPPORTED_TYPE'; path: string; variableName: string; declaredType: string }
-  | { code: 'VARIABLE_TYPE_CONFLICT'; variableName: string; declaredType: string; declaredAt: string; conflictingType: string; conflictingAt: string }
-  | { code: 'MISSING_VARIABLE'; variableName: string; expectedType: PayloadVariableType; templatePaths: string[] }
-  | { code: 'INVALID_VARIABLE_TYPE'; variableName: string; expectedType: PayloadVariableType; actualType: string; templatePaths: string[]; valuePath?: string };
+  | { code: 'INVALID_FALLBACK_SYNTAX'; path: string; variableName: string; placeholder: string }
+  | { code: 'VARIABLE_EXPRESSION_CONFLICT'; variableName: string; declaration: string; declaredAt: string; conflictingDeclaration: string; conflictingAt: string }
+  | (RuntimeIssue & { code: 'MISSING_VARIABLE' })
+  | (RuntimeIssue & { code: 'INVALID_VARIABLE_TYPE'; actualType: string; valuePath?: string })
+  | (RuntimeIssue & { code: 'FALLBACK_THROW'; operator: FallbackExpression['operator']; valuePath?: string })
+  | (RuntimeIssue & { code: 'CANNOT_OMIT_ROOT' });
