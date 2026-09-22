@@ -57,7 +57,12 @@ Templates must be parsed JSON trees. Raw JSON parsing, date validation, formatte
 
 ## Publishing a new version
 
-With your changes committed and npm authentication configured, choose the version increment:
+Merge your changes into `main`, switch to it, and pull the merged changes before publishing. With a clean working tree and npm authentication configured, choose the version increment:
+
+```sh
+git switch main
+git pull --ff-only
+```
 
 ```sh
 npm run release:patch
@@ -65,6 +70,10 @@ npm run release:minor
 npm run release:major
 ```
 
-Each command runs the build, compile-time tests, and runtime tests through npm's `preversion` hook. If they pass, `npm version` updates `package.json` and `package-lock.json`, creates a version commit and Git tag, and `npm publish` publishes the public package. The `prepack` hook rebuilds the distribution before publishing.
+Each command checks that the current branch is `main` and the working tree is clean, then runs the build, compile-time tests, and runtime tests through npm's `preversion` hook. If they pass, `npm version` updates `package.json` and `package-lock.json`, creates a version commit and Git tag, and `npm publish` publishes the public package. The `prepack` hook rebuilds the distribution before publishing.
 
 These commands require a clean Git working tree and do not push commits or tags to the remote. If publication fails after the version bump, resolve the publishing issue and retry `npm publish` for that version instead of bumping again.
+
+Direct `npm publish` calls also check the branch and working tree and run the tests through `prepublishOnly`. Feature branches, detached HEADs, and directories without a Git repository are rejected. `npm run release:check` runs just the guard; `npm pack --dry-run` remains available on feature branches. These are local npm lifecycle checks, so do not bypass them with `--ignore-scripts`.
+
+If a version was already bumped on a feature branch but publishing failed, merge that version into `main` along with the implementation. Then publish the existing version with `npm publish`; do not run another version-bump command. For the pending `1.0.0` release, this avoids accidentally creating `2.0.0`.

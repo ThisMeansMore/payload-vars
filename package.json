@@ -39,10 +39,12 @@
     "test": "npm run build && npm run test:types && node --test test/*.spec.js",
     "prepack": "npm run build",
     "test:types": "tsc -p test/types/tsconfig.json",
-    "preversion": "npm test",
+    "preversion": "npm run release:check && npm test",
     "release:patch": "npm version patch && npm publish",
     "release:minor": "npm version minor && npm publish",
-    "release:major": "npm version major && npm publish"
+    "release:major": "npm version major && npm publish",
+    "release:check": "node scripts/check-release.mjs",
+    "prepublishOnly": "npm run release:check && npm test"
   },
   "devDependencies": {
     "typescript": "^5.9.3"
