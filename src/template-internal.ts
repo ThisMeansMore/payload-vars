@@ -1,3 +1,4 @@
+import { variableNameSource, typeSource, actionSource, operatorSource } from './expression-syntax.js';
 import { PayloadTemplateError } from './payload-template.error.js';
 import type { BaseType, FallbackExpression, JsonValue, JsonTemplateValue, PayloadVariable } from './payload-template.types.js';
 
@@ -9,7 +10,9 @@ export interface Contract {
 }
 
 const identifierPattern = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
-const expressionPattern = /^(string|number|boolean)\s*(?:\[\s*(?:(\?\?|\|\|)\s*(null|omit|throw)\s*)?\])?\s*(?:(\?\?|\|\|)\s*(null|omit|throw))?$/;
+const expressionPattern = new RegExp(String.raw`^(${typeSource})\s*(?:\[\s*(?:(${operatorSource})\s*(${actionSource})\s*)?\])?\s*(?:(${operatorSource})\s*(${actionSource}))?$`);
+const placeholderPattern = new RegExp(String.raw`^\{\{\s*(${variableNameSource})\s*:\s*([^{}:]*?)\s*\}\}$`);
+const supportedTypePattern = new RegExp(String.raw`^(${typeSource})\b`);
 
 export function childPath(path: string, key: string): string {
   return identifierPattern.test(key) ? `${path}.${key}` : `${path}[${JSON.stringify(key)}]`;
@@ -17,7 +20,7 @@ export function childPath(path: string, key: string): string {
 
 export function parsePlaceholder(value: string, path: string): Declaration | undefined {
   if (!value.includes('{{') && !value.includes('}}')) return undefined;
-  const match = /^\{\{\s*([A-Za-z_][A-Za-z0-9_]*)\s*:\s*([^{}:]*?)\s*\}\}$/.exec(value);
+  const match = placeholderPattern.exec(value);
   if (!match) {
     throw new PayloadTemplateError({ code: 'INVALID_PLACEHOLDER', path, placeholder: value });
   }
@@ -25,7 +28,7 @@ export function parsePlaceholder(value: string, path: string): Declaration | und
   const expression = match[2]!;
   const parsed = expressionPattern.exec(expression);
   if (!parsed) {
-    if (!/^(string|number|boolean)\b/.test(expression)) {
+    if (!supportedTypePattern.test(expression)) {
       throw new PayloadTemplateError({ code: 'UNSUPPORTED_TYPE', path, variableName: name, declaredType: expression });
     }
     throw new PayloadTemplateError({ code: 'INVALID_FALLBACK_SYNTAX', path, variableName: name, placeholder: value });

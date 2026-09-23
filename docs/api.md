@@ -109,3 +109,38 @@ try {
   throw error;
 }
 ```
+
+## Expression highlighting
+
+`template.tokenizePayloadExpression(): TokenizedPayloadExpression[]` uses the normalized payload already stored by the constructor. Supply the input once at construction; no additional expression argument or normalization call is needed.
+
+Each result contains a JSON `path`, the normalized `expression` including mustache delimiters, and its `tokens`. Results follow payload traversal order, include repeated occurrences, and omit literal values. A root expression has path `$`; a payload without expressions returns `[]`. Each call returns independent objects and arrays.
+
+Each token has `kind`, exact normalized `text`, and `start` (inclusive) and `end` (exclusive) UTF-16 offsets relative to that entry's expression, not the serialized JSON. Concatenating its token texts reproduces the normalized expression. `TokenizedPayloadExpression`, `PayloadExpressionToken`, and `PayloadExpressionTokenKind` are exported types.
+
+Kinds are `delimiter`, `variable`, `punctuation`, `type`, `operator`, `action`, `whitespace`, and `unknown`. Keywords are classified by position: `string` is a variable in `{{string:boolean}}`. Constructor validation rejects incomplete or invalid expressions before tokenization; original whitespace is not retained. Tokenization does not change validation, rendering, or the stored payload, and does not tokenize surrounding JSON.
+
+The consumer chooses styling, for example with arbitrary CSS classes:
+
+```ts
+import { PayloadTemplate, type PayloadExpressionTokenKind } from 'payload-vars';
+
+const template = new PayloadTemplate({ products: '{{products:string[??omit]??throw}}' });
+const classes: Record<PayloadExpressionTokenKind, string> = {
+  delimiter: 'muted', variable: 'blue', punctuation: 'muted', type: 'purple',
+  operator: 'orange', action: 'green', whitespace: 'plain', unknown: 'underlined',
+};
+for (const { path, tokens } of template.tokenizePayloadExpression()) {
+  const container = document.createElement('pre');
+  container.dataset.path = path;
+  for (const token of tokens) {
+    const span = document.createElement('span');
+    span.className = classes[token.kind];
+    span.textContent = token.text;
+    container.append(span);
+  }
+  document.body.append(container);
+}
+```
+
+The method returns only token data; CSS classes and DOM elements above belong entirely to consumer code.
