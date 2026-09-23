@@ -99,3 +99,17 @@ const expressions = template.tokenizePayloadExpression();
 Each token has `kind`, `text`, `start`, and `end`. Map kinds to your own styles.
 
 See the [syntax guide](docs/syntax.md), [API and errors](docs/api.md), and [migration and development guide](docs/development.md) for details.
+
+## Module formats
+
+The package supports both ES modules and CommonJS, with matching TypeScript declarations.
+
+```js
+// ES modules
+import { PayloadTemplate } from 'payload-vars';
+
+// CommonJS
+const { PayloadTemplate } = require('payload-vars');
+```
+
+Import from the package root so your runtime selects the appropriate entry point.

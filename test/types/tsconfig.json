@@ -6,5 +6,10 @@
     "declaration": false,
     "skipLibCheck": false
   },
-  "include": ["./*.ts", "../../src/**/*.ts"]
+  "include": [
+    "./*.ts",
+    "../../src/**/*.ts",
+    "./*.mts",
+    "./*.cts"
+  ]
 }

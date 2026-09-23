@@ -27,15 +27,21 @@
   "sideEffects": false,
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/cjs/index.d.ts",
+        "default": "./dist/cjs/index.js"
+      }
     }
   },
-  "main": "./dist/index.js",
+  "main": "./dist/cjs/index.js",
   "types": "./dist/index.d.ts",
   "scripts": {
-    "build": "node --input-type=module -e \"import { rmSync } from 'node:fs'; rmSync('dist', { recursive: true, force: true });\" && tsc -p tsconfig.json",
-    "typecheck": "tsc -p tsconfig.json --noEmit && npm run test:types",
+    "build": "node scripts/build.mjs",
+    "typecheck": "npm run build && npm run test:types",
     "test": "npm run build && npm run test:types && node --test test/*.spec.js",
     "prepack": "npm run build",
     "test:types": "tsc -p test/types/tsconfig.json",
