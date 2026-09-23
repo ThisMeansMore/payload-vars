@@ -6,6 +6,7 @@ theme: minima
 github_username: ThisMeansMore
 
 header_pages:
+  - examples.md
   - syntax.md
   - api.md
   - typescript.md

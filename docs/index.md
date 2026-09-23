@@ -32,6 +32,7 @@ Construct a template once to validate its placeholders, then reuse it to render 
 
 ## Guides
 
+- [Examples](examples.md): demo templates and resulting payloads side by side.
 - [Template syntax](syntax.md): types, fallbacks, array members, and omission.
 - [API and structured errors](api.md): validation, rendering, extraction, and syntax highlighting.
 - [TypeScript input inference](typescript.md): inferred inputs and reusable types.
