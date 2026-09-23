@@ -36,3 +36,24 @@ export type PayloadTemplateIssue =
   | (RuntimeIssue & { code: 'INVALID_VARIABLE_TYPE'; actualType: string; valuePath?: string })
   | (RuntimeIssue & { code: 'FALLBACK_THROW'; operator: FallbackExpression['operator']; valuePath?: string })
   | (RuntimeIssue & { code: 'CANNOT_OMIT_ROOT' });
+
+export type PayloadExpressionTokenKind =
+  | 'delimiter' | 'variable' | 'punctuation' | 'type'
+  | 'operator' | 'action' | 'whitespace' | 'unknown';
+
+export interface PayloadExpressionToken {
+  kind: PayloadExpressionTokenKind;
+  text: string;
+  /** Inclusive UTF-16 offset into the normalized expression. */
+  start: number;
+  /** Exclusive UTF-16 offset into the normalized expression. */
+  end: number;
+}
+
+export interface TokenizedPayloadExpression {
+  /** JSON path of this placeholder occurrence, using the same format as errors. */
+  path: string;
+  /** Complete normalized placeholder, including mustache delimiters. */
+  expression: string;
+  tokens: PayloadExpressionToken[];
+}

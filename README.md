@@ -76,4 +76,24 @@ Placeholders occupy an entire string. Types are `string`, `number`, `boolean`, `
 
 TypeScript infers `render()` inputs from literal templates. Use `as const` on separately declared templates to preserve their literal types; see the [TypeScript guide](docs/typescript.md).
 
+## Syntax highlighting
+
+```js
+const expressions = template.tokenizePayloadExpression();
+// expressions[0]:
+// {
+//   path: '$.orderId',
+//   expression: '{{orderId:string}}',
+//   tokens: [
+//     { kind: 'delimiter', text: '{{', start: 0, end: 2 },
+//     { kind: 'variable', text: 'orderId', start: 2, end: 9 },
+//     { kind: 'punctuation', text: ':', start: 9, end: 10 },
+//     { kind: 'type', text: 'string', start: 10, end: 16 },
+//     { kind: 'delimiter', text: '}}', start: 16, end: 18 },
+//   ],
+// }
+```
+
+Each token has `kind`, `text`, `start`, and `end`. Map kinds to your own styles.
+
 See the [syntax guide](docs/syntax.md), [API and errors](docs/api.md), and [migration and development guide](docs/development.md) for details.

@@ -1,5 +1,6 @@
+import { tokenizePayloadExpression } from './tokenize-payload-expression.js';
 import type { PayloadTemplateVariables } from './payload-template-input.types.js';
-import type { JsonValue, JsonTemplateValue, PayloadVariable } from './payload-template.types.js';
+import type { JsonValue, JsonTemplateValue, PayloadVariable, TokenizedPayloadExpression } from './payload-template.types.js';
 import { validateTemplate, type Contract } from './template-internal.js';
 import { renderContract } from './render-internal.js';
 
@@ -23,6 +24,15 @@ export class PayloadTemplate<const T extends JsonTemplateValue = JsonTemplateVal
   /** Validate and snapshot the template. Invalid declarations throw PayloadTemplateError. */
   constructor(template: T) {
     this.#contract = validateTemplate(template);
+  }
+
+  /** Return highlighting tokens for every normalized placeholder occurrence. */
+  tokenizePayloadExpression(): TokenizedPayloadExpression[] {
+    return Array.from(this.#contract.locations, ([path, { declaration }]) => ({
+      path,
+      expression: declaration,
+      tokens: tokenizePayloadExpression(declaration),
+    }));
   }
 
   /** Return an independent copy of the normalized template. */
