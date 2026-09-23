@@ -40,9 +40,9 @@
     "prepack": "npm run build",
     "test:types": "tsc -p test/types/tsconfig.json",
     "preversion": "npm run release:check && npm test",
-    "release:patch": "npm version patch && npm publish",
-    "release:minor": "npm version minor && npm publish",
-    "release:major": "npm version major && npm publish",
+    "release:patch": "npm version patch && npm publish && git push origin main --follow-tags",
+    "release:minor": "npm version minor && npm publish && git push origin main --follow-tags",
+    "release:major": "npm version major && npm publish && git push origin main --follow-tags",
     "release:check": "node scripts/check-release.mjs",
     "prepublishOnly": "npm run release:check && npm test"
   },
