@@ -23,7 +23,7 @@
 │  git status → working tree must be clean.
 ↓
 📋 Prepare release
-│  npm whoami → should show thismeansmore; otherwise run npm login.
+│  npm whoami → should show username; otherwise run npm login.
 │  Choose: patch = fixes · minor = compatible features · major = breaking changes.
 ↓
 🚀 Publish new npm version
