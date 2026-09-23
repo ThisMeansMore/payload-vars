@@ -2,13 +2,15 @@
 title: Development
 ---
 
+<!-- {% raw %} -->
+
 # Migration and development
 
 ## Documentation website
 
 GitHub Pages publishes `docs/` from `main` at <https://thismeansmore.github.io/payload-vars/>. Changes pushed to `main` rebuild the site automatically. Relative `.md` links work on GitHub and are converted to website links during the build.
 
-Site settings and navigation are in `_config.yml`. Liquid rendering is disabled for page content to preserve literal template examples. New pages should include YAML front matter with a `title`; add them to `header_pages` to include them in navigation.
+Site settings and navigation are in `_config.yml`. Page content is wrapped in Liquid raw tags inside HTML comments to preserve literal template examples while keeping the comments hidden on GitHub. Keep these wrappers when editing pages. New pages should include YAML front matter with a `title`; add them to `header_pages` to include them in navigation.
 
 ## Migrating from functions to the class
 
@@ -87,3 +89,5 @@ These commands require a clean Git working tree and do not push commits or tags 
 Direct `npm publish` calls also check the branch and working tree and run the tests through `prepublishOnly`. Feature branches, detached HEADs, and directories without a Git repository are rejected. `npm run release:check` runs just the guard; `npm pack --dry-run` remains available on feature branches. These are local npm lifecycle checks, so do not bypass them with `--ignore-scripts`.
 
 If a version was already bumped on a feature branch but publishing failed, merge that version into `main` along with the implementation. Then publish the existing version with `npm publish`; do not run another version-bump command. For the pending `1.0.0` release, this avoids accidentally creating `2.0.0`.
+
+<!-- {% endraw %} -->

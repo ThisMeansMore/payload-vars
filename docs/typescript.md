@@ -2,6 +2,8 @@
 title: TypeScript
 ---
 
+<!-- {% raw %} -->
+
 # TypeScript input inference
 
 `PayloadTemplate` infers the variables accepted by `render()` from literal templates. This requires TypeScript 5.0 or newer. JavaScript users retain the same runtime validation.
@@ -103,3 +105,5 @@ TypeScript inference supplements validation; it does not replace it:
 - `NaN` has no distinct literal type. A non-number `|| null` or `|| omit` declaration accepts it at runtime, but its inferred input excludes general numbers other than `0`.
 - Syntax errors and conflicting declarations are still reported by the constructor. The type layer does not promise compile-time syntax diagnostics.
 - `render()` and `toJSON()` still return `JsonValue`, and `extractVariables()` returns `PayloadVariable[]`. Precise output inference is outside this input-inference feature.
+
+<!-- {% endraw %} -->

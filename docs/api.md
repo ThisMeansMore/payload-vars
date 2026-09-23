@@ -2,6 +2,8 @@
 title: API
 ---
 
+<!-- {% raw %} -->
+
 # API and structured errors
 
 ```ts
@@ -148,3 +150,5 @@ for (const { path, tokens } of template.tokenizePayloadExpression()) {
 ```
 
 The method returns only token data; CSS classes and DOM elements above belong entirely to consumer code.
+
+<!-- {% endraw %} -->

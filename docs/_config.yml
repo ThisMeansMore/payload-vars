@@ -19,5 +19,3 @@ defaults:
       path: ""
     values:
       layout: default
-      # Preserve literal {{...}} template examples.
-      render_with_liquid: false

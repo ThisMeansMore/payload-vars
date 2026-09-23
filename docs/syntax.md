@@ -2,6 +2,8 @@
 title: Syntax
 ---
 
+<!-- {% raw %} -->
+
 # Template syntax
 
 The `PayloadTemplate` constructor accepts parsed JSON values. A placeholder occupies an entire JSON string: `{{name:expression}}`. Names match `[A-Za-z_][A-Za-z0-9_]*`. Partial interpolation is unsupported. Strings without `{{` or `}}` are constants; object keys are always literal.
@@ -83,3 +85,5 @@ Whitespace between tokens is insignificant, including spaces, tabs, and newlines
 `toJSON()` returns a template with canonical placeholders. Extraction exposes the complete canonical placeholder as `declaration`. It does not mutate template strings. Repeated names must have identical canonical declarations, including both fallback operators and actions. Whitespace differences do not conflict.
 
 Unsupported examples include `string?`, `string!`, `string_`, `boolean[]`, `string ? null`, `string ?? undefined`, `string && throw`, `string[ omit ]`, unbalanced brackets, and multiple fallbacks at the same level.
+
+<!-- {% endraw %} -->

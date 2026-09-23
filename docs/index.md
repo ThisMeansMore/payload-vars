@@ -2,6 +2,8 @@
 title: Getting started
 ---
 
+<!-- {% raw %} -->
+
 # payload-vars
 
 Validate JSON templates, extract typed variables, and render them with runtime values. This ESM package has no runtime dependencies and supports browsers and Node.js 18+.
@@ -36,3 +38,5 @@ Construct a template once to validate its placeholders, then reuse it to render 
 - [Migration and development](development.md): migration notes, testing, and releases.
 
 [View the source on GitHub](https://github.com/ThisMeansMore/payload-vars)
+
+<!-- {% endraw %} -->
