@@ -6,6 +6,8 @@ title: Examples
 
 # Template examples
 
+<a id="example-values"></a>
+
 ## One set of values for every example
 
 Every template below uses these same values. Only the template changes.
@@ -40,6 +42,8 @@ Here, `""` means empty text, `null` means no value, and `[]` is an empty list. *
 
 Compare each template on the left with its rendered payload on the right.
 
+<a id="fill-in-details"></a>
+
 ## Fill in the details
 
 Ordinary values replace the placeholders. Fixed text such as USD stays as it is.
@@ -67,6 +71,8 @@ Ordinary values replace the placeholders. Fixed text such as USD stays as it is.
 </tr>
 </tbody>
 </table>
+
+<a id="missing-values-as-null"></a>
 
 ## ?? null: keep a place for missing values
 
@@ -102,6 +108,8 @@ The note is null and missingNote was not supplied. Both appear as null. Empty te
 </tbody>
 </table>
 
+<a id="empty-values-as-null"></a>
+
 ## || null: also replace empty text, zero, and false
 
 Only the rule changes. Nickname, discount, and paid now become null too. The name, total, and confirmed values stay unchanged.
@@ -136,6 +144,8 @@ Only the rule changes. Nickname, discount, and paid now become null too. The nam
 </tbody>
 </table>
 
+<a id="omit-missing-values"></a>
+
 ## ?? omit: leave out missing values
 
 The note and missingNote fields disappear. Empty text, zero, and false are still included.
@@ -168,6 +178,8 @@ The note and missingNote fields disappear. Empty text, zero, and false are still
 </tbody>
 </table>
 
+<a id="omit-empty-values"></a>
+
 ## || omit: also leave out empty text, zero, and false
 
 The same values now produce a shorter payload. Only the name, total, and confirmed fields remain.
@@ -196,6 +208,8 @@ The same values now produce a shorter payload. Only the name, total, and confirm
 </tr>
 </tbody>
 </table>
+
+<a id="keep-list-positions"></a>
 
 ## ?? null inside a list: keep all positions
 
@@ -229,6 +243,8 @@ The null entries stay as null. Empty text and zero also stay, so both lists keep
 </tbody>
 </table>
 
+<a id="empty-list-items-as-null"></a>
+
 ## || null inside a list: replace empty text and zero
 
 The empty tag and the zero score become null. The lists still keep all four positions.
@@ -261,6 +277,8 @@ The empty tag and the zero score become null. The lists still keep all four posi
 </tbody>
 </table>
 
+<a id="remove-null-list-items"></a>
+
 ## ?? omit inside a list: remove null entries
 
 The null entries disappear. Empty text and zero remain in their original order.
@@ -291,6 +309,8 @@ The null entries disappear. Empty text and zero remain in their original order.
 </tbody>
 </table>
 
+<a id="remove-empty-list-items"></a>
+
 ## || omit inside a list: also remove empty text and zero
 
 Only the filled-in tags and nonzero scores remain.
@@ -319,6 +339,8 @@ Only the filled-in tags and nonzero scores remain.
 </tbody>
 </table>
 
+<a id="missing-and-empty-lists"></a>
+
 ## Handle a missing list as well as its items
 
 The rule inside the brackets cleans the supplied tags. The rule after the brackets leaves out unavailableTags and missingTags. An empty list stays an empty list, even with || omit.
@@ -345,6 +367,8 @@ The rule inside the brackets cleans the supplied tags. The rule after the bracke
 </tr>
 </tbody>
 </table>
+
+<a id="reuse-values"></a>
 
 ## Use the same value in several places
 
@@ -376,6 +400,8 @@ The same name fills both locations. The missing note is left out of the delivery
 </tr>
 </tbody>
 </table>
+
+<a id="omit-list-entry"></a>
 
 ## Leave out an item from a list
 
