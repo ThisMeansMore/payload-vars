@@ -1,3 +1,7 @@
+---
+title: API
+---
+
 # API and structured errors
 
 ```ts

@@ -1,0 +1,23 @@
+title: payload-vars
+description: Validate JSON templates, extract typed variables, and render payloads.
+url: https://thismeansmore.github.io
+baseurl: /payload-vars
+theme: minima
+github_username: ThisMeansMore
+
+header_pages:
+  - syntax.md
+  - api.md
+  - typescript.md
+  - development.md
+
+plugins:
+  - jekyll-relative-links
+
+defaults:
+  - scope:
+      path: ""
+    values:
+      layout: default
+      # Preserve literal {{...}} template examples.
+      render_with_liquid: false

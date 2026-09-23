@@ -1,4 +1,14 @@
+---
+title: Development
+---
+
 # Migration and development
+
+## Documentation website
+
+GitHub Pages publishes `docs/` from `main` at <https://thismeansmore.github.io/payload-vars/>. Changes pushed to `main` rebuild the site automatically. Relative `.md` links work on GitHub and are converted to website links during the build.
+
+Site settings and navigation are in `_config.yml`. Liquid rendering is disabled for page content to preserve literal template examples. New pages should include YAML front matter with a `title`; add them to `header_pages` to include them in navigation.
 
 ## Migrating from functions to the class
 

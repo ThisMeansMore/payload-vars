@@ -1,3 +1,7 @@
+---
+title: TypeScript
+---
+
 # TypeScript input inference
 
 `PayloadTemplate` infers the variables accepted by `render()` from literal templates. This requires TypeScript 5.0 or newer. JavaScript users retain the same runtime validation.

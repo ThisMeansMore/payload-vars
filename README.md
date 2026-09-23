@@ -1,5 +1,7 @@
 # payload-vars
 
+[Documentation](https://thismeansmore.github.io/payload-vars/)
+
 Validate JSON templates, extract typed variables, and render them with runtime values. This ESM package has no runtime dependencies and supports browsers and Node.js 18+.
 
 ## Install

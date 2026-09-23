@@ -1,3 +1,7 @@
+---
+title: Syntax
+---
+
 # Template syntax
 
 The `PayloadTemplate` constructor accepts parsed JSON values. A placeholder occupies an entire JSON string: `{{name:expression}}`. Names match `[A-Za-z_][A-Za-z0-9_]*`. Partial interpolation is unsupported. Strings without `{{` or `}}` are constants; object keys are always literal.
