@@ -11,6 +11,10 @@ Notable changes, starting with 1.0.0. Historical dates follow Git tags.
 
 ## Unreleased
 
+## 1.1.5 — 2026-09-25
+
+<!-- reviewed -->
+
 ### Fixed
 
 - Releases explicitly deploy GitHub Pages and verify the deployed commit, preventing outdated documentation after a version bump.
