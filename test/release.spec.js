@@ -71,6 +71,27 @@ if (args[0] === 'test') {
   fs.writeFileSync(path.join(root, 'published'), JSON.stringify({ version: pack.version, 'dist.integrity': pack.integrity }));
 } else { process.exit(2); }
 `, { mode: 0o755 });
+  writeFileSync(join(root, 'bin/gh'), `#!/usr/bin/env node
+const fs = require('node:fs');
+const path = require('node:path');
+const cp = require('node:child_process');
+const root = process.env.RELEASE_TEST_ROOT;
+const args = process.argv.slice(2);
+fs.appendFileSync(path.join(root, 'gh-calls'), args.join(' ') + '\\n');
+if (fs.existsSync(path.join(root, 'gh-unavailable'))) process.exit(1);
+if (args[0] === 'repo') {
+  console.log('fixture/repo');
+} else if (args.includes('POST')) {
+  if (fs.existsSync(path.join(root, 'pages-request-fails'))) process.exit(1);
+  console.log(JSON.stringify({ status: 'queued' }));
+} else if (args[1].endsWith('/builds/latest')) {
+  const commit = cp.execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
+  const failed = fs.existsSync(path.join(root, 'pages-fails'));
+  console.log(JSON.stringify({ commit, status: failed ? 'errored' : 'built', error: { message: failed ? 'build failed' : null } }));
+} else {
+  console.log(JSON.stringify({ build_type: 'legacy', source: { branch: 'main', path: '/docs' } }));
+}
+`, { mode: 0o755 });
   const env = { ...process.env, PATH: join(root, 'bin') + delimiter + process.env.PATH, RELEASE_TEST_ROOT: root };
   const run = (script, ...args) => spawnSync(process.execPath, [`scripts/${script}.mjs`, ...args], { cwd, env, encoding: 'utf8' });
   const review = () => write('CHANGELOG.md', read('CHANGELOG.md').replace(/(## 1\.2\.4 — [^\n]+)\n/, '$1\n\n<!-- reviewed -->\n'));
@@ -223,4 +244,35 @@ test('direct publish guard requires clean main, synchronized docs and a matching
   assert.equal(f.run('build', '--docs').status, 0);
   f.git('add', '.'); f.git('commit', '-m', 'sync docs');
   assert.match(f.run('publish-version', '--check').stderr, /tag v1.2.4 must point/);
+});
+
+
+test('Pages failure keeps release retryable without republishing npm', t => {
+  const f = fixture(t);
+  f.prepare(); f.review(); f.flag('pages-fails');
+  const failed = f.run('publish-version');
+  assert.match(failed.stderr, /Pages deployment failed/);
+  assert.equal(existsSync(join(f.cwd, '.git/payload-vars-release.json')), true);
+  assert.equal(existsSync(join(f.root, 'published')), true);
+  rmSync(join(f.root, 'pages-fails'));
+  const retry = f.run('publish-version');
+  assert.equal(retry.status, 0, retry.stderr);
+  assert.match(retry.stdout, /deployed Pages/);
+  assert.equal(readFileSync(join(f.root, 'calls'), 'utf8').split('\n').filter(line => line.startsWith('publish ')).length, 1);
+  assert.equal(existsSync(join(f.cwd, '.git/payload-vars-release.json')), false);
+});
+
+test('Pages access is checked before npm publication and request failures retain state', t => {
+  const f = fixture(t);
+  f.prepare(); f.review(); f.flag('gh-unavailable');
+  assert.equal(f.run('publish-version').status, 1);
+  assert.equal(existsSync(join(f.root, 'published')), false);
+  assert.equal(f.git('tag', '--list', 'v1.2.4'), '');
+  rmSync(join(f.root, 'gh-unavailable'));
+  f.flag('pages-request-fails');
+  assert.equal(f.run('publish-version').status, 1);
+  assert.equal(existsSync(join(f.cwd, '.git/payload-vars-release.json')), true);
+  rmSync(join(f.root, 'pages-request-fails'));
+  const retry = f.run('publish-version');
+  assert.equal(retry.status, 0, retry.stderr);
 });

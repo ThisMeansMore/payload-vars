@@ -1,6 +1,7 @@
 import { existsSync, mkdtempSync, writeFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
+import { setTimeout as delay } from 'node:timers/promises';
 import { isDeepStrictEqual } from 'node:util';
 import {
   assertMain, assertClean, assertReleaseFiles, assertVersions, assertReviewed, assertTag,
@@ -14,7 +15,7 @@ try {
     runTests();
     checkRelease();
   } else if (process.argv.length === 2) {
-    publishVersion();
+    await publishVersion();
   } else {
     throw new Error('Usage: npm run publish-version (choose the version during preparation).');
   }
@@ -23,7 +24,7 @@ try {
   if (!process.argv.includes('--check')) console.error('After resolving the issue, rerun npm run publish-version. Do not prepare another version.');
 }
 
-function publishVersion() {
+async function publishVersion() {
   assertMain();
   const statePath = git('rev-parse', '--git-path', 'payload-vars-release.json');
   if (!existsSync(statePath)) throw new Error('No prepared release. Run npm run prepare-version -- patch (or minor/major) first.');
@@ -44,12 +45,14 @@ function publishVersion() {
   assertReviewed(state.version);
 
   checkRemote(state);
+  const pages = checkPages();
   commitRelease(state, save);
   checkRelease();
   publishPackage(pkg);
   git('push', '--atomic', 'origin', 'HEAD:refs/heads/main', `refs/tags/v${state.version}:refs/tags/v${state.version}`);
+  await deployPages(pages, state.releaseCommit);
   rmSync(statePath);
-  console.log(`Released ${state.version} to npm and pushed v${state.version} to GitHub.`);
+  console.log(`Released ${state.version} to npm, pushed v${state.version} to GitHub, and deployed Pages.`);
 }
 
 function runTests() {
@@ -142,4 +145,32 @@ function publishedArtifact(pkg, registry) {
     if (code !== 'E404') throw error;
     return undefined;
   }
+}
+
+function checkPages() {
+  // Resolve origin explicitly, so gh cannot select another repository or fork.
+  const repo = run('gh', ['repo', 'view', '--repo', git('remote', 'get-url', 'origin'), '--json', 'nameWithOwner', '--jq', '.nameWithOwner']);
+  const endpoint = `repos/${repo}/pages`;
+  const site = JSON.parse(run('gh', ['api', endpoint]));
+  if (site.build_type !== 'legacy' || site.source?.branch !== 'main' || site.source?.path !== '/docs') {
+    throw new Error('GitHub Pages must publish from main /docs before releasing.');
+  }
+  return endpoint;
+}
+
+async function deployPages(endpoint, commit) {
+  run('gh', ['api', '--method', 'POST', `${endpoint}/builds`]);
+  const deadline = Date.now() + 10 * 60 * 1000;
+  while (Date.now() < deadline) {
+    const build = JSON.parse(run('gh', ['api', `${endpoint}/builds/latest`]));
+    if (build.commit === commit) {
+      if (build.status === 'built') return;
+      if (build.status === 'errored' || build.error?.message) {
+        throw new Error(`GitHub Pages deployment failed: ${build.error?.message || build.status}`);
+      }
+    }
+    console.log(`Waiting for GitHub Pages to deploy ${commit.slice(0, 7)}…`);
+    await delay(10000);
+  }
+  throw new Error(`Timed out waiting for GitHub Pages to deploy ${commit}. Rerun npm run publish-version to retry.`);
 }
