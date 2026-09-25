@@ -80,6 +80,10 @@ const args = process.argv.slice(2);
 fs.appendFileSync(path.join(root, 'gh-calls'), args.join(' ') + '\\n');
 if (fs.existsSync(path.join(root, 'gh-unavailable'))) process.exit(1);
 if (args[0] === 'repo') {
+  if (args[1] !== 'view' || !args[2] || args[2].startsWith('-') || args.includes('--repo')) {
+    console.error('gh repo view requires a positional repository argument');
+    process.exit(1);
+  }
   console.log('fixture/repo');
 } else if (args.includes('POST')) {
   if (fs.existsSync(path.join(root, 'pages-request-fails'))) process.exit(1);

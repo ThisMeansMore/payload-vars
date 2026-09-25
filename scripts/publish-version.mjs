@@ -149,7 +149,7 @@ function publishedArtifact(pkg, registry) {
 
 function checkPages() {
   // Resolve origin explicitly, so gh cannot select another repository or fork.
-  const repo = run('gh', ['repo', 'view', '--repo', git('remote', 'get-url', 'origin'), '--json', 'nameWithOwner', '--jq', '.nameWithOwner']);
+  const repo = run('gh', ['repo', 'view', git('remote', 'get-url', 'origin'), '--json', 'nameWithOwner', '--jq', '.nameWithOwner']);
   const endpoint = `repos/${repo}/pages`;
   const site = JSON.parse(run('gh', ['api', endpoint]));
   if (site.build_type !== 'legacy' || site.source?.branch !== 'main' || site.source?.path !== '/docs') {
