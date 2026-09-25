@@ -11,6 +11,10 @@ Notable changes, starting with 1.0.0. Historical dates follow Git tags.
 
 ## Unreleased
 
+## 1.1.4 — 2026-09-25
+
+<!-- reviewed -->
+
 ### Added
 
 - Package version below the documentation homepage title, updated automatically on version bumps.
