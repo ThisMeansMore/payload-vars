@@ -9,6 +9,12 @@ title: Changelog
 
 Notable changes, starting with 1.0.0. Historical dates follow Git tags.
 
+## Unreleased
+
+### Fixed
+
+- Hide the empty Unreleased heading on the documentation site.
+
 ## 1.1.6 — 2026-09-25
 
 ### Changed
