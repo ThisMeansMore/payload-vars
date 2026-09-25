@@ -26,9 +26,12 @@
 │  npm whoami → should show username; otherwise run npm login.
 │  Choose: patch = fixes · minor = compatible features · major = breaking changes.
 ↓
-🚀 Publish new npm version
+🚀 Publish version to npm + GitHub
    npm run release:patch  (or release:minor / release:major)
-   Success → git push origin main --follow-tags
-   Failed after version bump? Fix the cause, then retry npm publish only.
-   Do not bump again. After success, push the release commit and tag as above.
+   Bumps the version, creates a commit + tag, publishes to npm, then pushes to GitHub.
+   npm publish failed? Fix the cause, retry npm publish, then git push origin main --follow-tags.
+   Only the push failed? Retry git push origin main --follow-tags.
+   Do not bump again or republish an already published version.
 ```
+
+The GitHub tag matches the npm version (e.g. `v1.2.3` for npm `1.2.3`). A GitHub Release page with release notes is separate and is not created by these commands.

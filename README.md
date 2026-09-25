@@ -2,7 +2,21 @@
 
 [Documentation](https://thismeansmore.github.io/payload-vars/)
 
-Validate JSON templates, extract typed variables, and render them with runtime values. This ESM package has no runtime dependencies and supports browsers and Node.js 18+.
+**Create payload templates as data, not code.** Variable names, types, and fallback rules live inside the template itself. Load a template at runtime, validate it, extract its variable contract, and render a JSON payload with supplied values.
+
+The complete definition is plain JSON, so templates can be created, edited, serialized, and exchanged independently of application code.
+
+## How it compares
+
+| Approach | What it provides |
+| --- | --- |
+| Schema validation (e.g. [Zod](https://zod.dev/basics)) | Validates data against schemas typically defined in JavaScript or TypeScript. |
+| JSON templating (e.g. [JSON-e](https://json-e.js.org/operators.html)) | Stores templates as data, with expressions, conditionals, and loops for generating JSON. |
+| **payload-vars** | Combines a JSON payload template with inline variable types and fallback rules, plus an extractable variable contract. |
+
+Use payload-vars when the payload shape and input rules should be defined together as data, with declarations such as `{{orderId:string}}` embedded directly in the template.
+
+The package has no runtime dependencies and supports browsers and Node.js 18+, with ES module and CommonJS entry points.
 
 ## Install
 
@@ -18,7 +32,7 @@ import { PayloadTemplate } from 'payload-vars';
 
 ### 1. JSON with variables
 
-Start with unformatted variable expressions.
+Define the payload structure with variable expressions as ordinary JSON strings.
 
 ```js
 const rawTemplate = {
@@ -73,6 +87,8 @@ const payload = template.render({
 });
 // { orderId: 'ORD-123', products: ['A', 'B'] }
 ```
+
+`template.toJSON()` returns the normalized template; `render()` returns the payload with values filled in.
 
 Placeholders occupy an entire string. Types are `string`, `number`, `boolean`, `string[]`, and `number[]`. Use `??` for nullish fallback or `||` for falsy fallback, with actions `null`, `omit`, or `throw`. Invalid templates throw `PayloadTemplateError`; inputs are never mutated.
 

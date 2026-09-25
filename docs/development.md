@@ -84,7 +84,7 @@ npm run release:major
 
 Each command checks that the current branch is `main` and the working tree is clean, then runs the build, compile-time tests, and runtime tests through npm's `preversion` hook. If they pass, `npm version` updates `package.json` and `package-lock.json`, creates a version commit and Git tag, and `npm publish` publishes the public package. The `prepack` hook rebuilds the distribution before publishing.
 
-These commands require a clean Git working tree and do not push commits or tags to the remote. If publication fails after the version bump, resolve the publishing issue and retry `npm publish` for that version instead of bumping again.
+After publication, these commands run `git push origin main --follow-tags` to push the version commit and tag to GitHub. They do not create a GitHub Release page with release notes. If publication fails after the version bump, resolve the issue, retry `npm publish` for that version, then run `git push origin main --follow-tags`. If only the push fails, retry only the push. Do not bump again or republish an already published version.
 
 Direct `npm publish` calls also check the branch and working tree and run the tests through `prepublishOnly`. Feature branches, detached HEADs, and directories without a Git repository are rejected. `npm run release:check` runs just the guard; `npm pack --dry-run` remains available on feature branches. These are local npm lifecycle checks, so do not bypass them with `--ignore-scripts`.
 
