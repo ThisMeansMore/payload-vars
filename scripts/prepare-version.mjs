@@ -21,7 +21,8 @@ try {
   const changelog = readFileSync('CHANGELOG.md', 'utf8');
   const entries = sections(changelog);
   const pending = entries.filter(entry => entry.title === 'Unreleased');
-  if (pending.length !== 1 || !pending[0].body.replace(/<!--[\s\S]*?-->/g, '').trim()) throw new Error('Add release notes under ## Unreleased in CHANGELOG.md first.');
+  if (pending.length !== 1) throw new Error('CHANGELOG.md must contain one ## Unreleased section.');
+  const notes = pending[0].body.replace(/<!--(?: reviewed | requires-review )-->/g, '').trim() || draftNotes(pkg.version);
   if (entries.some(entry => entry.title.split(' — ')[0] === version)) throw new Error(`CHANGELOG.md already has a ${version} entry.`);
   const snapshots = releaseFiles.map(path => [path, readFileSync(path)]);
   const state = { version, baseHead: git('rev-parse', 'HEAD') };
@@ -33,14 +34,23 @@ try {
     lock.packages[''].version = version;
     for (const [path, data] of [['package.json', pkg], ['package-lock.json', lock]]) writeFileSync(path, `${JSON.stringify(data, null, 2)}\n`);
     const date = new Date().toISOString().slice(0, 10);
-    writeFileSync('CHANGELOG.md', changelog.replace(/^## Unreleased\r?\n([\s\S]*?)(?=^## |$(?![\s\S]))/m, (_, notes) => `## Unreleased\n\n## ${version} — ${date}\n${notes.replace(/^<!-- reviewed -->[ \t]*\r?$/gm, '')}`));
+    writeFileSync('CHANGELOG.md', changelog.replace(/^## Unreleased\r?\n([\s\S]*?)(?=^## |$(?![\s\S]))/m, () => `## Unreleased\n\n## ${version} — ${date}\n\n<!-- requires-review -->\n\n${notes}\n\n`));
     syncDocs();
   } catch (error) {
     for (const [path, data] of snapshots) writeFileSync(path, data);
     rmSync(statePath, { force: true });
     throw error;
   }
-  console.log(`Prepared ${version}, without committing or tagging. Review CHANGELOG.md, add <!-- reviewed --> in its ${version} section, then run npm run publish-version.`);
+  console.log(`Prepared ${version}, without committing or tagging. Review CHANGELOG.md, edit the draft and remove <!-- requires-review --> from its ${version} section, then run npm run publish-version.`);
 } catch (error) {
   report(error);
+}
+
+function draftNotes(previousVersion) {
+  const tag = `v${previousVersion}`;
+  if (!tagCommit(previousVersion)) throw new Error(`Cannot draft notes: ${tag} is missing. Fetch release tags or write notes under Unreleased.`);
+  git('merge-base', '--is-ancestor', tag, 'HEAD');
+  const subjects = git('log', '--no-merges', '--reverse', '--format=%s', `${tag}..HEAD`);
+  if (!subjects) throw new Error(`No commits since ${tag}. Add Unreleased notes if you intend to release again.`);
+  return '### Changes\n\n' + subjects.split('\n').map(subject => `- ${subject}`).join('\n');
 }

@@ -9,6 +9,12 @@ title: Changelog
 
 Notable changes, starting with 1.0.0. Historical dates follow Git tags.
 
+## Unreleased
+
+### Changed
+
+- Release preparation drafts missing notes from commits and marks them for review; remove the review marker before publishing.
+
 ## 1.1.7 — 2026-09-25
 
 ### Fixed

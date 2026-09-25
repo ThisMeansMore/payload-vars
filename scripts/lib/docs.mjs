@@ -1,8 +1,8 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 
 export const stripReviewMarkers = markdown => markdown
-  .replace(/^[ \t]*<!-- reviewed -->[ \t]*\r?\n?/gm, '')
-  .replace(/<!-- reviewed -->/g, '')
+  .replace(/^[ \t]*<!-- (?:reviewed|requires-review) -->[ \t]*\r?\n?/gm, '')
+  .replace(/<!-- (?:reviewed|requires-review) -->/g, '')
   .replace(/\n{3,}/g, '\n\n');
 
 const root = new URL('../../', import.meta.url);

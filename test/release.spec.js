@@ -67,7 +67,7 @@ if (args[0] === 'test') {
   console.log(fs.readFileSync(path.join(root, 'published'), 'utf8'));
 } else if (args[0] === 'publish') {
   if (fs.existsSync(path.join(root, 'fail-publish'))) process.exit(1);
-  if (fs.readFileSync('CHANGELOG.md', 'utf8').includes('<!-- reviewed -->') || fs.readFileSync('docs/changelog.md', 'utf8').includes('<!-- reviewed -->')) process.exit(3);
+  if (fs.readFileSync('CHANGELOG.md', 'utf8').match(/<!-- (reviewed|requires-review) -->/g) || fs.readFileSync('docs/changelog.md', 'utf8').match(/<!-- (reviewed|requires-review) -->/g)) process.exit(3);
   const pack = JSON.parse(fs.readFileSync(args[1]));
   fs.writeFileSync(path.join(root, 'published'), JSON.stringify({ version: pack.version, 'dist.integrity': pack.integrity }));
 } else { process.exit(2); }
@@ -99,7 +99,7 @@ if (args[0] === 'repo') {
 `, { mode: 0o755 });
   const env = { ...process.env, PATH: join(root, 'bin') + delimiter + process.env.PATH, RELEASE_TEST_ROOT: root };
   const run = (script, ...args) => spawnSync(process.execPath, [`scripts/${script}.mjs`, ...args], { cwd, env, encoding: 'utf8' });
-  const review = () => write('CHANGELOG.md', read('CHANGELOG.md').replace(/(## 1\.2\.4 — [^\n]+)\n/, '$1\n\n<!-- reviewed -->\n'));
+  const review = () => write('CHANGELOG.md', read('CHANGELOG.md').replace('<!-- requires-review -->', ''));
   const prepare = () => { const result = run('prepare-version', 'patch'); assert.equal(result.status, 0, result.stderr); };
   const flag = name => writeFileSync(join(root, name), 'yes');
   return { root, cwd, remote, git, write, read, run, review, prepare, flag };
@@ -116,6 +116,8 @@ test('preparation bumps all versions, moves notes, preserves historical reviews 
   assert.match(f.read('docs/changelog.md'), /^## 1\.2\.4 — /m);
   assert.match(f.read('CHANGELOG.md'), /## Unreleased\n\n## 1.2.4 — \d{4}-\d{2}-\d{2}/);
   assert.match(f.read('CHANGELOG.md'), /## 1.2.3[^]*<!-- reviewed -->/);
+  assert.match(f.read('CHANGELOG.md'), /<!-- requires-review -->/);
+  assert.doesNotMatch(f.read('docs/changelog.md'), /<!-- requires-review -->/);
   assert.equal(f.git('rev-parse', 'HEAD'), head);
   assert.equal(f.git('tag', '--list', 'v1.2.4'), '');
   assert.equal(f.run('prepare-version', 'patch').status, 1, 'cannot accidentally bump twice');
@@ -123,7 +125,7 @@ test('preparation bumps all versions, moves notes, preserves historical reviews 
   assert.equal(f.git('rev-parse', 'HEAD'), head);
 });
 
-test('preparation rejects dirty branches, invalid increments and empty notes', t => {
+test('preparation rejects dirty branches and invalid increments, and drafts missing notes', t => {
   const f = fixture(t);
   assert.equal(f.run('prepare-version', 'invalid').status, 1);
   f.git('switch', '-c', 'feature');
@@ -134,7 +136,10 @@ test('preparation rejects dirty branches, invalid increments and empty notes', t
   rmSync(join(f.cwd, 'unrelated'));
   f.write('CHANGELOG.md', f.read('CHANGELOG.md').replace('- New feature.', ''));
   f.git('add', '.'); f.git('commit', '-m', 'empty notes');
-  assert.match(f.run('prepare-version', 'patch').stderr, /Add release notes/);
+  f.prepare();
+  assert.match(f.read('CHANGELOG.md'), /### Changes\n\n- empty notes/);
+  assert.match(f.read('CHANGELOG.md'), /<!-- requires-review -->/);
+  assert.match(f.run('publish-version').stderr, /remove <!-- requires-review -->/);
 });
 
 test('publication refreshes reviewed docs, commits only release files and publishes matching tag', t => {
@@ -161,7 +166,7 @@ test('publication rejects unrelated edits, pending notes, example review markers
   const reviewed = f.read('CHANGELOG.md');
   f.write('CHANGELOG.md', reviewed.replace('## Unreleased', '## Unreleased\n- Pending'));
   assert.match(f.run('publish-version').stderr, /empty Unreleased/);
-  f.write('CHANGELOG.md', reviewed.replace('<!-- reviewed -->', '```md\n<!-- reviewed -->\n```'));
+  f.write('CHANGELOG.md', reviewed.replace('- New feature.', '```md\n<!-- requires-review -->\n```\n- New feature.'));
   assert.match(f.run('publish-version').stderr, /Review the notes/);
   f.write('CHANGELOG.md', reviewed);
   f.flag('fail-test');
@@ -287,25 +292,24 @@ test('Pages access is checked before npm publication and request failures retain
 });
 
 
-test('failed checks retain the review marker; commit failure retries without publishing it', t => {
+test('commit failure can be retried after removing the review gate', t => {
   const f = fixture(t);
-  f.prepare(); f.review(); f.flag('fail-test');
+  f.prepare();
+  f.flag('fail-test');
+  assert.match(f.run('publish-version').stderr, /remove <!-- requires-review -->/);
+  assert.match(f.read('CHANGELOG.md'), /<!-- requires-review -->/);
+  f.review();
   assert.equal(f.run('publish-version').status, 1);
-  assert.match(f.read('CHANGELOG.md'), /<!-- reviewed -->/);
   rmSync(join(f.root, 'fail-test'));
   const hook = join(f.cwd, '.git/hooks/pre-commit');
   writeFileSync(hook, '#!/bin/sh\nexit 1\n', { mode: 0o755 });
   assert.equal(f.run('publish-version').status, 1);
-  assert.doesNotMatch(f.read('CHANGELOG.md'), /<!-- reviewed -->/);
-  const approved = f.read('CHANGELOG.md');
-  f.write('CHANGELOG.md', approved.replace('New feature.', 'Changed after review.'));
-  assert.match(f.run('publish-version').stderr, /Review the notes/);
-  f.write('CHANGELOG.md', approved);
+  assert.doesNotMatch(f.read('CHANGELOG.md'), /<!-- (reviewed|requires-review) -->/);
   rmSync(hook);
   const retry = f.run('publish-version');
   assert.equal(retry.status, 0, retry.stderr);
+  assert.equal(existsSync(join(f.cwd, '.git/payload-vars-review.json')), false);
 });
-
 
 test('Pages changelog keeps Unreleased only when there are pending notes', t => {
   const f = fixture(t);
