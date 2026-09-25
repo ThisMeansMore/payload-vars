@@ -10,6 +10,8 @@ title: Development
 
 GitHub Pages publishes `docs/` from `main` at <https://thismeansmore.github.io/payload-vars/>. Changes pushed to `main` rebuild the site automatically. Relative `.md` links work on GitHub and are converted to website links during the build.
 
+The homepage (`docs/index.md`) is generated from the root `README.md`, followed by the Pages-only footer in `docs/_includes/home-footer.md`. Edit README for shared content or the footer for the Guides list and GitHub source link, then run `npm run docs:sync` and commit the source changes together with the generated homepage. `npm run build` (also run by `npm test`) refreshes it automatically. The generator adjusts documentation links and protects template expressions from Liquid processing.
+
 Site settings and navigation are in `_config.yml`. Page content is wrapped in Liquid raw tags inside HTML comments to preserve literal template examples while keeping the comments hidden on GitHub. Keep these wrappers when editing pages. New pages should include YAML front matter with a `title`; add them to `header_pages` to include them in navigation.
 
 ## Migrating from functions to the class

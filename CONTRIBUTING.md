@@ -35,3 +35,5 @@
 ```
 
 The GitHub tag matches the npm version (e.g. `v1.2.3` for npm `1.2.3`). A GitHub Release page with release notes is separate and is not created by these commands.
+
+Builds and tests automatically regenerate `docs/index.md` from `README.md` plus the Pages-only footer in `docs/_includes/home-footer.md`. Edit those sources and include the generated homepage in your commit.
