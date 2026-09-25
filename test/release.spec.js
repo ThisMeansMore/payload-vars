@@ -1,38 +1,226 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync, spawnSync } from 'node:child_process';
-import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, copyFileSync, rmSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { join, delimiter } from 'node:path';
 
-const guard = fileURLToPath(new URL('../scripts/check-release.mjs', import.meta.url));
-
-test('release guard permits only clean main checkouts', t => {
-  const cwd = mkdtempSync(join(tmpdir(), 'payload-vars-release-'));
-  t.after(() => rmSync(cwd, { recursive: true, force: true }));
-  const git = (...args) => execFileSync('git', args, { cwd, stdio: 'pipe' });
-  const check = () => spawnSync(process.execPath, [guard], { cwd, encoding: 'utf8' });
-  assert.equal(check().status, 1, 'rejects directories without Git');
+function fixture(t) {
+  const root = mkdtempSync(join(tmpdir(), 'payload-vars-release-'));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const cwd = join(root, 'repo');
+  const remote = join(root, 'remote.git');
+  mkdirSync(cwd);
+  mkdirSync(join(root, 'bin'));
+  mkdirSync(join(cwd, 'scripts/lib'), { recursive: true });
+  mkdirSync(join(cwd, 'docs/_includes'), { recursive: true });
+  for (const file of ['lib/release.mjs', 'lib/docs.mjs', 'prepare-version.mjs', 'publish-version.mjs', 'build.mjs']) {
+    copyFileSync(new URL(`../scripts/${file}`, import.meta.url), join(cwd, 'scripts', file));
+  }
+  const write = (file, content) => writeFileSync(join(cwd, file), content);
+  const read = file => readFileSync(join(cwd, file), 'utf8');
+  const git = (...args) => execFileSync('git', args, { cwd, encoding: 'utf8', stdio: 'pipe' }).trim();
   git('init', '--initial-branch=main');
-  git('-c', 'user.name=Release test', '-c', 'user.email=test@example.invalid',
-    '-c', 'commit.gpgsign=false', 'commit', '--allow-empty', '-m', 'initial');
-  assert.equal(check().status, 0, 'accepts clean main');
-  git('switch', '-c', 'feature');
-  assert.match(check().stderr, /current branch is feature/);
-  assert.equal(check().status, 1);
-  git('checkout', '--detach');
-  assert.match(check().stderr, /detached HEAD/);
-  assert.equal(check().status, 1);
-  git('switch', 'main');
-  writeFileSync(join(cwd, 'untracked'), 'change');
-  assert.match(check().stderr, /clean working tree/);
-  assert.equal(check().status, 1, 'rejects untracked files');
-  git('add', 'untracked');
-  assert.equal(check().status, 1, 'rejects staged changes');
-  git('-c', 'user.name=Release test', '-c', 'user.email=test@example.invalid',
-    '-c', 'commit.gpgsign=false', 'commit', '-m', 'tracked');
-  assert.equal(check().status, 0);
-  writeFileSync(join(cwd, 'untracked'), 'modified');
-  assert.equal(check().status, 1, 'rejects unstaged changes');
+  git('config', 'user.name', 'Release test');
+  git('config', 'user.email', 'test@example.invalid');
+  git('config', 'commit.gpgsign', 'false');
+  git('config', 'tag.gpgsign', 'false');
+  write('package.json', JSON.stringify({ name: 'release-fixture', version: '1.2.3', type: 'module' }, null, 2) + '\n');
+  write('package-lock.json', JSON.stringify({ version: '1.2.3', packages: { '': { version: '1.2.3' } } }, null, 2) + '\n');
+  write('README.md', '# payload-vars\n\nDocumentation.\n');
+  write('docs/_includes/home-footer.md', '[Changelog](changelog.md)\n');
+  write('CHANGELOG.md', '# Changelog\n\n## Unreleased\n\n- New feature.\n\n## 1.2.3 — 2026-09-25\n\n<!-- reviewed -->\n\n- Previous release.\n');
+  execFileSync(process.execPath, ['scripts/build.mjs', '--docs'], { cwd });
+  git('add', '.');
+  git('commit', '-m', 'initial');
+  git('tag', 'v1.2.3');
+  execFileSync('git', ['init', '--bare', remote], { stdio: 'pipe' });
+  git('remote', 'add', 'origin', remote);
+  git('push', 'origin', 'main', '--tags');
+  // Real Git repositories; npm registry and publishing are simulated and never use the network.
+  writeFileSync(join(root, 'bin/npm'), `#!/usr/bin/env node
+const fs = require('node:fs');
+const path = require('node:path');
+const crypto = require('node:crypto');
+const root = process.env.RELEASE_TEST_ROOT;
+const args = process.argv.slice(2);
+fs.appendFileSync(path.join(root, 'calls'), args.join(' ') + '\\n');
+const pkg = JSON.parse(fs.readFileSync('package.json'));
+if (args[0] === 'test') {
+  if (fs.existsSync(path.join(root, 'fail-test'))) process.exit(1);
+} else if (args[0] === 'config') {
+  console.log('https://registry.example.invalid/');
+} else if (args[0] === 'pack') {
+  const files = ['package.json', 'package-lock.json', 'CHANGELOG.md', 'docs/index.md', 'docs/changelog.md'];
+  const contents = files.map(file => fs.readFileSync(file, 'utf8')).join('');
+  const integrity = 'sha512-' + crypto.createHash('sha512').update(contents).digest('base64');
+  const packed = { version: pkg.version, integrity, filename: 'fixture.tgz' };
+  fs.writeFileSync(path.join(args[args.indexOf('--pack-destination') + 1], packed.filename), JSON.stringify(packed));
+  console.log(JSON.stringify([packed]));
+} else if (args[0] === 'view') {
+  if (fs.existsSync(path.join(root, 'network-error'))) {
+    console.log(JSON.stringify({ error: { code: 'EAI_AGAIN' } })); process.exit(1);
+  }
+  if (!fs.existsSync(path.join(root, 'published'))) {
+    console.log(JSON.stringify({ error: { code: 'E404' } })); process.exit(1);
+  }
+  console.log(fs.readFileSync(path.join(root, 'published'), 'utf8'));
+} else if (args[0] === 'publish') {
+  if (fs.existsSync(path.join(root, 'fail-publish'))) process.exit(1);
+  const pack = JSON.parse(fs.readFileSync(args[1]));
+  fs.writeFileSync(path.join(root, 'published'), JSON.stringify({ version: pack.version, 'dist.integrity': pack.integrity }));
+} else { process.exit(2); }
+`, { mode: 0o755 });
+  const env = { ...process.env, PATH: join(root, 'bin') + delimiter + process.env.PATH, RELEASE_TEST_ROOT: root };
+  const run = (script, ...args) => spawnSync(process.execPath, [`scripts/${script}.mjs`, ...args], { cwd, env, encoding: 'utf8' });
+  const review = () => write('CHANGELOG.md', read('CHANGELOG.md').replace(/(## 1\.2\.4 — [^\n]+)\n/, '$1\n\n<!-- reviewed -->\n'));
+  const prepare = () => { const result = run('prepare-version', 'patch'); assert.equal(result.status, 0, result.stderr); };
+  const flag = name => writeFileSync(join(root, name), 'yes');
+  return { root, cwd, remote, git, write, read, run, review, prepare, flag };
+}
+
+test('preparation bumps all versions, moves notes, preserves historical reviews and does not commit', t => {
+  const f = fixture(t);
+  const head = f.git('rev-parse', 'HEAD');
+  f.prepare();
+  assert.equal(JSON.parse(f.read('package.json')).version, '1.2.4');
+  assert.equal(JSON.parse(f.read('package-lock.json')).packages[''].version, '1.2.4');
+  assert.match(f.read('docs/index.md'), /Package version: v1.2.4/);
+  assert.match(f.read('CHANGELOG.md'), /## Unreleased\n\n## 1.2.4 — \d{4}-\d{2}-\d{2}/);
+  assert.match(f.read('CHANGELOG.md'), /## 1.2.3[^]*<!-- reviewed -->/);
+  assert.equal(f.git('rev-parse', 'HEAD'), head);
+  assert.equal(f.git('tag', '--list', 'v1.2.4'), '');
+  assert.equal(f.run('prepare-version', 'patch').status, 1, 'cannot accidentally bump twice');
+  assert.match(f.run('publish-version').stderr, /Review the notes for 1.2.4/);
+  assert.equal(f.git('rev-parse', 'HEAD'), head);
+});
+
+test('preparation rejects dirty branches, invalid increments and empty notes', t => {
+  const f = fixture(t);
+  assert.equal(f.run('prepare-version', 'invalid').status, 1);
+  f.git('switch', '-c', 'feature');
+  assert.match(f.run('prepare-version', 'patch').stderr, /main branch/);
+  f.git('switch', 'main');
+  f.write('unrelated', 'work');
+  assert.match(f.run('prepare-version', 'patch').stderr, /clean working tree/);
+  rmSync(join(f.cwd, 'unrelated'));
+  f.write('CHANGELOG.md', f.read('CHANGELOG.md').replace('- New feature.', ''));
+  f.git('add', '.'); f.git('commit', '-m', 'empty notes');
+  assert.match(f.run('prepare-version', 'patch').stderr, /Add release notes/);
+});
+
+test('publication refreshes reviewed docs, commits only release files and publishes matching tag', t => {
+  const f = fixture(t);
+  f.prepare(); f.review();
+  const result = f.run('publish-version');
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(f.git('status', '--porcelain'), '');
+  assert.equal(f.git('rev-parse', 'v1.2.4^{commit}'), f.git('rev-parse', 'HEAD'));
+  assert.match(f.read('docs/changelog.md'), /<!-- reviewed -->/);
+  assert.equal(f.run('publish-version', '--check').status, 0);
+  assert.match(f.git('ls-remote', 'origin', 'refs/tags/v1.2.4^{}'), new RegExp(f.git('rev-parse', 'HEAD')));
+  assert.equal(existsSync(join(f.cwd, '.git/payload-vars-release.json')), false);
+});
+
+test('publication rejects unrelated edits, pending notes, example review markers and failing tests', t => {
+  const f = fixture(t);
+  f.prepare(); f.review();
+  f.write('unrelated', 'work');
+  assert.match(f.run('publish-version').stderr, /Unrelated changes/);
+  rmSync(join(f.cwd, 'unrelated'));
+  const reviewed = f.read('CHANGELOG.md');
+  f.write('CHANGELOG.md', reviewed.replace('## Unreleased', '## Unreleased\n- Pending'));
+  assert.match(f.run('publish-version').stderr, /empty Unreleased/);
+  f.write('CHANGELOG.md', reviewed.replace('<!-- reviewed -->', '```md\n<!-- reviewed -->\n```'));
+  assert.match(f.run('publish-version').stderr, /Review the notes/);
+  f.write('CHANGELOG.md', reviewed);
+  f.flag('fail-test');
+  assert.equal(f.run('publish-version').status, 1);
+  assert.equal(f.git('tag', '--list', 'v1.2.4'), '');
+  assert.equal(existsSync(join(f.root, 'published')), false);
+});
+
+test('push failure can be retried without another bump, commit or npm publication', t => {
+  const f = fixture(t);
+  f.prepare(); f.review();
+  const hook = join(f.remote, 'hooks/pre-receive');
+  writeFileSync(hook, '#!/bin/sh\nexit 1\n', { mode: 0o755 });
+  assert.equal(f.run('publish-version').status, 1);
+  assert.equal(existsSync(join(f.root, 'published')), true);
+  const head = f.git('rev-parse', 'HEAD');
+  rmSync(hook);
+  const retry = f.run('publish-version');
+  assert.equal(retry.status, 0, retry.stderr);
+  assert.match(retry.stdout, /skipping publication/);
+  assert.equal(f.git('rev-parse', 'HEAD'), head);
+  assert.equal(readFileSync(join(f.root, 'calls'), 'utf8').split('\n').filter(line => line.startsWith('publish ')).length, 1);
+});
+
+test('npm failure can be retried and registry errors never imply an unpublished version', t => {
+  const f = fixture(t);
+  f.prepare(); f.review(); f.flag('network-error');
+  assert.equal(f.run('publish-version').status, 1);
+  assert.equal(existsSync(join(f.root, 'published')), false);
+  rmSync(join(f.root, 'network-error'));
+  f.flag('fail-publish');
+  assert.equal(f.run('publish-version').status, 1);
+  rmSync(join(f.root, 'fail-publish'));
+  const retry = f.run('publish-version');
+  assert.equal(retry.status, 0, retry.stderr);
+});
+
+test('publication rejects an existing npm artifact with different contents', t => {
+  const f = fixture(t);
+  f.prepare(); f.review();
+  writeFileSync(join(f.root, 'published'), JSON.stringify({ version: '1.2.4', 'dist.integrity': 'different' }));
+  assert.match(f.run('publish-version').stderr, /different artifact/);
+  assert.equal(f.git('ls-remote', 'origin', 'refs/tags/v1.2.4'), '');
+});
+
+test('minor and major preparation select the intended version without approving it', t => {
+  for (const [increment, version] of [['minor', '1.3.0'], ['major', '2.0.0']]) {
+    const f = fixture(t);
+    const result = f.run('prepare-version', increment);
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(JSON.parse(f.read('package.json')).version, version);
+    assert.match(f.run('publish-version').stderr, new RegExp(`Review the notes for ${version}`));
+  }
+});
+
+test('publication rejects manifest changes and conflicting local or remote tags', t => {
+  const f = fixture(t);
+  f.prepare(); f.review();
+  const original = f.read('package.json');
+  f.write('package.json', original.replace('release-fixture', 'other-package'));
+  assert.match(f.run('publish-version').stderr, /beyond the prepared version bump/);
+  f.write('package.json', original);
+  const lock = f.read('package-lock.json');
+  f.write('package-lock.json', lock.replaceAll('1.2.4', '1.2.5'));
+  assert.match(f.run('publish-version').stderr, /versions do not match/);
+  f.write('package-lock.json', lock);
+  f.git('tag', 'v1.2.4');
+  assert.match(f.run('publish-version').stderr, /Local tag/);
+  f.git('push', 'origin', 'v1.2.4');
+  f.git('tag', '-d', 'v1.2.4');
+  assert.match(f.run('publish-version').stderr, /Remote tag/);
+  assert.equal(existsSync(join(f.root, 'published')), false);
+});
+
+test('direct publish guard requires clean main, synchronized docs and a matching release tag', t => {
+  const f = fixture(t);
+  f.prepare(); f.review();
+  const result = f.run('publish-version');
+  assert.equal(result.status, 0, result.stderr);
+  f.git('switch', '-c', 'feature');
+  assert.match(f.run('publish-version', '--check').stderr, /main branch/);
+  f.git('switch', 'main');
+  f.write('unrelated', 'change');
+  assert.match(f.run('publish-version', '--check').stderr, /clean working tree/);
+  rmSync(join(f.cwd, 'unrelated'));
+  f.write('docs/index.md', 'stale');
+  f.git('add', '.'); f.git('commit', '-m', 'stale docs');
+  assert.match(f.run('publish-version', '--check').stderr, /stale/);
+  assert.equal(f.run('build', '--docs').status, 0);
+  f.git('add', '.'); f.git('commit', '-m', 'sync docs');
+  assert.match(f.run('publish-version', '--check').stderr, /tag v1.2.4 must point/);
 });

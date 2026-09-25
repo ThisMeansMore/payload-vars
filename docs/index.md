@@ -2,10 +2,12 @@
 title: Getting started
 ---
 
-<!-- Generated from README.md and docs/_includes/home-footer.md by scripts/sync-docs.mjs. Do not edit directly. -->
+<!-- Generated from README.md, package.json, and docs/_includes/home-footer.md by scripts/lib/docs.mjs. Do not edit directly. -->
 <!-- {% raw %} -->
 
 # payload-vars
+
+Package version: v1.1.3
 
 **Create payload templates as data, not code.** Variable names, types, and fallback rules live inside the template itself. Load a template at runtime, validate it, extract its variable contract, and render a JSON payload with supplied values.
 
@@ -137,6 +139,7 @@ Import from the package root so your runtime selects the appropriate entry point
 
 ## Guides
 
+- [Changelog](changelog.md): version history and unreleased changes.
 - [Examples](examples.md): demo templates and resulting payloads side by side.
 - [Template syntax](syntax.md): types, fallbacks, array members, and omission.
 - [API and structured errors](api.md): validation, rendering, extraction, and syntax highlighting.

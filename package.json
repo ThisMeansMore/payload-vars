@@ -22,6 +22,7 @@
     "dist",
     "docs",
     "README.md",
+    "CHANGELOG.md",
     "LICENSE"
   ],
   "sideEffects": false,
@@ -41,17 +42,14 @@
   "types": "./dist/index.d.ts",
   "scripts": {
     "build": "node scripts/build.mjs",
-    "docs:sync": "node scripts/sync-docs.mjs",
+    "docs:sync": "node scripts/build.mjs --docs",
     "typecheck": "npm run build && npm run test:types",
     "test": "npm run build && npm run test:types && node --test test/*.spec.js",
     "prepack": "npm run build",
     "test:types": "tsc -p test/types/tsconfig.json",
-    "preversion": "npm run release:check && npm test",
-    "release:patch": "npm version patch && npm publish && git push origin main --follow-tags",
-    "release:minor": "npm version minor && npm publish && git push origin main --follow-tags",
-    "release:major": "npm version major && npm publish && git push origin main --follow-tags",
-    "release:check": "node scripts/check-release.mjs",
-    "prepublishOnly": "npm run release:check && npm test"
+    "prepublishOnly": "node scripts/publish-version.mjs --check",
+    "prepare-version": "node scripts/prepare-version.mjs",
+    "publish-version": "node scripts/publish-version.mjs"
   },
   "devDependencies": {
     "typescript": "^5.9.3"

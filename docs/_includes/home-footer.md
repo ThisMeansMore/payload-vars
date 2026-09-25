@@ -1,5 +1,6 @@
 ## Guides
 
+- [Changelog](changelog.md): version history and unreleased changes.
 - [Examples](examples.md): demo templates and resulting payloads side by side.
 - [Template syntax](syntax.md): types, fallbacks, array members, and omission.
 - [API and structured errors](api.md): validation, rendering, extraction, and syntax highlighting.

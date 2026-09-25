@@ -1,39 +1,17 @@
-# Internal workflow
+# Contributing
 
-```text
-🌿 Create feature branch
-│  git switch main && git pull --ff-only && git switch -c feature/short-name
-↓
-🛠️ Code
-│  Implement the change; update tests and docs.
-↓
-✅ Check
-│  npm test
-│  Failed? Return to Code. Continue only when tests pass.
-↓
-📤 Commit + push
-│  git add <changed-files> && git commit -m "Describe the change" &&
-│  git push -u origin feature/short-name
-↓
-🔀 Merge
-│  Open a PR into main, review it, and merge it on GitHub.
-↓
-🔄 Update local main
-│  git switch main && git pull --ff-only
-│  git status → working tree must be clean.
-↓
-📋 Prepare release
-│  npm whoami → should show username; otherwise run npm login.
-│  Choose: patch = fixes · minor = compatible features · major = breaking changes.
-↓
-🚀 Publish version to npm + GitHub
-   npm run release:patch  (or release:minor / release:major)
-   Bumps the version, creates a commit + tag, publishes to npm, then pushes to GitHub.
-   npm publish failed? Fix the cause, retry npm publish, then git push origin main --follow-tags.
-   Only the push failed? Retry git push origin main --follow-tags.
-   Do not bump again or republish an already published version.
+Work on a feature branch, update tests and docs, and add notes under **Unreleased** in `CHANGELOG.md`. Run `npm test`, commit, and merge your PR into `main`.
+
+To release, start on up-to-date `main` with a clean working tree. Authenticate with `npm login` if needed.
+
+```sh
+npm run prepare-version -- patch  # or minor / major
+# Review the new CHANGELOG.md entry and add <!-- reviewed --> on its own line.
+npm run publish-version
 ```
 
-The GitHub tag matches the npm version (e.g. `v1.2.3` for npm `1.2.3`). A GitHub Release page with release notes is separate and is not created by these commands.
+Preparation updates versions, dates the changelog entry, and generates docs. Leave those changes uncommitted while you review. Keep Unreleased empty; if you edit the notes again, remove the marker until you have reviewed them again.
 
-Builds and tests automatically regenerate `docs/index.md` from `README.md` plus the Pages-only footer in `docs/_includes/home-footer.md`. Edit those sources and include the generated homepage in your commit.
+Publication checks the review, versions, docs, and tests, then commits, tags, publishes to npm, and pushes to GitHub. If it fails, fix the reported issue and rerun `npm run publish-version` from the same checkout. It reuses the prepared version and skips an identical package already on npm. A GitHub Release page remains optional.
+
+README and CHANGELOG are the documentation sources; the Pages-only footer lives in `docs/_includes/home-footer.md`. Builds, tests, and release commands generate the Pages files automatically. `npm run docs:sync` refreshes just the docs. Include generated changes in ordinary development commits; the release command handles its own commit.
