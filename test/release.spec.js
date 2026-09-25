@@ -67,6 +67,7 @@ if (args[0] === 'test') {
   console.log(fs.readFileSync(path.join(root, 'published'), 'utf8'));
 } else if (args[0] === 'publish') {
   if (fs.existsSync(path.join(root, 'fail-publish'))) process.exit(1);
+  if (fs.readFileSync('CHANGELOG.md', 'utf8').includes('<!-- reviewed -->') || fs.readFileSync('docs/changelog.md', 'utf8').includes('<!-- reviewed -->')) process.exit(3);
   const pack = JSON.parse(fs.readFileSync(args[1]));
   fs.writeFileSync(path.join(root, 'published'), JSON.stringify({ version: pack.version, 'dist.integrity': pack.integrity }));
 } else { process.exit(2); }
@@ -141,7 +142,9 @@ test('publication refreshes reviewed docs, commits only release files and publis
   assert.equal(result.status, 0, result.stderr);
   assert.equal(f.git('status', '--porcelain'), '');
   assert.equal(f.git('rev-parse', 'v1.2.4^{commit}'), f.git('rev-parse', 'HEAD'));
-  assert.match(f.read('docs/changelog.md'), /<!-- reviewed -->/);
+  assert.doesNotMatch(f.read('CHANGELOG.md'), /<!-- reviewed -->/);
+  assert.doesNotMatch(f.read('docs/changelog.md'), /<!-- reviewed -->/);
+  assert.doesNotMatch(f.git('show', 'HEAD:CHANGELOG.md'), /<!-- reviewed -->/);
   assert.equal(f.run('publish-version', '--check').status, 0);
   assert.match(f.git('ls-remote', 'origin', 'refs/tags/v1.2.4^{}'), new RegExp(f.git('rev-parse', 'HEAD')));
   assert.equal(existsSync(join(f.cwd, '.git/payload-vars-release.json')), false);
@@ -277,6 +280,26 @@ test('Pages access is checked before npm publication and request failures retain
   assert.equal(f.run('publish-version').status, 1);
   assert.equal(existsSync(join(f.cwd, '.git/payload-vars-release.json')), true);
   rmSync(join(f.root, 'pages-request-fails'));
+  const retry = f.run('publish-version');
+  assert.equal(retry.status, 0, retry.stderr);
+});
+
+
+test('failed checks retain the review marker; commit failure retries without publishing it', t => {
+  const f = fixture(t);
+  f.prepare(); f.review(); f.flag('fail-test');
+  assert.equal(f.run('publish-version').status, 1);
+  assert.match(f.read('CHANGELOG.md'), /<!-- reviewed -->/);
+  rmSync(join(f.root, 'fail-test'));
+  const hook = join(f.cwd, '.git/hooks/pre-commit');
+  writeFileSync(hook, '#!/bin/sh\nexit 1\n', { mode: 0o755 });
+  assert.equal(f.run('publish-version').status, 1);
+  assert.doesNotMatch(f.read('CHANGELOG.md'), /<!-- reviewed -->/);
+  const approved = f.read('CHANGELOG.md');
+  f.write('CHANGELOG.md', approved.replace('New feature.', 'Changed after review.'));
+  assert.match(f.run('publish-version').stderr, /Review the notes/);
+  f.write('CHANGELOG.md', approved);
+  rmSync(hook);
   const retry = f.run('publish-version');
   assert.equal(retry.status, 0, retry.stderr);
 });

@@ -5,7 +5,7 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { isDeepStrictEqual } from 'node:util';
 import {
   assertMain, assertClean, assertReleaseFiles, assertVersions, assertReviewed, assertTag,
-  git, run, readJson, releaseFiles, syncDocs, tagCommit, report,
+  git, run, readJson, releaseFiles, syncDocs, tagCommit, report, finalizeChangelog,
 } from './lib/release.mjs';
 
 try {
@@ -105,6 +105,8 @@ function checkRemote(state) {
 
 function commitRelease(state, save) {
   if (!state.releaseCommit) {
+    finalizeChangelog(state.version);
+    syncDocs();
     git('add', '--', ...releaseFiles);
     state.releaseTree = git('write-tree');
     save();

@@ -1,5 +1,7 @@
 import { execFileSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import { stripReviewMarkers } from './docs.mjs';
 
 export const releaseFiles = ['package.json', 'package-lock.json', 'CHANGELOG.md', 'docs/index.md', 'docs/changelog.md'];
 export const run = (command, args, options = {}) => (execFileSync(command, args, {
@@ -61,13 +63,14 @@ export function sections(markdown) {
 }
 
 export function assertReviewed(version) {
-  const entries = sections(readFileSync('CHANGELOG.md', 'utf8'));
+  const changelog = readFileSync('CHANGELOG.md', 'utf8');
+  const entries = sections(changelog);
   const pending = entries.filter(entry => entry.title === 'Unreleased');
   if (pending.length !== 1 || pending[0].body.replace(/<!--[\s\S]*?-->/g, '').trim()) {
     throw new Error('CHANGELOG.md must have one empty Unreleased section. Run npm run prepare-version -- patch (or minor/major) before review.');
   }
   const releases = entries.filter(entry => entry.title.split(' — ')[0] === version);
-  if (releases.length !== 1 || !/^\d{4}-\d{2}-\d{2}$/.test(releases[0].title.split(' — ')[1] ?? '') || !releases[0].reviewed) {
+  if (releases.length !== 1 || !/^\d{4}-\d{2}-\d{2}$/.test(releases[0].title.split(' — ')[1] ?? '') || (!releases[0].reviewed && !hasReviewReceipt(version, changelog))) {
     throw new Error(`Review the notes for ${version} in CHANGELOG.md, then add <!-- reviewed --> on its own line in that section. Run npm run publish-version when ready.`);
   }
 }
@@ -86,4 +89,24 @@ export function report(error) {
   console.error(`Release blocked: ${error.message}`);
   if (error.stderr) console.error(String(error.stderr).trim());
   process.exitCode = 1;
+}
+
+// Keep approval local, bound to the exact marker-free content for safe retries.
+const reviewHash = text => createHash('sha256').update(text).digest('hex');
+const receiptPath = () => git('rev-parse', '--git-path', 'payload-vars-review.json');
+
+function hasReviewReceipt(version, changelog) {
+  const path = receiptPath();
+  if (!existsSync(path)) return false;
+  const receipt = readJson(path);
+  return receipt.version === version && receipt.hash === reviewHash(changelog);
+}
+
+export function finalizeChangelog(version) {
+  assertReviewed(version);
+  const changelog = stripReviewMarkers(readFileSync('CHANGELOG.md', 'utf8'));
+  // Save before removing the marker so an interrupted write can be retried.
+  writeFileSync(receiptPath(), JSON.stringify({ version, hash: reviewHash(changelog) }, null, 2));
+  writeFileSync('CHANGELOG.md', changelog);
+  // The caller refreshes the generated docs before committing.
 }

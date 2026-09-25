@@ -1,5 +1,10 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 
+export const stripReviewMarkers = markdown => markdown
+  .replace(/^[ \t]*<!-- reviewed -->[ \t]*\r?\n?/gm, '')
+  .replace(/<!-- reviewed -->/g, '')
+  .replace(/\n{3,}/g, '\n\n');
+
 const root = new URL('../../', import.meta.url);
 const read = path => readFileSync(new URL(path, root), 'utf8');
 const adjustLinks = markdown => markdown.replace(/(\]\()docs\//g, '$1');
@@ -13,7 +18,7 @@ export function syncDocs({ check = false } = {}) {
   const pages = [
     ['docs/index.md', 'Getting started', 'README.md, package.json, and docs/_includes/home-footer.md',
       `${body.trimEnd()}\n\n${read('docs/_includes/home-footer.md').trimEnd()}`],
-    ['docs/changelog.md', 'Changelog', 'CHANGELOG.md', adjustLinks(read('CHANGELOG.md')).trimEnd()],
+    ['docs/changelog.md', 'Changelog', 'CHANGELOG.md', adjustLinks(stripReviewMarkers(read('CHANGELOG.md'))).trimEnd()],
   ];
   for (const [path, title, sources, content] of pages) {
     const contents = `---

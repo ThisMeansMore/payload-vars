@@ -4,17 +4,17 @@ Notable changes, starting with 1.0.0. Historical dates follow Git tags.
 
 ## Unreleased
 
-## 1.1.5 — 2026-09-25
+### Changed
 
-<!-- reviewed -->
+- Remove internal review markers from changelogs before release while preserving safe publication retries.
+
+## 1.1.5 — 2026-09-25
 
 ### Fixed
 
 - Releases explicitly deploy GitHub Pages and verify the deployed commit, preventing outdated documentation after a version bump.
 
 ## 1.1.4 — 2026-09-25
-
-<!-- reviewed -->
 
 ### Added
 
