@@ -112,6 +112,8 @@ test('preparation bumps all versions, moves notes, preserves historical reviews 
   assert.equal(JSON.parse(f.read('package.json')).version, '1.2.4');
   assert.equal(JSON.parse(f.read('package-lock.json')).packages[''].version, '1.2.4');
   assert.match(f.read('docs/index.md'), /Package version: v1.2.4/);
+  assert.doesNotMatch(f.read('docs/changelog.md'), /^## Unreleased$/m);
+  assert.match(f.read('docs/changelog.md'), /^## 1\.2\.4 — /m);
   assert.match(f.read('CHANGELOG.md'), /## Unreleased\n\n## 1.2.4 — \d{4}-\d{2}-\d{2}/);
   assert.match(f.read('CHANGELOG.md'), /## 1.2.3[^]*<!-- reviewed -->/);
   assert.equal(f.git('rev-parse', 'HEAD'), head);
@@ -302,4 +304,14 @@ test('failed checks retain the review marker; commit failure retries without pub
   rmSync(hook);
   const retry = f.run('publish-version');
   assert.equal(retry.status, 0, retry.stderr);
+});
+
+
+test('Pages changelog keeps Unreleased only when there are pending notes', t => {
+  const f = fixture(t);
+  assert.match(f.read('docs/changelog.md'), /## Unreleased\n\n- New feature\./);
+  f.write('CHANGELOG.md', '# Changelog\n\n## Unreleased\n');
+  assert.equal(f.run('build', '--docs').status, 0);
+  assert.doesNotMatch(f.read('docs/changelog.md'), /^## Unreleased$/m);
+  assert.match(f.read('CHANGELOG.md'), /^## Unreleased$/m);
 });
