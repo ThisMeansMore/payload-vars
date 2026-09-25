@@ -8,13 +8,13 @@ The complete definition is plain JSON, so templates can be created, edited, seri
 
 ## How it compares
 
-| Approach | What it provides |
+| Category | A good fit when you need… |
 | --- | --- |
-| Schema validation (e.g. [Zod](https://zod.dev/basics)) | Validates data against schemas typically defined in JavaScript or TypeScript. |
-| JSON templating (e.g. [JSON-e](https://json-e.js.org/operators.html)) | Stores templates as data, with expressions, conditionals, and loops for generating JSON. |
-| **payload-vars** | Combines a JSON payload template with inline variable types and fallback rules, plus an extractable variable contract. |
+| Schema validation | General data validation with schemas defined in JavaScript or TypeScript (e.g. [Zod](https://zod.dev/basics)). |
+| General JSON templating | JSON templates stored as data, with expressions, conditions, and loops for generating dynamic output (e.g. [JSON-e](https://json-e.js.org/operators.html)). |
+| Typed placeholder templates | JSON templates with a small syntax for typed placeholders and fallback rules, plus an input contract you can inspect before rendering (the focus of **payload-vars**). |
 
-Use payload-vars when the payload shape and input rules should be defined together as data, with declarations such as `{{orderId:string}}` embedded directly in the template.
+**Define the output shape and input contract together, using a small placeholder syntax.** Choose payload-vars for configurable payloads where filling typed values into a predefined structure covers your needs. Declarations such as `{{orderId:string}}` keep the rules in the template, and `extractVariables()` lets an application or editor discover its inputs.
 
 The package has no runtime dependencies and supports browsers and Node.js 18+, with ES module and CommonJS entry points.
 
