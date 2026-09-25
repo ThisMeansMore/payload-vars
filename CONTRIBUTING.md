@@ -1,17 +1,33 @@
 # Contributing
 
-Work on a feature branch, update tests and docs, and add notes under **Unreleased** in `CHANGELOG.md`. Run `npm test`, commit, and merge your PR into `main`.
+**✋ MANUAL — Develop and write release notes**
 
-To release, start on up-to-date `main` with a clean working tree. Authenticate with `npm login` and `gh auth login` if needed; GitHub CLI needs permission to request Pages builds.
+Work on a feature branch and update tests and docs. Write a short description of your changes under **Unreleased** in `CHANGELOG.md`. Notes are **not generated from commits**; preparation stops if this section is empty. `npm run docs:sync` only regenerates documentation from existing content.
+
+Run `npm test`, commit your changes (including generated docs), and merge your PR into `main`.
+
+**✋ MANUAL — Start the release**
+
+Switch to up-to-date `main` with a clean working tree. Authenticate with `npm login` and `gh auth login` if needed; GitHub CLI needs permission to request Pages builds. Choose the version increment:
 
 ```sh
 npm run prepare-version -- patch  # or minor / major
-# Review the new CHANGELOG.md entry and add <!-- reviewed --> on its own line.
+```
+
+This automatically updates versions, moves Unreleased notes into a dated release section, and generates docs.
+
+**✋ MANUAL — Review before publishing**
+
+Edit the new version's notes in `CHANGELOG.md`, then add `<!-- reviewed -->` on its own line inside that section. Leave Unreleased empty and the prepared changes uncommitted. If you change the notes again, remove the marker until you have reviewed them again.
+
+When ready, run:
+
+```sh
 npm run publish-version
 ```
 
-Preparation updates versions, dates the changelog entry, and generates docs. Leave those changes uncommitted while you review. Keep Unreleased empty; if you edit the notes again, remove the marker until you have reviewed them again.
+This automatically validates, runs tests, removes review markers, commits, tags, publishes to npm, pushes to GitHub, and waits for Pages to deploy the release commit. Approval stays local for retries and is invalidated if the notes change.
 
-After the review and pre-publication checks pass, the command removes all review markers from the changelog and generated docs. Approval is remembered locally for retries and is invalidated if the notes change. Publication then commits, tags, publishes to npm, pushes to GitHub, and requests a Pages deployment. It finishes only when Pages reports the release commit deployed. If any step fails, fix the reported issue and rerun `npm run publish-version` from the same checkout. It reuses the prepared version and skips an identical package already on npm. A GitHub Release page remains optional.
+**✋ MANUAL — Only if a step fails:** fix the reported issue and rerun `npm run publish-version` from the same checkout. Do not prepare another version. An identical package already on npm is not published again. Creating a GitHub Release page is optional and separate.
 
-README and CHANGELOG are the documentation sources; the Pages-only footer lives in `docs/_includes/home-footer.md`. Builds, tests, and release commands generate the Pages files automatically. `npm run docs:sync` refreshes just the docs. Empty Unreleased sections are hidden on Pages. Include generated changes in ordinary development commits; the release command handles its own commit.
+README and CHANGELOG are the documentation sources; the Pages-only footer lives in `docs/_includes/home-footer.md`. Builds, tests, and release commands generate the Pages files automatically. Empty Unreleased sections are hidden on Pages.
