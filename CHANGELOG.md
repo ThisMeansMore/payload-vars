@@ -4,6 +4,10 @@ Notable changes, starting with 1.0.0. Historical dates follow Git tags.
 
 ## Unreleased
 
+## 1.1.8 — 2026-09-25
+
+- Improved releasing notes logic
+
 ### Changed
 
 - Release preparation drafts missing notes from commits and marks them for review; remove the review marker before publishing.
