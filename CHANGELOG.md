@@ -4,6 +4,8 @@ Notable changes, starting with 1.0.0. Historical dates follow Git tags.
 
 ## Unreleased
 
+## 1.1.7 — 2026-09-25
+
 ### Fixed
 
 - Hide the empty Unreleased heading on the documentation site.
