@@ -7,7 +7,7 @@ title: Getting started
 
 # payload-vars
 
-Package version: v1.2.1
+Package version: v1.2.2
 
 **Create payload templates as data, not code.** Variable names, types, and fallback rules live inside the template itself. Load a template at runtime, validate it, extract its variable contract, and render a JSON payload with supplied values.
 

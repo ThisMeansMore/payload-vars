@@ -9,6 +9,12 @@ title: Changelog archive
 
 Full notes for older releases. See the [changelog](changelog.md) for the latest five releases and a summary of this archive.
 
+## 1.1.6 — 2026-09-25
+
+### Changed
+
+- Remove internal review markers from changelogs before release while preserving safe publication retries.
+
 ## 1.1.5 — 2026-09-25
 
 ### Fixed
