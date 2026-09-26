@@ -103,7 +103,7 @@ template.render({ products: ['C'] });            // { products: ['C'] }
 | `UNSUPPORTED_TYPE` | `path`, `variableName`, `declaredType` |
 | `INVALID_FALLBACK_SYNTAX` | `path`, `variableName`, `placeholder` |
 | `VARIABLE_EXPRESSION_CONFLICT` | `variableName`, `declaration`, `declaredAt`, `conflictingDeclaration`, `conflictingAt` |
-| `INVALID_PLUGIN_NAME`, `DUPLICATE_PLUGIN_NAME` | `plugin` |
+| `INVALID_PLUGIN_NAME`, `DUPLICATE_PLUGIN_NAME`, `RESERVED_PLUGIN_NAME` | `plugin` |
 | `INVALID_PLUGIN_OPERATION_NAME`, `INVALID_PLUGIN_OPERATION` | `kind`, `operation`, `plugin` |
 | `UNKNOWN_PLUGIN_OPERATION` | `kind`, `operation`, `path`, `variableName` |
 | `VALIDATION_FAILED` | Runtime details, `kind`, `operation`, optional `valuePath` |

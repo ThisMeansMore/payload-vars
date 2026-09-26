@@ -8,7 +8,7 @@ type RegisteredTransformer = PayloadTransformer<string> | PayloadTransformer<num
   | PayloadTransformer<readonly string[]> | PayloadTransformer<readonly number[]>;
 
 export interface PayloadVarsPlugin {
-  /** Unique namespace used in references such as text.trim. */
+  /** Unique, non-reserved namespace used in references such as custom.trim. */
   name: string;
   validators?: Record<string, PayloadValidator>;
   transformers?: Record<string, RegisteredTransformer>;
@@ -57,17 +57,30 @@ function range(values: readonly string[] | readonly number[]): boolean {
 // Function parameter types are erased only at the runtime registry boundary.
 export type PluginFunction = (value: never) => unknown;
 const identifierPattern = new RegExp(`^${operationIdentifierSource}$`);
+const reservedNamespaces = new Set([
+  'text', 'number', 'boolean', 'date', 'collection', 'array', 'email', 'url', 'json',
+  'encoding', 'iso', 'time', 'phone', 'network', 'id', 'core',
+]);
 
 export function createRegistries(plugins: readonly PayloadVarsPlugin[] = []) {
   // Built-ins are private core capabilities; custom registrations cannot replace them.
   const registries = {
-    validator: new Map<string, PluginFunction>(Object.entries({ dateonly, isodatetime, email, domain, unique, range })),
-    transformer: new Map<string, PluginFunction>(Object.entries({ isodatetime: toIsoDateTime, domain: extractDomain })),
+    validator: new Map<string, PluginFunction>(Object.entries({
+      'date.dateonly': dateonly, 'date.isodatetime': isodatetime,
+      'email.email': email, 'email.domain': domain,
+      'collection.unique': unique, 'collection.range': range,
+    })),
+    transformer: new Map<string, PluginFunction>(Object.entries({
+      'date.isodatetime': toIsoDateTime, 'email.domain': extractDomain,
+    })),
   };
   const namespaces = new Set<string>();
   for (const plugin of plugins) {
     if (typeof plugin.name !== 'string' || !identifierPattern.test(plugin.name)) {
       throw new PayloadTemplateError({ code: 'INVALID_PLUGIN_NAME', plugin: plugin.name });
+    }
+    if (reservedNamespaces.has(plugin.name)) {
+      throw new PayloadTemplateError({ code: 'RESERVED_PLUGIN_NAME', plugin: plugin.name });
     }
     if (namespaces.has(plugin.name)) {
       throw new PayloadTemplateError({ code: 'DUPLICATE_PLUGIN_NAME', plugin: plugin.name });

@@ -32,7 +32,7 @@ interface RuntimeIssue {
 }
 export type PayloadTemplateIssue =
   | { code: 'INVALID_PLUGIN_NAME'; plugin: unknown }
-  | { code: 'DUPLICATE_PLUGIN_NAME'; plugin: string }
+  | { code: 'DUPLICATE_PLUGIN_NAME' | 'RESERVED_PLUGIN_NAME'; plugin: string }
   | { code: 'INVALID_PLUGIN_OPERATION_NAME' | 'INVALID_PLUGIN_OPERATION'; kind: PayloadOperation['kind']; operation: string; plugin: string }
   | { code: 'UNKNOWN_PLUGIN_OPERATION'; kind: PayloadOperation['kind']; operation: string; path: string; variableName: string }
   | (RuntimeIssue & { code: 'VALIDATION_FAILED' | 'PLUGIN_EXECUTION_FAILED' | 'INVALID_TRANSFORMER_RESULT'; kind: PayloadOperation['kind']; operation: string; valuePath?: string })

@@ -101,15 +101,15 @@ TypeScript infers `render()` inputs from literal templates. Use `as const` on se
 Chain `@` validators and `>` transformers to express what a value must satisfy and how it should change. Built-in plugins cover dates, email addresses, and collections. Add your own reusable business rules with a few functions; the template stays portable JSON.
 
 ```ts
-new PayloadTemplate('{{value:string @ email > domain}}')
+new PayloadTemplate('{{value:string @ email.email > email.domain}}')
   .render({ value: 'user@Example.com' }); // 'example.com'
 
-new PayloadTemplate('{{value:string[ @ dateonly > isodatetime ] @ range}}')
+new PayloadTemplate('{{value:string[ @ date.dateonly > date.isodatetime ] @ collection.range}}')
   .render({ value: ['2026-01-01', '2026-12-31'] });
 // ['2026-01-01T00:00:00.000Z', '2026-12-31T00:00:00.000Z']
 ```
 
-Use `@` for validation and `>` for transformation, in execution order. Existing `??` and `||` fallbacks still handle only nullish/falsy inputs; validation failures throw errors. Built-in operations are always available, including with `plugins: []`. Register custom extensions with `{ plugins: [customPlugin] }` and reference their operations as `@ customPlugin.validateSomething` or `> customPlugin.transformSomething`, using the plugin's `name` as its namespace. Custom operations cannot override built-ins.
+Use `@` for validation and `>` for transformation, in execution order. Existing `??` and `||` fallbacks still handle only nullish/falsy inputs; validation failures throw errors. Built-in operations are always available, including with `plugins: []`. Register custom extensions with `{ plugins: [customPlugin] }` and reference their operations as `@ customPlugin.validateSomething` or `> customPlugin.transformSomething`, using the plugin's `name` as its namespace. All operations require `namespace.operation`. Custom plugins cannot use the [16 reserved built-in namespaces](docs/plugins.md#reserved-namespaces) or override built-ins.
 
 **[Explore Plugins →](docs/plugins.md)** — built-ins, execution order, and a complete custom-plugin example.
 

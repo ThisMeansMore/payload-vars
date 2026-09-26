@@ -6,6 +6,12 @@ The latest five releases are detailed below. Older releases have one-line summar
 
 ## Unreleased
 
+### Breaking changes
+
+- Require `namespace.operation` for built-in and custom operations. Built-ins now use `date.dateonly`, `date.isodatetime`, `email.email`, `email.domain`, `collection.unique`, and `collection.range`; bare names are invalid syntax.
+- Reserve `text`, `number`, `boolean`, `date`, `collection`, `array`, `email`, `url`, `json`, `encoding`, `iso`, `time`, `phone`, `network`, `id`, and `core`. Custom registrations using these names fail with `RESERVED_PLUGIN_NAME`, including empty plugins and non-conflicting operations.
+- Update plugin examples, syntax documentation, and migration guidance for qualified built-ins and reserved namespaces.
+
 ## 1.3.0 — 2026-09-26
 
 ### Breaking changes

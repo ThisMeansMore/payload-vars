@@ -66,11 +66,11 @@ The outer fallback processes the supplied variable first. Only an actual array r
 
 ## Validators and transformers
 
-Use `@ name` to validate and `> name` to transform. Operation names use the same identifier syntax as variable names. Operations run left-to-right within a scope and precede that scope's optional fallback in the declaration:
+Use `@ namespace.operation` to validate and `> namespace.operation` to transform. Each segment uses the same identifier syntax as variable names. Operations run left-to-right within a scope and precede that scope's optional fallback in the declaration:
 
 ```text
-{{value:string @ email > domain}}
-{{value:string[ @ dateonly > isodatetime ?? omit ] @ range ?? throw}}
+{{value:string @ email.email > email.domain}}
+{{value:string[ @ date.dateonly > date.isodatetime ?? omit ] @ collection.range ?? throw}}
 ```
 
 At runtime, the whole-value fallback runs first, followed by type checking. For arrays, each member's fallback, type check, and operations run before collection operations. A fallback-produced `null` bypasses member operations but remains visible to collection operations; omitted members are removed first.
@@ -79,7 +79,7 @@ Validators return a boolean without modifying the input. `false` raises `VALIDAT
 
 See [Plugins](plugins.md) for the built-in operations, configuration, and custom validator and transformer examples.
 
-Plugin whitespace follows the existing canonical rules: `string[@dateonly>isodatetime]@range` becomes `string[ @ dateonly > isodatetime ] @ range`. Repeated declarations must include identical operations in identical order. Unknown operation names fail during construction. Built-ins use bare identifiers such as `@ email`; custom operations require `@ pluginName.validator` or `> pluginName.transformer`. Each segment matches `[A-Za-z_][A-Za-z0-9_]*`, with exactly one dot and no whitespace around it for custom references. This syntax applies in both member and whole-value scopes.
+Plugin whitespace follows the existing canonical rules: `string[@date.dateonly>date.isodatetime]@collection.range` becomes `string[ @ date.dateonly > date.isodatetime ] @ collection.range`. Repeated declarations must include identical operations in identical order. Unknown operation names fail during construction. Built-in and custom operations both require `@ namespace.operation` or `> namespace.operation`, for example `@ email.email` or `> custom.trim`. Each segment matches `[A-Za-z_][A-Za-z0-9_]*`, with exactly one dot and no whitespace around it for all operation references. This syntax applies in both member and whole-value scopes.
 
 ## Omission
 

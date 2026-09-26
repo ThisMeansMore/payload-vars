@@ -14,9 +14,9 @@ test('built-ins are always available in both package formats', async () => {
       assert.equal(Object.hasOwn(api, name), false);
     }
     for (const options of [undefined, { plugins: [] }, { plugins: [plugin({ email: () => false })] }]) {
-      assert.equal(new api.PayloadTemplate('{{x:string @ dateonly > isodatetime}}', options)
+      assert.equal(new api.PayloadTemplate('{{x:string @ date.dateonly > date.isodatetime}}', options)
         .render({ x: '2026-01-01' }), '2026-01-01T00:00:00.000Z');
-      assert.equal(new api.PayloadTemplate('{{x:string @ email > domain @ domain}}', options)
+      assert.equal(new api.PayloadTemplate('{{x:string @ email.email > email.domain @ email.domain}}', options)
         .render({ x: 'user@Example.com' }), 'example.com');
     }
   }
@@ -35,12 +35,12 @@ test('namespaces isolate callbacks and built-ins with exact lookup', () => {
   assert.equal(new PayloadTemplate('{{x:string > test.domain}}', options).render({ x: 'x' }), 'custom');
   assert.throws(() => new PayloadTemplate('{{x:string @ test.email}}', options).render({ x: 'a@example.com' }),
     e => issue('VALIDATION_FAILED')(e) && e.issue.operation === 'test.email');
-  for (const reference of ['same', 'missing.same', 'test.missing', 'toString', 'date.dateonly']) {
+  for (const reference of ['missing.same', 'test.missing', 'test.toString', 'date.missing', 'Date.dateonly']) {
     assert.throws(() => new PayloadTemplate(`{{x:string @ ${reference}}}`, options),
       e => issue('UNKNOWN_PLUGIN_OPERATION')(e) && e.issue.operation === reference);
   }
   assert.throws(() => new PayloadTemplate('{{x:string > other.same}}', options), issue('UNKNOWN_PLUGIN_OPERATION'));
-  assert.throws(() => new PayloadTemplate('{{x:string > dateonly}}'), issue('UNKNOWN_PLUGIN_OPERATION'));
+  assert.throws(() => new PayloadTemplate('{{x:string > date.dateonly}}'), issue('UNKNOWN_PLUGIN_OPERATION'));
   assert.throws(() => new PayloadTemplate('{{x:string @ test.same}}'), issue('UNKNOWN_PLUGIN_OPERATION'));
 });
 
@@ -51,6 +51,38 @@ test('duplicate namespaces fail even for empty or disjoint plugins', () => {
       assert.deepEqual(error.issue, { code: 'DUPLICATE_PLUGIN_NAME', plugin: 'test' });
       return true;
     });
+  }
+});
+
+test('all reserved namespaces reject custom registrations in both package formats', async () => {
+  const esm = await import('../dist/index.js');
+  const cjs = createRequire(import.meta.url)('../dist/cjs/index.js');
+  for (const api of [esm, cjs]) {
+    for (const name of ['text', 'number', 'boolean', 'date', 'collection', 'array', 'email', 'url',
+      'json', 'encoding', 'iso', 'time', 'phone', 'network', 'id', 'core']) {
+      for (const extension of [{}, { validators: { extra: () => true } }, { transformers: { extra: x => x } }]) {
+        assert.throws(() => new api.PayloadTemplate(null, { plugins: [{ name, ...extension }] }), error => {
+          assert.ok(error instanceof api.PayloadTemplateError);
+          assert.deepEqual(error.issue, { code: 'RESERVED_PLUGIN_NAME', plugin: name });
+          return true;
+        });
+      }
+    }
+    assert.equal(new api.PayloadTemplate('{{x:string @ Text.check}}', {
+      plugins: [{ name: 'Text', validators: { check: () => true } }],
+    }).render({ x: 'ok' }), 'ok');
+  }
+});
+
+test('bare built-in and custom references are invalid in both scopes', () => {
+  for (const name of ['dateonly', 'isodatetime', 'email', 'domain', 'unique', 'range', 'same', 'toString']) {
+    for (const operator of ['@', '>']) {
+      for (const expression of [`string ${operator} ${name}`, `string[ ${operator} ${name} ]`]) {
+        assert.throws(() => new PayloadTemplate(`{{x:${expression}}}`, {
+          plugins: [plugin({ same: () => true }, { same: x => x })],
+        }), issue('INVALID_FALLBACK_SYNTAX'));
+      }
+    }
   }
 });
 
@@ -80,23 +112,23 @@ test('operations execute left-to-right in member then collection scope', () => {
     after: x => { calls.push(['after', x]); return true; },
     collection: xs => { calls.push(['collection', [...xs]]); return true; },
   }, { increment: x => x + 1, reverse: xs => xs.reverse() });
-  const template = new PayloadTemplate('{{x:number[@test.before>test.increment@test.after??omit]@test.collection>test.reverse@range}}',
+  const template = new PayloadTemplate('{{x:number[@test.before>test.increment@test.after??omit]@test.collection>test.reverse@collection.range}}',
     { plugins: [custom] });
   const input = [2, null, 1];
   assert.deepEqual(template.render({ x: input }), [2, 3]);
   assert.deepEqual(input, [2, null, 1]);
   assert.deepEqual(calls, [['before', 2], ['after', 3], ['before', 1], ['after', 2], ['collection', [3, 2]]]);
-  const dates = new PayloadTemplate('{{x:string[ @ dateonly > isodatetime ] @ range}}');
+  const dates = new PayloadTemplate('{{x:string[ @ date.dateonly > date.isodatetime ] @ collection.range}}');
   assert.deepEqual(dates.render({ x: ['2026-01-01', '2026-12-31'] }), ['2026-01-01T00:00:00.000Z', '2026-12-31T00:00:00.000Z']);
 });
 
 test('fallbacks are evaluated before plugins and never handle validation failures', () => {
   for (const operator of ['??', '||']) {
-    const template = new PayloadTemplate({ x: `{{x:string @ dateonly ${operator} omit}}` });
+    const template = new PayloadTemplate({ x: `{{x:string @ date.dateonly ${operator} omit}}` });
     assert.deepEqual(template.render({}), {});
     assert.throws(() => template.render({ x: 'bad' }), issue('VALIDATION_FAILED'));
   }
-  const template = new PayloadTemplate('{{x:number[ @ test.positive ?? omit ] @ unique || null}}', {
+  const template = new PayloadTemplate('{{x:number[ @ test.positive ?? omit ] @ collection.unique || null}}', {
     plugins: [plugin({ positive: x => x > 0 })],
   });
   assert.equal(template.render({ x: false }), null);
@@ -105,7 +137,7 @@ test('fallbacks are evaluated before plugins and never handle validation failure
   assert.throws(() => template.render({ x: [1, 1] }), issue('VALIDATION_FAILED'));
   const empty = new PayloadTemplate('{{x:string > test.empty || null}}', { plugins: [plugin({}, { empty: () => '' })] });
   assert.equal(empty.render({ x: 'value' }), '');
-  const nulls = new PayloadTemplate('{{x:string[ @ dateonly ?? null ] @ unique}}');
+  const nulls = new PayloadTemplate('{{x:string[ @ date.dateonly ?? null ] @ collection.unique}}');
   assert.deepEqual(nulls.render({ x: [null, '2026-01-01'] }), [null, '2026-01-01']);
 });
 
@@ -133,37 +165,37 @@ test('invalid transformer outputs and plugin exceptions are owned errors', () =>
 
 test('built-ins reject invalid calendars, timestamps, email addresses, and collections', () => {
   for (const [name, values] of [
-    ['dateonly', ['2026-02-29', '2024-02-30', '2026-13-01', '2026-1-1', '']],
-    ['isodatetime', ['2026-01-01', '2026-02-30T00:00:00Z', '2026-01-01T24:00:00Z', '2026-01-01T00:00:00']],
-    ['email', ['a@@example.com', '.a@example.com', 'a..b@example.com', 'a@-example.com', 'a b@example.com']],
-    ['domain', ['localhost', '-example.com', 'example..com', 'example.com/']],
+    ['date.dateonly', ['2026-02-29', '2024-02-30', '2026-13-01', '2026-1-1', '']],
+    ['date.isodatetime', ['2026-01-01', '2026-02-30T00:00:00Z', '2026-01-01T24:00:00Z', '2026-01-01T00:00:00']],
+    ['email.email', ['a@@example.com', '.a@example.com', 'a..b@example.com', 'a@-example.com', 'a b@example.com']],
+    ['email.domain', ['localhost', '-example.com', 'example..com', 'example.com/']],
   ]) for (const x of values) {
     assert.throws(() => new PayloadTemplate(`{{x:string @ ${name}}}`).render({ x }), issue('VALIDATION_FAILED'));
   }
-  assert.equal(new PayloadTemplate('{{x:string @ dateonly}}').render({ x: '2024-02-29' }), '2024-02-29');
-  assert.equal(new PayloadTemplate('{{x:string @ isodatetime > isodatetime}}').render({ x: '2026-01-01T01:00:00+01:00' }), '2026-01-01T00:00:00.000Z');
+  assert.equal(new PayloadTemplate('{{x:string @ date.dateonly}}').render({ x: '2024-02-29' }), '2024-02-29');
+  assert.equal(new PayloadTemplate('{{x:string @ date.isodatetime > date.isodatetime}}').render({ x: '2026-01-01T01:00:00+01:00' }), '2026-01-01T00:00:00.000Z');
   for (const x of [[], [1], [1, 1], [2, 1], [1, 2, 3]]) {
-    assert.throws(() => new PayloadTemplate('{{x:number[] @ range}}').render({ x }), issue('VALIDATION_FAILED'));
+    assert.throws(() => new PayloadTemplate('{{x:number[] @ collection.range}}').render({ x }), issue('VALIDATION_FAILED'));
   }
 });
 
 test('normalization, extraction, conflicts and highlighting retain ordered operations', () => {
-  const template = new PayloadTemplate('{{ x : string [@dateonly>isodatetime??omit]@range??throw }}');
-  const canonical = '{{x:string[ @ dateonly > isodatetime ?? omit ] @ range ?? throw}}';
+  const template = new PayloadTemplate('{{ x : string [@date.dateonly>date.isodatetime??omit]@collection.range??throw }}');
+  const canonical = '{{x:string[ @ date.dateonly > date.isodatetime ?? omit ] @ collection.range ?? throw}}';
   assert.equal(template.toJSON(), canonical);
   assert.equal(new PayloadTemplate(canonical).toJSON(), canonical);
   const extracted = template.extractVariables();
-  assert.deepEqual(extracted[0].memberOperations, [{ kind: 'validator', name: 'dateonly' }, { kind: 'transformer', name: 'isodatetime' }]);
+  assert.deepEqual(extracted[0].memberOperations, [{ kind: 'validator', name: 'date.dateonly' }, { kind: 'transformer', name: 'date.isodatetime' }]);
   extracted[0].memberOperations[0].name = 'corrupt';
-  assert.equal(template.extractVariables()[0].memberOperations[0].name, 'dateonly');
+  assert.equal(template.extractVariables()[0].memberOperations[0].name, 'date.dateonly');
   const [{ tokens }] = template.tokenizePayloadExpression();
   assert.equal(tokens.map(t => t.text).join(''), canonical);
   assert.equal(tokens.some(t => t.kind === 'unknown'), false);
   assert.deepEqual(tokens.filter(t => ['validator', 'transformer'].includes(t.kind)).map(t => [t.kind, t.text]),
-    [['validator', 'dateonly'], ['transformer', 'isodatetime'], ['validator', 'range']]);
+    [['validator', 'date.dateonly'], ['transformer', 'date.isodatetime'], ['validator', 'collection.range']]);
   for (const token of tokens) assert.equal(canonical.slice(token.start, token.end), token.text);
-  assert.throws(() => new PayloadTemplate(['{{x:string @ dateonly > isodatetime}}', '{{x:string > isodatetime @ dateonly}}']), issue('VARIABLE_EXPRESSION_CONFLICT'));
-  for (const tail of ['@', '>', '@ date only', '?? null @ dateonly', '@ dateonly[]', '[@ dateonly] >', '@@ dateonly']) {
+  assert.throws(() => new PayloadTemplate(['{{x:string @ date.dateonly > date.isodatetime}}', '{{x:string > date.isodatetime @ date.dateonly}}']), issue('VARIABLE_EXPRESSION_CONFLICT'));
+  for (const tail of ['@', '>', '@ date only', '?? null @ date.dateonly', '@ date.dateonly[]', '[@ date.dateonly] >', '@@ date.dateonly']) {
     assert.throws(() => new PayloadTemplate(`{{x:string ${tail}}}`), issue('INVALID_FALLBACK_SYNTAX'));
   }
 });

@@ -3,4 +3,4 @@ export const typeSource = 'string|number|boolean';
 export const actionSource = 'null|omit|throw';
 export const operatorSource = String.raw`\?\?|\|\|`;
 export const operationIdentifierSource = '[A-Za-z_][A-Za-z0-9_]*';
-export const operationNameSource = String.raw`${operationIdentifierSource}(?:\.${operationIdentifierSource})?`;
+export const operationNameSource = String.raw`${operationIdentifierSource}\.${operationIdentifierSource}`;
