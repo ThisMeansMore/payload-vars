@@ -6,6 +6,13 @@ The latest five releases are detailed below. Older releases have one-line summar
 
 ## Unreleased
 
+### Breaking changes
+
+- Built-in validators and transformers are always available, regardless of `plugins` configuration.
+- Custom operations require `pluginName.operationName`; plugin namespaces must be unique identifiers. Bare custom aliases are no longer supported.
+- Remove the `builtInPlugins`, `datePlugin`, `emailPlugin`, and `collectionPlugin` registration exports. Register only custom plugins.
+- Replace `DUPLICATE_PLUGIN_OPERATION` with `DUPLICATE_PLUGIN_NAME`, and add construction errors for invalid plugin names, operation names, and callbacks.
+
 ## 1.2.2 — 2026-09-26
 
 ### Changes

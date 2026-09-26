@@ -109,7 +109,7 @@ new PayloadTemplate('{{value:string[ @ dateonly > isodatetime ] @ range}}')
 // ['2026-01-01T00:00:00.000Z', '2026-12-31T00:00:00.000Z']
 ```
 
-Use `@` for validation and `>` for transformation, in execution order. Existing `??` and `||` fallbacks still handle only nullish/falsy inputs; validation failures throw errors. Supply `{ plugins: [...] }` as the constructor's second argument to select plugins, or extend the defaults with `{ plugins: [...builtInPlugins, customPlugin] }`.
+Use `@` for validation and `>` for transformation, in execution order. Existing `??` and `||` fallbacks still handle only nullish/falsy inputs; validation failures throw errors. Built-in operations are always available, including with `plugins: []`. Register custom extensions with `{ plugins: [customPlugin] }` and reference their operations as `@ customPlugin.validateSomething` or `> customPlugin.transformSomething`, using the plugin's `name` as its namespace. Custom operations cannot override built-ins.
 
 **[Explore Plugins →](docs/plugins.md)** — built-ins, execution order, and a complete custom-plugin example.
 

@@ -16,6 +16,7 @@ The template stores operation names. Your application supplies the functions beh
 - [Built-in operations](#built-in-operations)
 - [Writing a custom plugin](#writing-a-custom-plugin)
 - [Errors and TypeScript](#errors-and-typescript)
+- [Migrating from flat plugin names](#migrating-from-flat-plugin-names)
 
 ## Validators and transformers
 
@@ -37,7 +38,7 @@ template.render({ email: 'user@Example.com' });
 
 Here `string` checks the base type, `@ email` validates the address, and `> domain` extracts a lowercase domain. Both the supplied email and the resulting domain are strings. A transformer cannot turn a string into a number or an object.
 
-Operation order matters: each operation receives the preceding operation's result. Validators leave the value unchanged. Operation names use the same identifier rules as variable names; a plugin's display name is not a namespace in the expression.
+Operation order matters: each operation receives the preceding operation's result. Validators leave the value unchanged. Built-in operations use bare names such as `email`. Custom operations require `pluginName.operationName`, such as `text.trim`. Each name segment must match `[A-Za-z_][A-Za-z0-9_]*`. Names are case-sensitive; exactly one dot and no whitespace around it are allowed. Variable names remain unchanged.
 
 ## Execution order and array scopes
 
@@ -60,41 +61,41 @@ Transformer results are checked against the declared type without rerunning fall
 
 ## Plugin configuration
 
-The optional second constructor argument is `PayloadTemplateOptions`. Omit `plugins` to use `builtInPlugins`; explicitly supplying an array uses exactly that collection, including `[]` to disable all plugins.
+The optional second constructor argument is `PayloadTemplateOptions`. Its `plugins` array registers custom extensions. Built-in operations are always available, including when `plugins` is omitted or `[]`. Custom plugins cannot override built-ins.
 
 ```ts
-import { PayloadTemplate, builtInPlugins, datePlugin,
+import { PayloadTemplate,
   type PayloadVarsPlugin, type PayloadValidator, type PayloadTransformer } from 'payload-vars';
 
 const positive: PayloadValidator<number> = value => value > 0;
 const trim: PayloadTransformer<string> = value => value.trim();
 const customPlugin: PayloadVarsPlugin = {
-  name: 'text-and-numbers',
+  name: 'textAndNumbers',
   validators: { positive },
   transformers: { trim },
 };
 
-new PayloadTemplate('{{x:string @ dateonly}}', { plugins: [datePlugin] });
-new PayloadTemplate('{{x:string > trim @ email}}', {
-  plugins: [...builtInPlugins, customPlugin],
+new PayloadTemplate('{{x:string @ dateonly}}', { plugins: [] });
+new PayloadTemplate('{{x:string > textAndNumbers.trim @ email}}', {
+  plugins: [customPlugin],
 });
 ```
 
 `PayloadValidator<T>` is `(value: T) => boolean`; `PayloadTransformer<T>` is `(value: T) => T`. Annotate callback parameters or use these aliases when defining custom functions. Collection callbacks can use typed arrays such as `readonly string[]` or `number[]`. Plugins are responsible for providing operations suitable for the scope where they are used; template syntax has no plugin type metadata. Callbacks must be synchronous. Validators should return `false` for invalid input, rather than throwing. Exceptions are wrapped in `PLUGIN_EXECUTION_FAILED` without exposing their contents.
 
-Each `PayloadVarsPlugin` has a display `name` and optional `validators` and `transformers` records. Operation aliases must be unique within each registry across all configured plugins; a validator and transformer may share an alias. Duplicate aliases throw `DUPLICATE_PLUGIN_OPERATION` during construction, including when the same plugin is registered twice. Display names do not need to be unique and are used in error details. Registry functions are snapshotted during construction.
+Each `PayloadVarsPlugin` has a unique namespace `name` and optional `validators` and `transformers` records. Record keys are local operation names without dots. Different plugins may export the same operation names, and a validator and transformer may share a name. Duplicate namespaces throw `DUPLICATE_PLUGIN_NAME` during construction, even for empty plugins or repeated registration of the same object. Invalid identifiers and non-function callbacks are rejected during construction. Registry functions are snapshotted during construction.
 
-`datePlugin`, `emailPlugin`, `collectionPlugin`, and the readonly `builtInPlugins` collection are exported individually. See the [built-in operations](#built-in-operations) below.
+Lookup is exact: bare references resolve only to built-ins; qualified references resolve only to configured custom plugins. There are no aliases, overrides, or registration-order precedence rules. Built-in definitions are private core capabilities and are not exported as registration objects.
 
 ## Built-in operations
 
-The built-ins are enabled by default:
+The built-ins are always available:
 
-| Plugin | Validators | Transformers |
+| Group | Validators | Transformers |
 | --- | --- | --- |
-| `datePlugin` | `dateonly`, `isodatetime` | `isodatetime` |
-| `emailPlugin` | `email`, `domain` | `domain` |
-| `collectionPlugin` | `unique`, `range` | None |
+| Dates | `dateonly`, `isodatetime` | `isodatetime` |
+| Email | `email`, `domain` | `domain` |
+| Collections | `unique`, `range` | None |
 
 `dateonly` requires a real calendar date in `YYYY-MM-DD` form. `isodatetime` requires a valid date and time with seconds and an explicit `Z` or `±HH:MM` offset; fractional seconds are optional. The transformer accepts either form and returns UTC ISO text, for example `2026-01-01T00:00:00.000Z`.
 
@@ -107,7 +108,7 @@ The built-ins are enabled by default:
 Keep application-specific rules in a reusable plugin. This example trims a name and then checks that it contains text:
 
 ```ts
-import { PayloadTemplate, builtInPlugins, type PayloadVarsPlugin } from 'payload-vars';
+import { PayloadTemplate, type PayloadVarsPlugin } from 'payload-vars';
 
 const textPlugin: PayloadVarsPlugin = {
   name: 'text',
@@ -120,29 +121,38 @@ const textPlugin: PayloadVarsPlugin = {
 };
 
 const greeting = new PayloadTemplate({
-  name: '{{name:string > trim @ nonempty}}',
-}, { plugins: [...builtInPlugins, textPlugin] });
+  name: '{{name:string > text.trim @ text.nonempty}}',
+}, { plugins: [textPlugin] });
 
 greeting.render({ name: '  Ada  ' }); // { name: 'Ada' }
 greeting.render({ name: '   ' });    // throws VALIDATION_FAILED
 ```
 
-Use synchronous, deterministic callbacks and avoid mutating external state. A validator should return a boolean; a transformer should return a value of the same type. Plugin callbacks receive values, not the full variables object. Register only the capabilities a template needs when choosing an explicit plugin set.
+Use synchronous, deterministic callbacks and avoid mutating external state. A validator should return a boolean; a transformer should return a value of the same type. Plugin callbacks receive values, not the full variables object. Register the custom plugins a template needs; built-ins require no registration.
 
 ## Errors and TypeScript
 
-Construction checks that every operation name exists and that aliases are unique within each registry. Rendering checks values and executes callbacks:
+Construction checks plugin namespaces, operation identifiers, callback functions, and that every referenced operation exists. Rendering checks values and executes callbacks:
 
 | Code | Meaning |
 | --- | --- |
 | `UNKNOWN_PLUGIN_OPERATION` | The expression names an operation that was not registered. |
-| `DUPLICATE_PLUGIN_OPERATION` | Two configured entries use the same alias in the same registry. |
+| `DUPLICATE_PLUGIN_NAME` | Two configured plugins use the same namespace. |
+| `INVALID_PLUGIN_NAME` | A plugin namespace is not a valid identifier. |
+| `INVALID_PLUGIN_OPERATION_NAME` | A local operation key is not a valid identifier. |
+| `INVALID_PLUGIN_OPERATION` | A registered callback is not a function. |
 | `VALIDATION_FAILED` | A validator did not return `true`. |
 | `PLUGIN_EXECUTION_FAILED` | A callback threw; its exception contents are not exposed. |
 | `INVALID_TRANSFORMER_RESULT` | A transformer returned an invalid value for the declared type. |
 
-`PayloadTemplateError.issue` identifies the operation and variable; member errors include the original input member path. See [structured errors](development.md#errors) for complete fields.
+`PayloadTemplateError.issue` identifies the full operation reference (including the namespace for custom callbacks) and variable; member errors include the original input member path. See [structured errors](development.md#errors) for complete fields.
 
 Plugin validators do not narrow the TypeScript input type: `string @ email` still accepts a `string` at compile time. Email validity is checked at runtime. The syntax carries no metadata linking a callback's parameter type to a scope, so configure and use operations with compatible base types. See [TypeScript input inference](development.md#typescript-input-inference).
+
+## Migrating from flat plugin names
+
+Change custom references such as `> trim` to `> text.trim`, using the plugin's `name`. Rename plugin names containing hyphens, spaces, or dots to valid identifiers. Remove built-in plugins from configuration: `{ plugins: [...builtInPlugins, textPlugin] }` becomes `{ plugins: [textPlugin] }`.
+
+The `builtInPlugins`, `datePlugin`, `emailPlugin`, and `collectionPlugin` registration exports have been removed. `plugins: []` now retains all built-ins. Bare custom operation aliases are no longer supported, and duplicate plugin namespaces are rejected even when their operations differ. These are breaking changes.
 
 <!-- {% endraw %} -->

@@ -1,53 +1,76 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
-import { PayloadTemplate, PayloadTemplateError, builtInPlugins, datePlugin, emailPlugin, collectionPlugin } from '../dist/index.js';
+import { PayloadTemplate, PayloadTemplateError } from '../dist/index.js';
 
 const plugin = (validators = {}, transformers = {}) => ({ name: 'test', validators, transformers });
 const issue = code => error => error instanceof PayloadTemplateError && error.issue.code === code;
 
-test('built-in capability buckets work in both package formats', () => {
-  assert.deepEqual(builtInPlugins, [datePlugin, emailPlugin, collectionPlugin]);
+test('built-ins are always available in both package formats', async () => {
+  const esm = await import('../dist/index.js');
   const cjs = createRequire(import.meta.url)('../dist/cjs/index.js');
-  for (const api of [{ PayloadTemplate, builtInPlugins }, cjs]) {
-    const template = new api.PayloadTemplate('{{x:string @ dateonly > isodatetime}}', { plugins: api.builtInPlugins });
-    assert.equal(template.render({ x: '2026-01-01' }), '2026-01-01T00:00:00.000Z');
+  for (const api of [esm, cjs]) {
+    for (const name of ['builtInPlugins', 'datePlugin', 'emailPlugin', 'collectionPlugin']) {
+      assert.equal(Object.hasOwn(api, name), false);
+    }
+    for (const options of [undefined, { plugins: [] }, { plugins: [plugin({ email: () => false })] }]) {
+      assert.equal(new api.PayloadTemplate('{{x:string @ dateonly > isodatetime}}', options)
+        .render({ x: '2026-01-01' }), '2026-01-01T00:00:00.000Z');
+      assert.equal(new api.PayloadTemplate('{{x:string @ email > domain @ domain}}', options)
+        .render({ x: 'user@Example.com' }), 'example.com');
+    }
   }
-  assert.throws(() => new PayloadTemplate(null, { plugins: [...builtInPlugins, ...cjs.builtInPlugins] }),
-    issue('DUPLICATE_PLUGIN_OPERATION'));
-  assert.equal(new PayloadTemplate('{{x:string @ email > domain @ domain}}').render({ x: 'user@Example.com' }), 'example.com');
 });
 
-test('explicit configuration replaces defaults and isolates registries', () => {
-  for (const plugins of [[], [emailPlugin]]) {
-    assert.throws(() => new PayloadTemplate('{{x:string @ dateonly}}', { plugins }), issue('UNKNOWN_PLUGIN_OPERATION'));
-  }
-  const first = plugin({ same: x => x === 'ok' }, { same: x => x.toUpperCase() });
-  const template = new PayloadTemplate('{{x:string @ same > same}}', { plugins: [first] });
+test('namespaces isolate callbacks and built-ins with exact lookup', () => {
+  const first = plugin({ same: x => x === 'ok', email: () => false }, { same: x => x.toUpperCase(), domain: () => 'custom' });
+  const second = { name: 'other', validators: { same: x => x === 'OK' } };
+  const options = { plugins: [first, second] };
+  const template = new PayloadTemplate('{{x:string @ test.same > test.same @ other.same}}', options);
   first.validators.same = () => false;
   first.transformers.same = () => null;
+  first.name = 'changed';
   assert.equal(template.render({ x: 'ok' }), 'OK');
-  for (const plugins of [[plugin({ x: () => true }), plugin({ x: () => true })],
-    [plugin({}, { x: x => x }), plugin({}, { x: x => x })]]) {
-    assert.throws(() => new PayloadTemplate(null, { plugins }), issue('DUPLICATE_PLUGIN_OPERATION'));
+  first.name = 'test';
+  assert.equal(new PayloadTemplate('{{x:string > test.domain}}', options).render({ x: 'x' }), 'custom');
+  assert.throws(() => new PayloadTemplate('{{x:string @ test.email}}', options).render({ x: 'a@example.com' }),
+    e => issue('VALIDATION_FAILED')(e) && e.issue.operation === 'test.email');
+  for (const reference of ['same', 'missing.same', 'test.missing', 'toString', 'date.dateonly']) {
+    assert.throws(() => new PayloadTemplate(`{{x:string @ ${reference}}}`, options),
+      e => issue('UNKNOWN_PLUGIN_OPERATION')(e) && e.issue.operation === reference);
   }
-  assert.throws(() => new PayloadTemplate('{{x:string @ toString}}'), issue('UNKNOWN_PLUGIN_OPERATION'));
+  assert.throws(() => new PayloadTemplate('{{x:string > other.same}}', options), issue('UNKNOWN_PLUGIN_OPERATION'));
   assert.throws(() => new PayloadTemplate('{{x:string > dateonly}}'), issue('UNKNOWN_PLUGIN_OPERATION'));
+  assert.throws(() => new PayloadTemplate('{{x:string @ test.same}}'), issue('UNKNOWN_PLUGIN_OPERATION'));
 });
 
-test('repeated registration rejects duplicate aliases for either operation kind', () => {
-  for (const [kind, custom] of [
-    ['validator', plugin({ same: () => true })],
-    ['transformer', plugin({}, { same: x => x })],
-  ]) {
-    assert.throws(() => new PayloadTemplate(null, { plugins: [custom, custom] }), error => {
-      assert.ok(error instanceof PayloadTemplateError);
-      assert.deepEqual(error.issue, {
-        code: 'DUPLICATE_PLUGIN_OPERATION', kind, operation: 'same', plugin: 'test',
-      });
+test('duplicate namespaces fail even for empty or disjoint plugins', () => {
+  const custom = plugin({ same: () => true });
+  for (const plugins of [[custom, custom], [plugin(), plugin()], [custom, plugin({}, { other: x => x })]]) {
+    assert.throws(() => new PayloadTemplate(null, { plugins }), error => {
+      assert.deepEqual(error.issue, { code: 'DUPLICATE_PLUGIN_NAME', plugin: 'test' });
       return true;
     });
   }
+});
+
+test('registration validates names and callbacks', () => {
+  for (const name of ['', '1test', 'a.b', 'a-b', 'a b', '$test', 'é', null, 123]) {
+    assert.throws(() => new PayloadTemplate(null, { plugins: [{ name }] }), issue('INVALID_PLUGIN_NAME'));
+  }
+  for (const kind of ['validators', 'transformers']) {
+    for (const name of ['', 'a.b', '1op', 'a-b', 'a b', '$op']) {
+      assert.throws(() => new PayloadTemplate(null, { plugins: [{ name: 'test', [kind]: { [name]: x => x } }] }),
+        issue('INVALID_PLUGIN_OPERATION_NAME'));
+    }
+    for (const fn of [null, undefined, true, 1, 'callback', {}]) {
+      assert.throws(() => new PayloadTemplate(null, { plugins: [{ name: 'test', [kind]: { bad: fn } }] }),
+        e => issue('INVALID_PLUGIN_OPERATION')(e) && e.issue.operation === 'test.bad');
+    }
+  }
+  assert.equal(new PayloadTemplate('{{x:string @ _test2.do_something}}', {
+    plugins: [{ name: '_test2', validators: { do_something: () => true } }],
+  }).render({ x: 'ok' }), 'ok');
 });
 
 test('operations execute left-to-right in member then collection scope', () => {
@@ -57,8 +80,8 @@ test('operations execute left-to-right in member then collection scope', () => {
     after: x => { calls.push(['after', x]); return true; },
     collection: xs => { calls.push(['collection', [...xs]]); return true; },
   }, { increment: x => x + 1, reverse: xs => xs.reverse() });
-  const template = new PayloadTemplate('{{x:number[@before>increment@after??omit]@collection>reverse@range}}',
-    { plugins: [...builtInPlugins, custom] });
+  const template = new PayloadTemplate('{{x:number[@test.before>test.increment@test.after??omit]@test.collection>test.reverse@range}}',
+    { plugins: [custom] });
   const input = [2, null, 1];
   assert.deepEqual(template.render({ x: input }), [2, 3]);
   assert.deepEqual(input, [2, null, 1]);
@@ -73,14 +96,14 @@ test('fallbacks are evaluated before plugins and never handle validation failure
     assert.deepEqual(template.render({}), {});
     assert.throws(() => template.render({ x: 'bad' }), issue('VALIDATION_FAILED'));
   }
-  const template = new PayloadTemplate('{{x:number[ @ positive ?? omit ] @ unique || null}}', {
-    plugins: [...builtInPlugins, plugin({ positive: x => x > 0 })],
+  const template = new PayloadTemplate('{{x:number[ @ test.positive ?? omit ] @ unique || null}}', {
+    plugins: [plugin({ positive: x => x > 0 })],
   });
   assert.equal(template.render({ x: false }), null);
   assert.deepEqual(template.render({ x: [null, 1, 2] }), [1, 2]);
   assert.throws(() => template.render({ x: [null, -1] }), e => issue('VALIDATION_FAILED')(e) && e.issue.valuePath === '$[1]');
   assert.throws(() => template.render({ x: [1, 1] }), issue('VALIDATION_FAILED'));
-  const empty = new PayloadTemplate('{{x:string > empty || null}}', { plugins: [plugin({}, { empty: () => '' })] });
+  const empty = new PayloadTemplate('{{x:string > test.empty || null}}', { plugins: [plugin({}, { empty: () => '' })] });
   assert.equal(empty.render({ x: 'value' }), '');
   const nulls = new PayloadTemplate('{{x:string[ @ dateonly ?? null ] @ unique}}');
   assert.deepEqual(nulls.render({ x: [null, '2026-01-01'] }), [null, '2026-01-01']);
@@ -88,21 +111,21 @@ test('fallbacks are evaluated before plugins and never handle validation failure
 
 test('invalid transformer outputs and plugin exceptions are owned errors', () => {
   for (const output of [null, undefined, Symbol('omit'), 1, {}, ['x'], Promise.resolve('x')]) {
-    const template = new PayloadTemplate('{{x:string > bad ?? null}}', { plugins: [plugin({}, { bad: () => output })] });
+    const template = new PayloadTemplate('{{x:string > test.bad ?? null}}', { plugins: [plugin({}, { bad: () => output })] });
     assert.throws(() => template.render({ x: 'x' }), issue('INVALID_TRANSFORMER_RESULT'));
   }
   for (const output of [[1], [null], [undefined], Array(1), 'x']) {
-    const template = new PayloadTemplate('{{x:string[] > bad}}', { plugins: [plugin({}, { bad: () => output })] });
+    const template = new PayloadTemplate('{{x:string[] > test.bad}}', { plugins: [plugin({}, { bad: () => output })] });
     assert.throws(() => template.render({ x: [] }), issue('INVALID_TRANSFORMER_RESULT'));
   }
-  const invalidNumber = new PayloadTemplate('{{x:number > bad}}', { plugins: [plugin({}, { bad: () => NaN })] });
+  const invalidNumber = new PayloadTemplate('{{x:number > test.bad}}', { plugins: [plugin({}, { bad: () => NaN })] });
   assert.throws(() => invalidNumber.render({ x: 1 }), issue('INVALID_TRANSFORMER_RESULT'));
   const throws = () => { throw new Error('private input'); };
   for (const [operator, p] of [['@', plugin({ bad: throws })], ['>', plugin({}, { bad: throws })]]) {
-    assert.throws(() => new PayloadTemplate(`{{x:string ${operator} bad}}`, { plugins: [p] }).render({ x: 'x' }),
+    assert.throws(() => new PayloadTemplate(`{{x:string ${operator} test.bad}}`, { plugins: [p] }).render({ x: 'x' }),
       e => issue('PLUGIN_EXECUTION_FAILED')(e) && !JSON.stringify(e).includes('private input'));
   }
-  const mutate = new PayloadTemplate('{{x:string[] @ bad}}', { plugins: [plugin({ bad: xs => { xs.push('bad'); return true; } })] });
+  const mutate = new PayloadTemplate('{{x:string[] @ test.bad}}', { plugins: [plugin({ bad: xs => { xs.push('bad'); return true; } })] });
   const input = ['a'];
   assert.throws(() => mutate.render({ x: input }), issue('PLUGIN_EXECUTION_FAILED'));
   assert.deepEqual(input, ['a']);
@@ -143,4 +166,34 @@ test('normalization, extraction, conflicts and highlighting retain ordered opera
   for (const tail of ['@', '>', '@ date only', '?? null @ dateonly', '@ dateonly[]', '[@ dateonly] >', '@@ dateonly']) {
     assert.throws(() => new PayloadTemplate(`{{x:string ${tail}}}`), issue('INVALID_FALLBACK_SYNTAX'));
   }
+});
+
+test('qualified operations normalize, extract, highlight and compare in both scopes', () => {
+  const custom = plugin({ check: () => true }, { trim: x => x.trim() });
+  const options = { plugins: [custom] };
+  const template = new PayloadTemplate('{{ x : string [>test.trim@test.check??omit]@test.check??throw }}', options);
+  const canonical = '{{x:string[ > test.trim @ test.check ?? omit ] @ test.check ?? throw}}';
+  assert.equal(template.toJSON(), canonical);
+  assert.equal(new PayloadTemplate(canonical, options).toJSON(), canonical);
+  assert.deepEqual(template.render({ x: [' a ', null] }), ['a']);
+  const [variable] = template.extractVariables();
+  assert.deepEqual(variable.memberOperations, [
+    { kind: 'transformer', name: 'test.trim' }, { kind: 'validator', name: 'test.check' },
+  ]);
+  assert.deepEqual(variable.valueOperations, [{ kind: 'validator', name: 'test.check' }]);
+  const [{ tokens }] = template.tokenizePayloadExpression();
+  assert.equal(tokens.map(t => t.text).join(''), canonical);
+  assert.equal(tokens.some(t => t.kind === 'unknown'), false);
+  assert.deepEqual(tokens.filter(t => ['validator', 'transformer'].includes(t.kind)).map(t => t.text),
+    ['test.trim', 'test.check', 'test.check']);
+  for (const token of tokens) assert.equal(canonical.slice(token.start, token.end), token.text);
+  assert.throws(() => new PayloadTemplate(['{{x:string @ test.check}}', '{{x:string @ other.check}}'], {
+    plugins: [custom, { ...custom, name: 'other' }],
+  }), issue('VARIABLE_EXPRESSION_CONFLICT'));
+  for (const reference of ['test.', '.check', 'test..check', 'test.group.check', 'test .check', 'test. check', '1test.check', 'test.1check']) {
+    for (const tail of [`@ ${reference}`, `[ > ${reference} ]`]) {
+      assert.throws(() => new PayloadTemplate(`{{x:string ${tail}}}`, options), issue('INVALID_FALLBACK_SYNTAX'));
+    }
+  }
+  assert.throws(() => new PayloadTemplate('{{test.x:string}}'), issue('INVALID_PLACEHOLDER'));
 });

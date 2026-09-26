@@ -46,7 +46,7 @@ Validation happens once in the constructor. Extraction and rendering reuse the v
 
 ### Plugin configuration
 
-Pass `PayloadTemplateOptions` as the second constructor argument to select or extend plugins. See [Plugins](plugins.md#plugin-configuration) for configuration, custom callbacks, and built-ins.
+Pass `PayloadTemplateOptions` as the second constructor argument to register custom plugins. Built-in operations remain available regardless of this configuration. See [Plugins](plugins.md#plugin-configuration) for configuration, custom callbacks, and built-ins.
 
 ### Normalized template
 
@@ -103,7 +103,8 @@ template.render({ products: ['C'] });            // { products: ['C'] }
 | `UNSUPPORTED_TYPE` | `path`, `variableName`, `declaredType` |
 | `INVALID_FALLBACK_SYNTAX` | `path`, `variableName`, `placeholder` |
 | `VARIABLE_EXPRESSION_CONFLICT` | `variableName`, `declaration`, `declaredAt`, `conflictingDeclaration`, `conflictingAt` |
-| `DUPLICATE_PLUGIN_OPERATION` | `kind`, `operation`, `plugin` |
+| `INVALID_PLUGIN_NAME`, `DUPLICATE_PLUGIN_NAME` | `plugin` |
+| `INVALID_PLUGIN_OPERATION_NAME`, `INVALID_PLUGIN_OPERATION` | `kind`, `operation`, `plugin` |
 | `UNKNOWN_PLUGIN_OPERATION` | `kind`, `operation`, `path`, `variableName` |
 | `VALIDATION_FAILED` | Runtime details, `kind`, `operation`, optional `valuePath` |
 | `PLUGIN_EXECUTION_FAILED` | Runtime details, `kind`, `operation`, optional `valuePath` |

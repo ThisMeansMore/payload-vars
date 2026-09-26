@@ -1,5 +1,5 @@
-import { builtInPlugins, createRegistries, type PayloadTemplateOptions, type PayloadOperation, type PluginRegistries } from './plugins.js';
-import { variableNameSource, typeSource, actionSource, operatorSource } from './expression-syntax.js';
+import { createRegistries, type PayloadTemplateOptions, type PayloadOperation, type PluginRegistries } from './plugins.js';
+import { variableNameSource, operationNameSource, typeSource, actionSource, operatorSource } from './expression-syntax.js';
 import { PayloadTemplateError } from './payload-template.error.js';
 import type { BaseType, FallbackExpression, JsonValue, JsonTemplateValue, PayloadVariable } from './payload-template.types.js';
 
@@ -12,7 +12,7 @@ export interface Contract {
 }
 
 const identifierPattern = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
-const operationsSource = String.raw`(?:[@>]\s*${variableNameSource}\s*)*`;
+const operationsSource = String.raw`(?:[@>]\s*${operationNameSource}\s*)*`;
 const scopeSource = String.raw`(${operationsSource})(?:(${operatorSource})\s*(${actionSource})\s*)?`;
 const expressionPattern = new RegExp(String.raw`^(${typeSource})\s*(?:\[\s*${scopeSource}\])?\s*${scopeSource}$`);
 const placeholderPattern = new RegExp(String.raw`^\{\{\s*(${variableNameSource})\s*:\s*([^{}:]*?)\s*\}\}$`);
@@ -44,7 +44,7 @@ export function parsePlaceholder(value: string, path: string): Declaration | und
   const memberFallback = parsed[3] ? { operator: parsed[3], action: parsed[4] } as FallbackExpression : undefined;
   const valueFallback = parsed[6] ? { operator: parsed[6], action: parsed[7] } as FallbackExpression : undefined;
   const operations = (source: string): PayloadOperation[] => Array.from(
-    source.matchAll(new RegExp(String.raw`([@>])\s*(${variableNameSource})`, 'g')),
+    source.matchAll(new RegExp(String.raw`([@>])\s*(${operationNameSource})`, 'g')),
     match => ({ kind: match[1] === '@' ? 'validator' : 'transformer', name: match[2]! }));
   const memberOperations = operations(parsed[2] ?? '');
   const valueOperations = operations(parsed[5] ?? '');
@@ -65,7 +65,7 @@ export function parsePlaceholder(value: string, path: string): Declaration | und
 }
 
 export function validateTemplate(template: JsonTemplateValue, options: PayloadTemplateOptions = {}): Contract {
-  const plugins = createRegistries(options.plugins ?? builtInPlugins);
+  const plugins = createRegistries(options.plugins);
   const declarations = new Map<string, Declaration>();
   const locations = new Map<string, Declaration>();
   function visit(value: JsonTemplateValue, path: string): JsonValue {

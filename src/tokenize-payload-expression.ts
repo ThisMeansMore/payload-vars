@@ -1,7 +1,8 @@
-import { variableNameSource, typeSource, actionSource, operatorSource } from './expression-syntax.js';
+import { variableNameSource, operationNameSource, typeSource, actionSource, operatorSource } from './expression-syntax.js';
 import type { PayloadExpressionToken, PayloadExpressionTokenKind } from './payload-template.types.js';
 
 const variablePattern = new RegExp(`^${variableNameSource}$`);
+const operationPattern = new RegExp(`^${operationNameSource}$`);
 const typePattern = new RegExp(`^(${typeSource})$`);
 const actionPattern = new RegExp(`^(${actionSource})$`);
 const operatorPattern = new RegExp(`^(${operatorSource})$`);
@@ -14,7 +15,7 @@ export function tokenizePayloadExpression(expression: string): PayloadExpression
   let position: Position = 'outside';
   // Whole word/operator runs avoid highlighting valid prefixes of invalid text.
   // The final alternative consumes any code point, including lone surrogates.
-  const pieces = /\s+|\{\{|\}\}|[A-Za-z0-9_$]+|[?|]+|[^]/gu;
+  const pieces = /\s+|\{\{|\}\}|[A-Za-z0-9_$.]+|[?|]+|[^]/gu;
   for (const match of expression.matchAll(pieces)) {
     const text = match[0];
     const start = match.index!;
@@ -40,7 +41,7 @@ export function tokenizePayloadExpression(expression: string): PayloadExpression
         kind = 'operator';
         position = position === 'member' ? (text === '@' ? 'memberValidator' : 'memberTransformer')
           : (text === '@' ? 'valueValidator' : 'valueTransformer');
-      } else if (variablePattern.test(text) && (position === 'memberValidator' || position === 'memberTransformer'
+      } else if (operationPattern.test(text) && (position === 'memberValidator' || position === 'memberTransformer'
         || position === 'valueValidator' || position === 'valueTransformer')) {
         kind = position.endsWith('Validator') ? 'validator' : 'transformer';
         position = position.startsWith('member') ? 'member' : 'arrayEnd';

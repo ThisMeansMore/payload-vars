@@ -79,7 +79,7 @@ Validators return a boolean without modifying the input. `false` raises `VALIDAT
 
 See [Plugins](plugins.md) for the built-in operations, configuration, and custom validator and transformer examples.
 
-Plugin whitespace follows the existing canonical rules: `string[@dateonly>isodatetime]@range` becomes `string[ @ dateonly > isodatetime ] @ range`. Repeated declarations must include identical operations in identical order. Unknown operation names fail during construction.
+Plugin whitespace follows the existing canonical rules: `string[@dateonly>isodatetime]@range` becomes `string[ @ dateonly > isodatetime ] @ range`. Repeated declarations must include identical operations in identical order. Unknown operation names fail during construction. Built-ins use bare identifiers such as `@ email`; custom operations require `@ pluginName.validator` or `> pluginName.transformer`. Each segment matches `[A-Za-z_][A-Za-z0-9_]*`, with exactly one dot and no whitespace around it for custom references. This syntax applies in both member and whole-value scopes.
 
 ## Omission
 

@@ -31,7 +31,9 @@ interface RuntimeIssue {
   templatePaths: string[];
 }
 export type PayloadTemplateIssue =
-  | { code: 'DUPLICATE_PLUGIN_OPERATION'; kind: PayloadOperation['kind']; operation: string; plugin: string }
+  | { code: 'INVALID_PLUGIN_NAME'; plugin: unknown }
+  | { code: 'DUPLICATE_PLUGIN_NAME'; plugin: string }
+  | { code: 'INVALID_PLUGIN_OPERATION_NAME' | 'INVALID_PLUGIN_OPERATION'; kind: PayloadOperation['kind']; operation: string; plugin: string }
   | { code: 'UNKNOWN_PLUGIN_OPERATION'; kind: PayloadOperation['kind']; operation: string; path: string; variableName: string }
   | (RuntimeIssue & { code: 'VALIDATION_FAILED' | 'PLUGIN_EXECUTION_FAILED' | 'INVALID_TRANSFORMER_RESULT'; kind: PayloadOperation['kind']; operation: string; valuePath?: string })
   | { code: 'INVALID_PLACEHOLDER'; path: string; placeholder: string }

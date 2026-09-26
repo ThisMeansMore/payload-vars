@@ -1,3 +1,4 @@
+import { operationIdentifierSource } from './expression-syntax.js';
 import { PayloadTemplateError } from './payload-template.error.js';
 
 export type PayloadValidator<T = never> = (value: T) => boolean;
@@ -7,10 +8,12 @@ type RegisteredTransformer = PayloadTransformer<string> | PayloadTransformer<num
   | PayloadTransformer<readonly string[]> | PayloadTransformer<readonly number[]>;
 
 export interface PayloadVarsPlugin {
+  /** Unique namespace used in references such as text.trim. */
   name: string;
   validators?: Record<string, PayloadValidator>;
   transformers?: Record<string, RegisteredTransformer>;
 }
+/** Custom extensions. Built-in operations are always available. */
 export interface PayloadTemplateOptions { plugins?: readonly PayloadVarsPlugin[] }
 export interface PayloadOperation { kind: 'validator' | 'transformer'; name: string }
 
@@ -51,30 +54,35 @@ function range(values: readonly string[] | readonly number[]): boolean {
   return Array.isArray(values) && values.length === 2 && typeof values[0] === typeof values[1]
     && (typeof values[0] === 'string' || typeof values[0] === 'number') && values[0] < values[1]!;
 }
-export const datePlugin: PayloadVarsPlugin = {
-  name: 'date',
-  validators: { dateonly, isodatetime }, transformers: { isodatetime: toIsoDateTime },
-};
-export const emailPlugin: PayloadVarsPlugin = {
-  name: 'email',
-  validators: { email, domain }, transformers: { domain: extractDomain },
-};
-export const collectionPlugin: PayloadVarsPlugin = {
-  name: 'collection', validators: { unique, range },
-};
-export const builtInPlugins = [datePlugin, emailPlugin, collectionPlugin] as const;
-
 // Function parameter types are erased only at the runtime registry boundary.
 export type PluginFunction = (value: never) => unknown;
-export function createRegistries(plugins: readonly PayloadVarsPlugin[]) {
-  const registries = { validator: new Map<string, PluginFunction>(), transformer: new Map<string, PluginFunction>() };
+const identifierPattern = new RegExp(`^${operationIdentifierSource}$`);
+
+export function createRegistries(plugins: readonly PayloadVarsPlugin[] = []) {
+  // Built-ins are private core capabilities; custom registrations cannot replace them.
+  const registries = {
+    validator: new Map<string, PluginFunction>(Object.entries({ dateonly, isodatetime, email, domain, unique, range })),
+    transformer: new Map<string, PluginFunction>(Object.entries({ isodatetime: toIsoDateTime, domain: extractDomain })),
+  };
+  const namespaces = new Set<string>();
   for (const plugin of plugins) {
+    if (typeof plugin.name !== 'string' || !identifierPattern.test(plugin.name)) {
+      throw new PayloadTemplateError({ code: 'INVALID_PLUGIN_NAME', plugin: plugin.name });
+    }
+    if (namespaces.has(plugin.name)) {
+      throw new PayloadTemplateError({ code: 'DUPLICATE_PLUGIN_NAME', plugin: plugin.name });
+    }
+    namespaces.add(plugin.name);
     for (const kind of ['validator', 'transformer'] as const) {
       for (const [name, fn] of Object.entries((kind === 'validator' ? plugin.validators : plugin.transformers) ?? {})) {
-        if (registries[kind].has(name)) {
-          throw new PayloadTemplateError({ code: 'DUPLICATE_PLUGIN_OPERATION', kind, operation: name, plugin: plugin.name });
+        if (!identifierPattern.test(name)) {
+          throw new PayloadTemplateError({ code: 'INVALID_PLUGIN_OPERATION_NAME', kind, operation: name, plugin: plugin.name });
         }
-        registries[kind].set(name, fn);
+        const operation = `${plugin.name}.${name}`;
+        if (typeof fn !== 'function') {
+          throw new PayloadTemplateError({ code: 'INVALID_PLUGIN_OPERATION', kind, operation, plugin: plugin.name });
+        }
+        registries[kind].set(operation, fn);
       }
     }
   }
