@@ -9,7 +9,7 @@ title: Changelog
 
 Notable changes, starting with 1.0.0. Historical dates follow Git tags.
 
-## Unreleased
+## 1.2.0 — 2026-09-26
 
 - Add pluggable validators (`@`) and type-preserving transformers (`>`), with date, email, and collection built-ins, member/collection scopes, and unchanged fallback behavior.
 
