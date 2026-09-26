@@ -6,6 +6,8 @@ The latest five releases are detailed below. Older releases have one-line summar
 
 ## Unreleased
 
+## 1.4.0 — 2026-09-26
+
 ### Breaking changes
 
 - Require `namespace.operation` for built-in and custom operations. Built-ins now use `date.dateonly`, `date.isodatetime`, `email.email`, `email.domain`, `collection.unique`, and `collection.range`; bare names are invalid syntax.
@@ -38,16 +40,9 @@ The latest five releases are detailed below. Older releases have one-line summar
 
 - Add pluggable validators (`@`) and type-preserving transformers (`>`), with date, email, and collection built-ins, member/collection scopes, and unchanged fallback behavior.
 
-## 1.1.8 — 2026-09-25
-
-- Improved releasing notes logic
-
-### Changed
-
-- Release preparation drafts missing notes from commits and marks them for review; remove the review marker before publishing.
-
 ## Older releases
 
+- [1.1.8 — 2026-09-25](CHANGELOG-ARCHIVE.md#118--2026-09-25) — Improved releasing notes logic
 - [1.1.7 — 2026-09-25](CHANGELOG-ARCHIVE.md#117--2026-09-25) — Hide the empty Unreleased heading on the documentation site.
 - [1.1.6 — 2026-09-25](CHANGELOG-ARCHIVE.md#116--2026-09-25) — Remove internal review markers from changelogs before release while preserving safe publication retries.
 - [1.1.5 — 2026-09-25](CHANGELOG-ARCHIVE.md#115--2026-09-25) — Releases explicitly deploy GitHub Pages and verify the deployed commit, preventing outdated documentation after a version bump.

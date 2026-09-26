@@ -9,6 +9,14 @@ title: Changelog archive
 
 Full notes for older releases. See the [changelog](changelog.md) for the latest five releases and a summary of this archive.
 
+## 1.1.8 — 2026-09-25
+
+- Improved releasing notes logic
+
+### Changed
+
+- Release preparation drafts missing notes from commits and marks them for review; remove the review marker before publishing.
+
 ## 1.1.7 — 2026-09-25
 
 ### Fixed
