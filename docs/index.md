@@ -137,6 +137,23 @@ const { PayloadTemplate } = require('payload-vars');
 
 Import from the package root so your runtime selects the appropriate entry point.
 
+## Validators and transformers
+
+Built-in plugins validate dates, email addresses, and collections, and transform values while preserving their declared type:
+
+```ts
+new PayloadTemplate('{{value:string @ email > domain}}')
+  .render({ value: 'user@Example.com' }); // 'example.com'
+
+new PayloadTemplate('{{value:string[ @ dateonly > isodatetime ] @ range}}')
+  .render({ value: ['2026-01-01', '2026-12-31'] });
+// ['2026-01-01T00:00:00.000Z', '2026-12-31T00:00:00.000Z']
+```
+
+Use `@` for validation and `>` for transformation, in execution order. Existing `??` and `||` fallbacks still handle only nullish/falsy inputs; validation failures throw errors. Supply `{ plugins: [...] }` as the constructor's second argument to select plugins, or extend the defaults with `{ plugins: [...builtInPlugins, customPlugin] }`.
+
+See [plugin syntax](syntax.md#validators-and-transformers) and [custom plugin configuration](api.md#plugin-configuration).
+
 ## Guides
 
 - [Changelog](changelog.md): version history and unreleased changes.

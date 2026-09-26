@@ -21,17 +21,20 @@ type WithFallback<Value, F extends Fallback> = F['action'] extends 'throw'
   ? F['operator'] extends '||' ? Exclude<Value, Falsy> : Value
   : Value | (F['operator'] extends '??' ? Nullish : Falsy);
 type Expression = { input: unknown; optional: boolean };
+// Plugin operations preserve the declared type; only the trailing fallback affects inputs.
+type ScopeFallback<S extends string> = S extends `${string}??${infer Rest}` ? `??${Rest}`
+  : S extends `${string}||${infer Rest}` ? `||${Rest}` : '';
+type Base<S extends string, Acc extends string = ''> = S extends `${infer Head}${infer Tail}`
+  ? Head extends Whitespace | '@' | '>' | '?' | '|' ? Acc : Base<Tail, `${Acc}${Head}`> : Acc;
 type ApplyFallback<Value, S extends string> = Trim<S> extends '' ? { input: Value; optional: false }
   : ParseFallback<S> extends infer F extends Fallback
     ? { input: WithFallback<Value, F>; optional: F['action'] extends 'throw' ? false : true }
     : never;
-type Members<Value, S extends string> = ApplyFallback<Value, S> extends infer E extends Expression ? E['input'] : never;
+type Members<Value, S extends string> = ApplyFallback<Value, ScopeFallback<S>> extends infer E extends Expression ? E['input'] : never;
 type ParseExpression<S extends string> = S extends `${infer Base}[${infer Member}]${infer Whole}`
   ? Trim<Base> extends 'string' | 'number'
-    ? ApplyFallback<ReadonlyArray<Members<Primitive<Trim<Base>>, Member>>, Whole> : never
-  : S extends `${infer Base}??${infer Rest}` ? ApplyFallback<Primitive<Trim<Base>>, `??${Rest}`>
-  : S extends `${infer Base}||${infer Rest}` ? ApplyFallback<Primitive<Trim<Base>>, `||${Rest}`>
-  : { input: Primitive<Trim<S>>; optional: false };
+    ? ApplyFallback<ReadonlyArray<Members<Primitive<Trim<Base>>, Member>>, ScopeFallback<Whole>> : never
+  : ApplyFallback<Primitive<Base<Trim<S>>>, ScopeFallback<S>>;
 
 declare const dynamicTemplate: unique symbol;
 type Dynamic = typeof dynamicTemplate;

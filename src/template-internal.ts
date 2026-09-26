@@ -1,16 +1,20 @@
+import { builtInPlugins, createRegistries, type PayloadTemplateOptions, type PayloadOperation, type PluginRegistries } from './plugins.js';
 import { variableNameSource, typeSource, actionSource, operatorSource } from './expression-syntax.js';
 import { PayloadTemplateError } from './payload-template.error.js';
 import type { BaseType, FallbackExpression, JsonValue, JsonTemplateValue, PayloadVariable } from './payload-template.types.js';
 
 export interface Declaration extends PayloadVariable { paths: string[] }
 export interface Contract {
+  plugins: PluginRegistries;
   template: JsonValue;
   declarations: Map<string, Declaration>;
   locations: Map<string, Declaration>;
 }
 
 const identifierPattern = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
-const expressionPattern = new RegExp(String.raw`^(${typeSource})\s*(?:\[\s*(?:(${operatorSource})\s*(${actionSource})\s*)?\])?\s*(?:(${operatorSource})\s*(${actionSource}))?$`);
+const operationsSource = String.raw`(?:[@>]\s*${variableNameSource}\s*)*`;
+const scopeSource = String.raw`(${operationsSource})(?:(${operatorSource})\s*(${actionSource})\s*)?`;
+const expressionPattern = new RegExp(String.raw`^(${typeSource})\s*(?:\[\s*${scopeSource}\])?\s*${scopeSource}$`);
 const placeholderPattern = new RegExp(String.raw`^\{\{\s*(${variableNameSource})\s*:\s*([^{}:]*?)\s*\}\}$`);
 const supportedTypePattern = new RegExp(String.raw`^(${typeSource})\b`);
 
@@ -37,25 +41,42 @@ export function parsePlaceholder(value: string, path: string): Declaration | und
   if (array && parsed[1] === 'boolean') {
     throw new PayloadTemplateError({ code: 'UNSUPPORTED_TYPE', path, variableName: name, declaredType: 'boolean[]' });
   }
-  const memberFallback = parsed[2] ? { operator: parsed[2], action: parsed[3] } as FallbackExpression : undefined;
-  const valueFallback = parsed[4] ? { operator: parsed[4], action: parsed[5] } as FallbackExpression : undefined;
-  const format = (fallback: FallbackExpression) => `${fallback.operator} ${fallback.action}`;
-  const canonical = parsed[1] + (array ? memberFallback ? `[ ${format(memberFallback)} ]` : '[]' : '')
-    + (valueFallback ? ` ${format(valueFallback)}` : '');
+  const memberFallback = parsed[3] ? { operator: parsed[3], action: parsed[4] } as FallbackExpression : undefined;
+  const valueFallback = parsed[6] ? { operator: parsed[6], action: parsed[7] } as FallbackExpression : undefined;
+  const operations = (source: string): PayloadOperation[] => Array.from(
+    source.matchAll(new RegExp(String.raw`([@>])\s*(${variableNameSource})`, 'g')),
+    match => ({ kind: match[1] === '@' ? 'validator' : 'transformer', name: match[2]! }));
+  const memberOperations = operations(parsed[2] ?? '');
+  const valueOperations = operations(parsed[5] ?? '');
+  const format = (ops: PayloadOperation[], fallback?: FallbackExpression) => [
+    ...ops.map(op => `${op.kind === 'validator' ? '@' : '>'} ${op.name}`),
+    ...(fallback ? [`${fallback.operator} ${fallback.action}`] : []),
+  ].join(' ');
+  const member = format(memberOperations, memberFallback);
+  const whole = format(valueOperations, valueFallback);
+  const canonical = parsed[1] + (array ? member ? `[ ${member} ]` : '[]' : '') + (whole ? ` ${whole}` : '');
   return {
+    ...(memberOperations.length ? { memberOperations } : {}),
+    ...(valueOperations.length ? { valueOperations } : {}),
     name, type: (parsed[1] + (array ? '[]' : '')) as BaseType,
     ...(memberFallback ? { memberFallback } : {}), ...(valueFallback ? { valueFallback } : {}),
     declaration: `{{${name}:${canonical}}}`, paths: [path],
   };
 }
 
-export function validateTemplate(template: JsonTemplateValue): Contract {
+export function validateTemplate(template: JsonTemplateValue, options: PayloadTemplateOptions = {}): Contract {
+  const plugins = createRegistries(options.plugins ?? builtInPlugins);
   const declarations = new Map<string, Declaration>();
   const locations = new Map<string, Declaration>();
   function visit(value: JsonTemplateValue, path: string): JsonValue {
     if (typeof value === 'string') {
       const found = parsePlaceholder(value, path);
       if (!found) return value;
+      for (const op of [...(found.memberOperations ?? []), ...(found.valueOperations ?? [])]) {
+        if (!plugins[op.kind].has(op.name)) throw new PayloadTemplateError({
+          code: 'UNKNOWN_PLUGIN_OPERATION', path, variableName: found.name, kind: op.kind, operation: op.name,
+        });
+      }
       const previous = declarations.get(found.name);
       if (previous && previous.declaration !== found.declaration) {
         throw new PayloadTemplateError({ code: 'VARIABLE_EXPRESSION_CONFLICT', variableName: found.name,
@@ -79,5 +100,5 @@ export function validateTemplate(template: JsonTemplateValue): Contract {
     return value;
   }
   const normalizedTemplate = visit(template, '$');
-  return { template: normalizedTemplate, declarations, locations };
+  return { template: normalizedTemplate, declarations, locations, plugins };
 }

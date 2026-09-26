@@ -6,6 +6,7 @@ const typePattern = new RegExp(`^(${typeSource})$`);
 const actionPattern = new RegExp(`^(${actionSource})$`);
 const operatorPattern = new RegExp(`^(${operatorSource})$`);
 type Position = 'outside' | 'variable' | 'colon' | 'type' | 'tail'
+  | 'memberValidator' | 'memberTransformer' | 'valueValidator' | 'valueTransformer'
   | 'member' | 'memberAction' | 'memberEnd' | 'arrayEnd' | 'valueAction' | 'end';
 
 export function tokenizePayloadExpression(expression: string): PayloadExpressionToken[] {
@@ -35,6 +36,14 @@ export function tokenizePayloadExpression(expression: string): PayloadExpression
       } else if (position === 'type' && /^[A-Za-z0-9_$]+$/.test(text)) {
         if (typePattern.test(text)) kind = 'type';
         position = 'tail';
+      } else if ((text === '@' || text === '>') && (position === 'tail' || position === 'arrayEnd' || position === 'member')) {
+        kind = 'operator';
+        position = position === 'member' ? (text === '@' ? 'memberValidator' : 'memberTransformer')
+          : (text === '@' ? 'valueValidator' : 'valueTransformer');
+      } else if (variablePattern.test(text) && (position === 'memberValidator' || position === 'memberTransformer'
+        || position === 'valueValidator' || position === 'valueTransformer')) {
+        kind = position.endsWith('Validator') ? 'validator' : 'transformer';
+        position = position.startsWith('member') ? 'member' : 'arrayEnd';
       } else if (operatorPattern.test(text) && (position === 'tail' || position === 'arrayEnd' || position === 'member')) {
         kind = 'operator';
         position = position === 'member' ? 'memberAction' : 'valueAction';

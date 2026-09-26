@@ -4,6 +4,8 @@ Notable changes, starting with 1.0.0. Historical dates follow Git tags.
 
 ## Unreleased
 
+- Add pluggable validators (`@`) and type-preserving transformers (`>`), with date, email, and collection built-ins, member/collection scopes, and unchanged fallback behavior.
+
 ## 1.1.8 — 2026-09-25
 
 - Improved releasing notes logic

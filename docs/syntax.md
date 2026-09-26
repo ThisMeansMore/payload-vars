@@ -64,6 +64,35 @@ Combine member and whole-value fallbacks:
 
 The outer fallback processes the supplied variable first. Only an actual array reaches member processing. Member fallback alone cannot handle a missing or nullish whole array.
 
+## Validators and transformers
+
+Use `@ name` to validate and `> name` to transform. Operation names use the same identifier syntax as variable names. Operations run left-to-right within a scope and precede that scope's optional fallback in the declaration:
+
+```text
+{{value:string @ email > domain}}
+{{value:string[ @ dateonly > isodatetime ?? omit ] @ range ?? throw}}
+```
+
+At runtime, the whole-value fallback runs first, followed by type checking. For arrays, each member's fallback, type check, and operations run before collection operations. A fallback-produced `null` bypasses member operations but remains visible to collection operations; omitted members are removed first.
+
+Validators return a boolean without modifying the input. `false` raises `VALIDATION_FAILED`; it never triggers a fallback. Transformers preserve the declared type. Their results are checked without running fallbacks again, so a string transformer may return `""` even with `|| null`. Returning `null`, `undefined`, an omission marker, another type, or a non-finite number fails with `INVALID_TRANSFORMER_RESULT`. Collection transformations may retain existing member-fallback nulls but cannot add new nulls. Collection validators receive a frozen copy; collection transformers receive a mutable copy.
+
+The built-ins are enabled by default:
+
+| Plugin | Validators | Transformers |
+| --- | --- | --- |
+| `datePlugin` | `dateonly`, `isodatetime` | `isodatetime` |
+| `emailPlugin` | `email`, `domain` | `domain` |
+| `collectionPlugin` | `unique`, `range` | None |
+
+`dateonly` requires a real calendar date in `YYYY-MM-DD` form. `isodatetime` requires a valid date and time with seconds and an explicit `Z` or `±HH:MM` offset; fractional seconds are optional. The transformer accepts either form and returns UTC ISO text, for example `2026-01-01T00:00:00.000Z`.
+
+`email` validates common ASCII dot-atom addresses with a dotted DNS domain (quoted local parts and internationalized addresses are unsupported). `domain` validates dotted ASCII DNS labels. The `domain` transformer extracts and lowercases the domain of a valid email: `user@Example.com` becomes `example.com`.
+
+`unique` checks the entire collection using `Set` equality. `range` requires exactly two strictly ascending strings or numbers; strings use JavaScript lexicographic order. Member transformations run first, so `string[ @ dateonly > isodatetime ] @ range` compares the transformed strings.
+
+Plugin whitespace follows the existing canonical rules: `string[@dateonly>isodatetime]@range` becomes `string[ @ dateonly > isodatetime ] @ range`. Repeated declarations must include identical operations in identical order. Unknown operation names fail during construction.
+
 ## Omission
 
 Omission removes an object property, a placeholder entry in a template array, or an individual member of a supplied array. Empty containers remain present. Intentional omission uses an internal symbol, never `undefined` or `null`.

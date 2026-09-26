@@ -1,3 +1,4 @@
+import type { PayloadOperation } from './plugins.js';
 export type JsonPrimitive = string | number | boolean | null;
 export type JsonValue = JsonPrimitive | JsonObject | JsonValue[];
 export interface JsonObject { [key: string]: JsonValue }
@@ -14,6 +15,8 @@ export interface FallbackExpression {
 export interface ParsedVariableExpression {
   name: string;
   type: BaseType;
+  memberOperations?: PayloadOperation[];
+  valueOperations?: PayloadOperation[];
   memberFallback?: FallbackExpression;
   valueFallback?: FallbackExpression;
 }
@@ -28,6 +31,9 @@ interface RuntimeIssue {
   templatePaths: string[];
 }
 export type PayloadTemplateIssue =
+  | { code: 'DUPLICATE_PLUGIN_OPERATION'; kind: PayloadOperation['kind']; operation: string; plugin: string }
+  | { code: 'UNKNOWN_PLUGIN_OPERATION'; kind: PayloadOperation['kind']; operation: string; path: string; variableName: string }
+  | (RuntimeIssue & { code: 'VALIDATION_FAILED' | 'PLUGIN_EXECUTION_FAILED' | 'INVALID_TRANSFORMER_RESULT'; kind: PayloadOperation['kind']; operation: string; valuePath?: string })
   | { code: 'INVALID_PLACEHOLDER'; path: string; placeholder: string }
   | { code: 'UNSUPPORTED_TYPE'; path: string; variableName: string; declaredType: string }
   | { code: 'INVALID_FALLBACK_SYNTAX'; path: string; variableName: string; placeholder: string }
@@ -39,7 +45,7 @@ export type PayloadTemplateIssue =
 
 export type PayloadExpressionTokenKind =
   | 'delimiter' | 'variable' | 'punctuation' | 'type'
-  | 'operator' | 'action' | 'whitespace' | 'unknown';
+  | 'validator' | 'transformer' | 'operator' | 'action' | 'whitespace' | 'unknown';
 
 export interface PayloadExpressionToken {
   kind: PayloadExpressionTokenKind;

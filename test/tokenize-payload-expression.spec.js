@@ -89,7 +89,8 @@ test('invalid operators, unsupported types and unexpected characters remain unkn
     assert.ok(coverage(`{{x:${type}}}`).some(t => t.text === type && t.kind === 'unknown'));
   }
   for (const input of ['{{x:string@}}', '{{9name:string}}', '{{x:$string}}', '"{{x:string}}"', '{{x:string}\ud800', '😀{{:}}', '{{x:boolean[]}}']) coverage(input);
-  assert.equal(tokenize('{{x:string@}}').find(t => t.text === '@').kind, 'unknown');
+  // A partial validator operation still highlights its recognized operator.
+  assert.equal(tokenize('{{x:string@}}').find(t => t.text === '@').kind, 'operator');
 });
 
 test('arbitrary input has contiguous coverage and calls leave template state unchanged', () => {

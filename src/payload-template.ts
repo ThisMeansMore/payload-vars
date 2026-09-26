@@ -1,3 +1,4 @@
+import type { PayloadTemplateOptions } from './plugins.js';
 import { tokenizePayloadExpression } from './tokenize-payload-expression.js';
 import type { PayloadTemplateVariables } from './payload-template-input.types.js';
 import type { JsonValue, JsonTemplateValue, PayloadVariable, TokenizedPayloadExpression } from './payload-template.types.js';
@@ -22,8 +23,8 @@ export class PayloadTemplate<const T extends JsonTemplateValue = JsonTemplateVal
   readonly #contract: Contract;
 
   /** Validate and snapshot the template. Invalid declarations throw PayloadTemplateError. */
-  constructor(template: T) {
-    this.#contract = validateTemplate(template);
+  constructor(template: T, options: PayloadTemplateOptions = {}) {
+    this.#contract = validateTemplate(template, options);
   }
 
   /** Return highlighting tokens for every normalized placeholder occurrence. */
@@ -42,8 +43,10 @@ export class PayloadTemplate<const T extends JsonTemplateValue = JsonTemplateVal
 
   /** Return independent variable contracts in first occurrence order. */
   extractVariables(): PayloadVariable[] {
-    return Array.from(this.#contract.declarations.values(), ({ name, type, declaration, memberFallback, valueFallback }) => ({
+    return Array.from(this.#contract.declarations.values(), ({ name, type, declaration, memberFallback, valueFallback, memberOperations, valueOperations }) => ({
       name, type, declaration,
+      ...(memberOperations ? { memberOperations: memberOperations.map(op => ({ ...op })) } : {}),
+      ...(valueOperations ? { valueOperations: valueOperations.map(op => ({ ...op })) } : {}),
       ...(memberFallback ? { memberFallback: { ...memberFallback } } : {}),
       ...(valueFallback ? { valueFallback: { ...valueFallback } } : {}),
     }));

@@ -36,6 +36,34 @@ const template = new PayloadTemplate({
 
 Validation happens once in the constructor. Extraction and rendering reuse the validated contract. Later changes to the original input cannot change the instance.
 
+## Plugin configuration
+
+The optional second constructor argument is `PayloadTemplateOptions`. Omit `plugins` to use `builtInPlugins`; explicitly supplying an array uses exactly that collection, including `[]` to disable all plugins.
+
+```ts
+import { PayloadTemplate, builtInPlugins, datePlugin,
+  type PayloadVarsPlugin, type PayloadValidator, type PayloadTransformer } from 'payload-vars';
+
+const positive: PayloadValidator<number> = value => value > 0;
+const trim: PayloadTransformer<string> = value => value.trim();
+const customPlugin: PayloadVarsPlugin = {
+  name: 'text-and-numbers',
+  validators: { positive },
+  transformers: { trim },
+};
+
+new PayloadTemplate('{{x:string @ dateonly}}', { plugins: [datePlugin] });
+new PayloadTemplate('{{x:string > trim @ email}}', {
+  plugins: [...builtInPlugins, customPlugin],
+});
+```
+
+`PayloadValidator<T>` is `(value: T) => boolean`; `PayloadTransformer<T>` is `(value: T) => T`. Annotate callback parameters or use these aliases when defining custom functions. Collection callbacks can use typed arrays such as `readonly string[]` or `number[]`. Plugins are responsible for providing operations suitable for the scope where they are used; template syntax has no plugin type metadata. Callbacks must be synchronous. Validators should return `false` for invalid input, rather than throwing. Exceptions are wrapped in `PLUGIN_EXECUTION_FAILED` without exposing their contents.
+
+Each `PayloadVarsPlugin` has a display `name` and optional `validators` and `transformers` records. Operation aliases must be unique within each registry across all configured plugins; a validator and transformer may share an alias. Duplicate aliases throw `DUPLICATE_PLUGIN_OPERATION` during construction, including when the same plugin is registered twice. Display names do not need to be unique and are used in error details. Registry functions are snapshotted during construction.
+
+`datePlugin`, `emailPlugin`, `collectionPlugin`, and the readonly `builtInPlugins` collection are exported individually. See [plugin syntax and built-in behavior](syntax.md#validators-and-transformers).
+
 ## Normalized template
 
 `template.toJSON(): JsonValue` returns an independent copy with canonical placeholder strings. Nested arrays and objects are copied; literal values and object keys are preserved.
@@ -51,7 +79,7 @@ The constructor accepts already parsed JSON. Normalization is idempotent. Editin
 
 ## Extraction
 
-`template.extractVariables(): PayloadVariable[]` returns the compiled variable contracts in first occurrence order, deduplicating matching declarations. Each call returns fresh objects, including nested fallback expressions.
+`template.extractVariables(): PayloadVariable[]` returns the compiled variable contracts in first occurrence order, deduplicating matching declarations. Each call returns fresh objects, including nested fallback expressions and operation arrays.
 
 ```ts
 template.extractVariables();
@@ -64,7 +92,7 @@ template.extractVariables();
 // }]
 ```
 
-`BaseType` contains only the five supported base types. `PayloadVariableType` aliases `BaseType`. `ParsedVariableExpression` contains `name`, `type`, optional `memberFallback`, and optional `valueFallback`. `PayloadVariable` adds the canonical `declaration` string. Absent fallbacks are omitted from extracted objects.
+`BaseType` contains only the five supported base types. `PayloadVariableType` aliases `BaseType`. `ParsedVariableExpression` contains `name`, `type`, optional `memberFallback`, and optional `valueFallback`. `PayloadVariable` adds the canonical `declaration` string. Optional `memberOperations` and `valueOperations` contain ordered `PayloadOperation` objects (`{ kind: 'validator' | 'transformer', name: string }`). Absent fallbacks and empty operation lists are omitted from extracted objects.
 
 ## Rendering
 
@@ -91,6 +119,11 @@ template.render({ products: ['C'] });            // { products: ['C'] }
 | `UNSUPPORTED_TYPE` | `path`, `variableName`, `declaredType` |
 | `INVALID_FALLBACK_SYNTAX` | `path`, `variableName`, `placeholder` |
 | `VARIABLE_EXPRESSION_CONFLICT` | `variableName`, `declaration`, `declaredAt`, `conflictingDeclaration`, `conflictingAt` |
+| `DUPLICATE_PLUGIN_OPERATION` | `kind`, `operation`, `plugin` |
+| `UNKNOWN_PLUGIN_OPERATION` | `kind`, `operation`, `path`, `variableName` |
+| `VALIDATION_FAILED` | Runtime details, `kind`, `operation`, optional `valuePath` |
+| `PLUGIN_EXECUTION_FAILED` | Runtime details, `kind`, `operation`, optional `valuePath` |
+| `INVALID_TRANSFORMER_RESULT` | Runtime details, `kind`, `operation`, optional `valuePath` |
 | `MISSING_VARIABLE` | Runtime details |
 | `INVALID_VARIABLE_TYPE` | Runtime details, `actualType`, optional `valuePath` |
 | `FALLBACK_THROW` | Runtime details, `operator`, optional `valuePath` |
@@ -124,7 +157,7 @@ Each result contains a JSON `path`, the normalized `expression` including mustac
 
 Each token has `kind`, exact normalized `text`, and `start` (inclusive) and `end` (exclusive) UTF-16 offsets relative to that entry's expression, not the serialized JSON. Concatenating its token texts reproduces the normalized expression. `TokenizedPayloadExpression`, `PayloadExpressionToken`, and `PayloadExpressionTokenKind` are exported types.
 
-Kinds are `delimiter`, `variable`, `punctuation`, `type`, `operator`, `action`, `whitespace`, and `unknown`. Keywords are classified by position: `string` is a variable in `{{string:boolean}}`. Constructor validation rejects incomplete or invalid expressions before tokenization; original whitespace is not retained. Tokenization does not change validation, rendering, or the stored payload, and does not tokenize surrounding JSON.
+Kinds are `delimiter`, `variable`, `punctuation`, `type`, `operator`, `action`, `validator`, `transformer`, `whitespace`, and `unknown`. Keywords are classified by position: `string` is a variable in `{{string:boolean}}`. Constructor validation rejects incomplete or invalid expressions before tokenization; original whitespace is not retained. Tokenization does not change validation, rendering, or the stored payload, and does not tokenize surrounding JSON.
 
 The consumer chooses styling, for example with arbitrary CSS classes:
 
@@ -134,7 +167,7 @@ import { PayloadTemplate, type PayloadExpressionTokenKind } from 'payload-vars';
 const template = new PayloadTemplate({ products: '{{products:string[??omit]??throw}}' });
 const classes: Record<PayloadExpressionTokenKind, string> = {
   delimiter: 'muted', variable: 'blue', punctuation: 'muted', type: 'purple',
-  operator: 'orange', action: 'green', whitespace: 'plain', unknown: 'underlined',
+  operator: 'orange', action: 'green', validator: 'blue', transformer: 'purple', whitespace: 'plain', unknown: 'underlined',
 };
 for (const { path, tokens } of template.tokenizePayloadExpression()) {
   const container = document.createElement('pre');
