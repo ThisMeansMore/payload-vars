@@ -15,6 +15,7 @@ Every template below uses these same values. Only the template changes.
 ```json
 {
   "name": "Ada",
+  "email": "  Ada@Example.com  ",
   "nickname": "",
   "note": null,
   "total": 19.95,
@@ -425,5 +426,98 @@ The missing note disappears from this list. The name and total stay in order.
 </tr>
 </tbody>
 </table>
+
+<a id="plugin-chains"></a>
+
+## Chain plugins to clean and validate values
+
+Use `>` for transformers and `@` for validators. Operations run left-to-right: each receives the previous operation's result. Validators leave the value unchanged, and transformers must preserve the declared type.
+
+The examples below use the same values from the top of this page. Register these custom transformers once; the email and collection operations are built in:
+
+```ts
+import { PayloadTemplate, type PayloadVarsPlugin } from 'payload-vars';
+
+const custom: PayloadVarsPlugin = {
+  name: 'custom',
+  transformers: {
+    trim: (value: string) => value.trim(),
+    uppercase: (value: string) => value.toUpperCase(),
+  },
+};
+
+// Use this configuration for each template below.
+const template = new PayloadTemplate({
+  domain: '{{email:string > custom.trim > email.domain}}',
+}, { plugins: [custom] });
+
+template.render({ email: '  Ada@Example.com  ' });
+// { domain: 'example.com' }
+```
+
+### Run two transformers in sequence
+
+First trim the surrounding spaces, then extract the lowercase email domain. The second transformer receives `Ada@Example.com`.
+
+<table>
+<thead>
+<tr><th>Template</th><th>Rendered payload</th></tr>
+</thead>
+<tbody>
+<tr>
+<td valign="top"><pre><code>{
+  "domain": "{{email:string &gt; custom.trim &gt; email.domain}}"
+}</code></pre></td>
+<td valign="top"><pre><code>{
+  "domain": "example.com"
+}</code></pre></td>
+</tr>
+</tbody>
+</table>
+
+### Mix transformers and validators
+
+Trim the input, validate the email address, extract its domain, then validate that domain. Each validator checks the value at its position in the chain. A failed validator throws `VALIDATION_FAILED` and stops the chain.
+
+<table>
+<thead>
+<tr><th>Template</th><th>Rendered payload</th></tr>
+</thead>
+<tbody>
+<tr>
+<td valign="top"><pre><code>{
+  "domain": "{{email:string &gt; custom.trim @ email.email &gt; email.domain @ email.domain}}"
+}</code></pre></td>
+<td valign="top"><pre><code>{
+  "domain": "example.com"
+}</code></pre></td>
+</tr>
+</tbody>
+</table>
+
+### Chain member operations before checking the list
+
+The member fallback removes empty and null tags first. Each remaining tag is trimmed and uppercased, then `collection.unique` checks the transformed list for duplicates. Fallbacks are not rerun after transformation: a whitespace-only tag would become `""` and remain in the list.
+
+<table>
+<thead>
+<tr><th>Template</th><th>Rendered payload</th></tr>
+</thead>
+<tbody>
+<tr>
+<td valign="top"><pre><code>{
+  "tags": "{{tags:string[ &gt; custom.trim &gt; custom.uppercase || omit ] @ collection.unique}}"
+}</code></pre></td>
+<td valign="top"><pre><code>{
+  "tags": [
+    "NEW",
+    "SALE"
+  ]
+}</code></pre></td>
+</tr>
+</tbody>
+</table>
+
+See [Plugins](plugins.md) for configuration, built-in operations, and execution order.
 
 <!-- {% endraw %} -->
