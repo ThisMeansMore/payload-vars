@@ -2,6 +2,12 @@
 
 Full notes for older releases. See the [changelog](CHANGELOG.md) for the latest five releases and a summary of this archive.
 
+## 1.1.7 — 2026-09-25
+
+### Fixed
+
+- Hide the empty Unreleased heading on the documentation site.
+
 ## 1.1.6 — 2026-09-25
 
 ### Changed

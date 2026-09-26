@@ -6,6 +6,8 @@ The latest five releases are detailed below. Older releases have one-line summar
 
 ## Unreleased
 
+## 1.3.0 — 2026-09-26
+
 ### Breaking changes
 
 - Built-in validators and transformers are always available, regardless of `plugins` configuration.
@@ -38,14 +40,9 @@ The latest five releases are detailed below. Older releases have one-line summar
 
 - Release preparation drafts missing notes from commits and marks them for review; remove the review marker before publishing.
 
-## 1.1.7 — 2026-09-25
-
-### Fixed
-
-- Hide the empty Unreleased heading on the documentation site.
-
 ## Older releases
 
+- [1.1.7 — 2026-09-25](CHANGELOG-ARCHIVE.md#117--2026-09-25) — Hide the empty Unreleased heading on the documentation site.
 - [1.1.6 — 2026-09-25](CHANGELOG-ARCHIVE.md#116--2026-09-25) — Remove internal review markers from changelogs before release while preserving safe publication retries.
 - [1.1.5 — 2026-09-25](CHANGELOG-ARCHIVE.md#115--2026-09-25) — Releases explicitly deploy GitHub Pages and verify the deployed commit, preventing outdated documentation after a version bump.
 - [1.1.4 — 2026-09-25](CHANGELOG-ARCHIVE.md#114--2026-09-25) — Package version below the documentation homepage title, updated automatically on version bumps.
