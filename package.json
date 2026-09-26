@@ -45,7 +45,7 @@
     "build": "node scripts/build.mjs",
     "docs:sync": "node scripts/build.mjs --docs",
     "typecheck": "npm run build && npm run test:types",
-    "test": "npm run build && npm run test:types && node --test test/*.spec.js",
+    "test": "npm run build && npm run test:types && node scripts/test.mjs",
     "prepack": "npm run build",
     "test:types": "tsc -p test/types/tsconfig.json",
     "prepublishOnly": "node scripts/publish-version.mjs --check",

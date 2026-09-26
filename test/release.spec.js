@@ -5,12 +5,6 @@ import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, copyFileSync, rmSy
 import { tmpdir } from 'node:os';
 import { join, delimiter } from 'node:path';
 
-const progressMessage = 'Running release integration tests. This can take 1–2 minutes; a quiet terminal is normal.';
-const useColor = process.env.NO_COLOR === undefined && process.env.FORCE_COLOR !== '0' && process.env.TERM !== 'dumb';
-console.log(useColor ? `\u001b[36m${progressMessage}\u001b[0m` : progressMessage);
-// Flush the test runner's output before synchronous Git fixtures occupy this process.
-await new Promise(resolve => setImmediate(resolve));
-
 function fixture(t) {
   const root = mkdtempSync(join(tmpdir(), 'payload-vars-release-'));
   t.after(() => rmSync(root, { recursive: true, force: true }));
