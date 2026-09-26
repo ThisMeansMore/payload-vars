@@ -7,7 +7,9 @@ export const stripReviewMarkers = markdown => markdown
 
 const root = new URL('../../', import.meta.url);
 const read = path => readFileSync(new URL(path, root), 'utf8');
-const adjustLinks = markdown => markdown.replace(/(\]\()docs\//g, '$1');
+const adjustLinks = markdown => markdown.replace(/(\]\()docs\//g, '$1')
+  .replace(/(\]\()CHANGELOG-ARCHIVE\.md/g, '$1changelog-archive.md')
+  .replace(/(\]\()CHANGELOG\.md/g, '$1changelog.md');
 
 // Shared by builds and both release commands. Importing this module changes no files.
 export function syncDocs({ check = false } = {}) {
@@ -22,6 +24,7 @@ export function syncDocs({ check = false } = {}) {
     ['docs/index.md', 'Getting started', 'README.md, package.json, and docs/_includes/home-footer.md',
       `${body.trimEnd()}\n\n${read('docs/_includes/home-footer.md').trimEnd()}`],
     ['docs/changelog.md', 'Changelog', 'CHANGELOG.md', adjustLinks(changelog).trimEnd()],
+    ['docs/changelog-archive.md', 'Changelog archive', 'CHANGELOG-ARCHIVE.md', adjustLinks(stripReviewMarkers(read('CHANGELOG-ARCHIVE.md'))).trimEnd()],
   ];
   for (const [path, title, sources, content] of pages) {
     const contents = `---

@@ -14,6 +14,8 @@ npm run prepare-version -- patch  # or minor / major
 
 This automatically sets the version and date, preserves existing notes or drafts them from commits since the current version's tag, adds `<!-- requires-review -->`, and generates docs.
 
+The latest five releases keep their full notes in `CHANGELOG.md`. Preparation moves older entries into `CHANGELOG-ARCHIVE.md` and leaves a one-line summary linked to the full notes. Each summary uses the release's first bullet, so lead with its most useful change. Archive notes are preserved, including breaking changes and migration guidance.
+
 **✋ MANUAL — Review and remove the marker**
 
 Read and edit the new version's notes in `CHANGELOG.md`. Commit subjects are only a draft: combine or rewrite them as useful release notes. Remove `<!-- requires-review -->` when finished. Leave Unreleased empty and the prepared changes uncommitted.
@@ -26,4 +28,4 @@ Publication stops while the marker remains. Once removed, it validates, runs tes
 
 **✋ MANUAL — Only if a step fails:** fix the reported issue and rerun `npm run publish-version` from the same checkout. Do not prepare another version. An identical package already on npm is not published again. Creating a GitHub Release page is optional and separate.
 
-README and CHANGELOG are the documentation sources; the Pages-only footer lives in `docs/_includes/home-footer.md`. Builds, tests, and release commands generate the Pages files automatically. Empty Unreleased sections and internal review markers are hidden on Pages.
+README, CHANGELOG, and CHANGELOG-ARCHIVE are the documentation sources; the Pages-only footer lives in `docs/_includes/home-footer.md`. Builds, tests, and release commands generate the Pages files automatically. Empty Unreleased sections and internal review markers are hidden on Pages.

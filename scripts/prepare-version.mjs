@@ -1,5 +1,5 @@
 import { existsSync, readFileSync, writeFileSync, rmSync } from 'node:fs';
-import { assertMain, assertClean, assertVersions, git, readJson, releaseFiles, sections, syncDocs, tagCommit, report } from './lib/release.mjs';
+import { assertMain, assertClean, assertVersions, git, readJson, releaseFiles, sections, syncDocs, tagCommit, report, compactChangelog } from './lib/release.mjs';
 
 try {
   const increment = process.argv[2];
@@ -34,7 +34,10 @@ try {
     lock.packages[''].version = version;
     for (const [path, data] of [['package.json', pkg], ['package-lock.json', lock]]) writeFileSync(path, `${JSON.stringify(data, null, 2)}\n`);
     const date = new Date().toISOString().slice(0, 10);
-    writeFileSync('CHANGELOG.md', changelog.replace(/^## Unreleased\r?\n([\s\S]*?)(?=^## |$(?![\s\S]))/m, () => `## Unreleased\n\n## ${version} — ${date}\n\n<!-- requires-review -->\n\n${notes}\n\n`));
+    const prepared = changelog.replace(/^## Unreleased\r?\n([\s\S]*?)(?=^## |$(?![\s\S]))/m, () => `## Unreleased\n\n## ${version} — ${date}\n\n<!-- requires-review -->\n\n${notes}\n\n`);
+    const compact = compactChangelog(prepared, readFileSync('CHANGELOG-ARCHIVE.md', 'utf8'));
+    writeFileSync('CHANGELOG.md', compact.changelog);
+    writeFileSync('CHANGELOG-ARCHIVE.md', compact.archive);
     syncDocs();
   } catch (error) {
     for (const [path, data] of snapshots) writeFileSync(path, data);

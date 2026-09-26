@@ -2,7 +2,8 @@ import { execFileSync } from 'node:child_process';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { stripReviewMarkers } from './docs.mjs';
 
-export const releaseFiles = ['package.json', 'package-lock.json', 'CHANGELOG.md', 'docs/index.md', 'docs/changelog.md'];
+export const releaseFiles = ['package.json', 'package-lock.json', 'CHANGELOG.md', 'CHANGELOG-ARCHIVE.md',
+  'docs/index.md', 'docs/changelog.md', 'docs/changelog-archive.md'];
 export const run = (command, args, options = {}) => (execFileSync(command, args, {
   encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], ...options,
 }) ?? '').trim();
@@ -58,6 +59,32 @@ export function sections(markdown) {
     }
   }
   return result;
+}
+
+export function compactChangelog(changelog, archive) {
+  const isRelease = entry => /^\d+\.\d+\.\d+ — \d{4}-\d{2}-\d{2}$/.test(entry.title);
+  const entries = sections(changelog);
+  const overflow = entries.filter(isRelease).slice(5);
+  if (!overflow.length) return { changelog, archive };
+  const archived = [...overflow, ...sections(archive).filter(isRelease)];
+  const titles = new Set();
+  for (const entry of archived) {
+    if (titles.has(entry.title)) throw new Error(`Duplicate archived release: ${entry.title}`);
+    titles.add(entry.title);
+  }
+  const format = entry => `## ${entry.title}\n\n${entry.body.trim()}\n\n`;
+  const summaries = archived.map(entry => {
+    const anchor = entry.title.replace(/[^\w -]/g, '').replaceAll(' ', '-');
+    const summary = entry.body.match(/^- (.+)$/m)?.[1] ?? 'Full release notes.';
+    return `- [${entry.title}](CHANGELOG-ARCHIVE.md#${anchor}) — ${summary}`;
+  }).join('\n');
+  const retained = entries.filter(entry => entry.title !== 'Older releases' && !overflow.includes(entry));
+  return {
+    changelog: changelog.slice(0, changelog.indexOf('\n## ') + 1)
+      + retained.map(format).join('') + `## Older releases\n\n${summaries}\n`,
+    archive: archive.slice(0, archive.indexOf('\n## ') < 0 ? archive.length : archive.indexOf('\n## ') + 1).trimEnd()
+      + '\n\n' + archived.map(format).join('').trimEnd() + '\n',
+  };
 }
 
 export function assertReviewed(version) {
