@@ -72,7 +72,7 @@ export function compactChangelog(changelog, archive) {
     if (titles.has(entry.title)) throw new Error(`Duplicate archived release: ${entry.title}`);
     titles.add(entry.title);
   }
-  const format = entry => `## ${entry.title}\n\n${entry.body.trim()}\n\n`;
+  const format = entry => `## ${entry.title}\n\n${entry.body.trim() ? entry.body.trim() + '\n\n' : ''}`;
   const summaries = archived.map(entry => {
     const anchor = entry.title.replace(/[^\w -]/g, '').replaceAll(' ', '-');
     const summary = entry.body.match(/^- (.+)$/m)?.[1] ?? 'Full release notes.';

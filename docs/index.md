@@ -99,7 +99,26 @@ const payload = template.render({
 
 Placeholders occupy an entire string. Types are `string`, `number`, `boolean`, `string[]`, and `number[]`. Use `??` for nullish fallback or `||` for falsy fallback, with actions `null`, `omit`, or `throw`. Invalid templates throw `PayloadTemplateError`; inputs are never mutated.
 
-TypeScript infers `render()` inputs from literal templates. Use `as const` on separately declared templates to preserve their literal types; see the [TypeScript guide](typescript.md).
+TypeScript infers `render()` inputs from literal templates. Use `as const` on separately declared templates to preserve their literal types; see [TypeScript input inference](development.md#typescript-input-inference).
+
+## Plugins: your rules, inside plain JSON
+
+**Validate an email. Extract its domain. Turn calendar dates into UTC timestamps. All in the template.**
+
+Chain `@` validators and `>` transformers to express what a value must satisfy and how it should change. Built-in plugins cover dates, email addresses, and collections. Add your own reusable business rules with a few functions; the template stays portable JSON.
+
+```ts
+new PayloadTemplate('{{value:string @ email > domain}}')
+  .render({ value: 'user@Example.com' }); // 'example.com'
+
+new PayloadTemplate('{{value:string[ @ dateonly > isodatetime ] @ range}}')
+  .render({ value: ['2026-01-01', '2026-12-31'] });
+// ['2026-01-01T00:00:00.000Z', '2026-12-31T00:00:00.000Z']
+```
+
+Use `@` for validation and `>` for transformation, in execution order. Existing `??` and `||` fallbacks still handle only nullish/falsy inputs; validation failures throw errors. Supply `{ plugins: [...] }` as the constructor's second argument to select plugins, or extend the defaults with `{ plugins: [...builtInPlugins, customPlugin] }`.
+
+**[Explore Plugins →](plugins.md)** — built-ins, execution order, and a complete custom-plugin example.
 
 ## Syntax highlighting
 
@@ -121,7 +140,7 @@ const expressions = template.tokenizePayloadExpression();
 
 Each token has `kind`, `text`, `start`, and `end`. Map kinds to your own styles.
 
-See the [syntax guide](syntax.md), [API and errors](api.md), and [migration and development guide](development.md) for details.
+See the [syntax guide](syntax.md) and [Development](development.md) for the API, errors, TypeScript, and migration guidance.
 
 ## Module formats
 
@@ -137,31 +156,13 @@ const { PayloadTemplate } = require('payload-vars');
 
 Import from the package root so your runtime selects the appropriate entry point.
 
-## Validators and transformers
-
-Built-in plugins validate dates, email addresses, and collections, and transform values while preserving their declared type:
-
-```ts
-new PayloadTemplate('{{value:string @ email > domain}}')
-  .render({ value: 'user@Example.com' }); // 'example.com'
-
-new PayloadTemplate('{{value:string[ @ dateonly > isodatetime ] @ range}}')
-  .render({ value: ['2026-01-01', '2026-12-31'] });
-// ['2026-01-01T00:00:00.000Z', '2026-12-31T00:00:00.000Z']
-```
-
-Use `@` for validation and `>` for transformation, in execution order. Existing `??` and `||` fallbacks still handle only nullish/falsy inputs; validation failures throw errors. Supply `{ plugins: [...] }` as the constructor's second argument to select plugins, or extend the defaults with `{ plugins: [...builtInPlugins, customPlugin] }`.
-
-See [plugin syntax](syntax.md#validators-and-transformers) and [custom plugin configuration](api.md#plugin-configuration).
-
 ## Guides
 
 - [Changelog](changelog.md): version history and unreleased changes.
 - [Examples](examples.md): demo templates and resulting payloads side by side.
 - [Template syntax](syntax.md): types, fallbacks, array members, and omission.
-- [API and structured errors](api.md): validation, rendering, extraction, and syntax highlighting.
-- [TypeScript input inference](typescript.md): inferred inputs and reusable types.
-- [Migration and development](development.md): migration notes, testing, and releases.
+- [Plugins](plugins.md): validators, transformers, built-ins, and your own reusable rules.
+- [Development](development.md): API reference, structured errors, TypeScript, migration, testing, and releases.
 
 [View the source on GitHub](https://github.com/ThisMeansMore/payload-vars)
 

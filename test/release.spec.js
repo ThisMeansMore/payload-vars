@@ -36,6 +36,7 @@ function fixture(t) {
   write('README.md', '# payload-vars\n\nDocumentation.\n');
   write('docs/_includes/home-footer.md', '[Changelog](changelog.md)\n');
   write('CHANGELOG.md', '# Changelog\n\n## Unreleased\n\n- New feature.\n\n## 1.2.3 — 2026-09-25\n\n<!-- reviewed -->\n\n- Previous release.\n');
+  write('CHANGELOG-ARCHIVE.md', '# Changelog archive\n\n[Recent releases](CHANGELOG.md)\n');
   execFileSync(process.execPath, ['scripts/build.mjs', '--docs'], { cwd });
   git('add', '.');
   git('commit', '-m', 'initial');
@@ -57,7 +58,7 @@ if (args[0] === 'test') {
 } else if (args[0] === 'config') {
   console.log('https://registry.example.invalid/');
 } else if (args[0] === 'pack') {
-  const files = ['package.json', 'package-lock.json', 'CHANGELOG.md', 'docs/index.md', 'docs/changelog.md'];
+  const files = ['package.json', 'package-lock.json', 'CHANGELOG.md', 'CHANGELOG-ARCHIVE.md', 'docs/index.md', 'docs/changelog.md', 'docs/changelog-archive.md'];
   const contents = files.map(file => fs.readFileSync(file, 'utf8')).join('');
   const integrity = 'sha512-' + crypto.createHash('sha512').update(contents).digest('base64');
   const packed = { name: pkg.name, version: pkg.version, integrity, filename: 'fixture.tgz' };
@@ -131,6 +132,24 @@ test('preparation bumps all versions, moves notes, preserves historical reviews 
   assert.equal(f.run('prepare-version', 'patch').status, 1, 'cannot accidentally bump twice');
   assert.match(f.run('publish-version').stderr, /Review the notes for 1.2.4/);
   assert.equal(f.git('rev-parse', 'HEAD'), head);
+});
+
+test('preparation archives older notes and publication commits synchronized archive pages', t => {
+  const f = fixture(t);
+  const older = Array.from({ length: 5 }, (_, index) => `## 1.1.${4 - index} — 2026-09-24\n\n- Older ${4 - index}.\n\n- Keep this detail.\n`).join('\n');
+  f.write('CHANGELOG.md', f.read('CHANGELOG.md') + '\n' + older);
+  assert.equal(f.run('build', '--docs').status, 0);
+  f.git('add', '.'); f.git('commit', '-m', 'add history');
+  f.prepare();
+  assert.equal((f.read('CHANGELOG.md').match(/^## \d/gm) ?? []).length, 5);
+  assert.match(f.read('CHANGELOG-ARCHIVE.md'), /## 1\.1\.1[^]*Keep this detail/);
+  assert.match(f.read('docs/changelog.md'), /\]\(changelog-archive\.md#111--2026-09-24\)/);
+  assert.match(f.read('docs/changelog-archive.md'), /\[Recent releases\]\(changelog\.md\)/);
+  f.review();
+  const result = f.run('publish-version');
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(f.git('show', 'HEAD:CHANGELOG-ARCHIVE.md'), f.read('CHANGELOG-ARCHIVE.md').trim());
+  assert.equal(f.git('status', '--porcelain'), '');
 });
 
 test('preparation rejects dirty branches and invalid increments, and drafts missing notes', t => {

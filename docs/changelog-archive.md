@@ -1,6 +1,13 @@
+---
+title: Changelog archive
+---
+
+<!-- Generated from CHANGELOG-ARCHIVE.md by scripts/lib/docs.mjs. Do not edit directly. -->
+<!-- {% raw %} -->
+
 # Changelog archive
 
-Full notes for older releases. See the [changelog](CHANGELOG.md) for the latest five releases and a summary of this archive.
+Full notes for older releases. See the [changelog](changelog.md) for the latest five releases and a summary of this archive.
 
 ## 1.1.4 — 2026-09-25
 
@@ -59,9 +66,11 @@ Full notes for older releases. See the [changelog](CHANGELOG.md) for the latest 
 
 - **Breaking:** Replace standalone extraction and rendering functions with `PayloadTemplate`. Construct a template, then use `extractVariables()` and `render()`.
 - **Breaking:** Replace nullable `?` suffixes with explicit `??` / `||` fallback rules and `null`, `omit`, or `throw` actions, including array-member rules.
-- **Breaking:** Variable contracts and structured errors now include declarations and fallback information. See the [migration guide](docs/development.md) for API, syntax, and error changes.
+- **Breaking:** Variable contracts and structured errors now include declarations and fallback information. See the [migration guide](development.md) for API, syntax, and error changes.
 
 ### Added
 
 - Template normalization through `toJSON()`.
 - TypeScript inference of render inputs from literal templates.
+
+<!-- {% endraw %} -->
