@@ -11,6 +11,13 @@ Notable changes, starting with 1.0.0. Historical dates follow Git tags.
 
 The latest five releases are detailed below. Older releases have one-line summaries linking to their full notes in the [archive](changelog-archive.md).
 
+## 1.2.1 — 2026-09-26
+
+### Changes
+
+- chore: simplified release and changelog
+- docs: simplified changelog and documentation
+
 ## 1.2.0 — 2026-09-26
 
 - Add pluggable validators (`@`) and type-preserving transformers (`>`), with date, email, and collection built-ins, member/collection scopes, and unchanged fallback behavior.
@@ -35,14 +42,9 @@ The latest five releases are detailed below. Older releases have one-line summar
 
 - Remove internal review markers from changelogs before release while preserving safe publication retries.
 
-## 1.1.5 — 2026-09-25
-
-### Fixed
-
-- Releases explicitly deploy GitHub Pages and verify the deployed commit, preventing outdated documentation after a version bump.
-
 ## Older releases
 
+- [1.1.5 — 2026-09-25](changelog-archive.md#115--2026-09-25) — Releases explicitly deploy GitHub Pages and verify the deployed commit, preventing outdated documentation after a version bump.
 - [1.1.4 — 2026-09-25](changelog-archive.md#114--2026-09-25) — Package version below the documentation homepage title, updated automatically on version bumps.
 - [1.1.3 — 2026-09-25](changelog-archive.md#113--2026-09-25) — Generate the documentation homepage from README with a Pages-only Guides list and GitHub source link.
 - [1.1.2 — 2026-09-25](changelog-archive.md#112--2026-09-25) — Clarify that templates are defined as data, with a comparison to schema validation and JSON templating tools.

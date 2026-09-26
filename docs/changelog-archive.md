@@ -9,6 +9,12 @@ title: Changelog archive
 
 Full notes for older releases. See the [changelog](changelog.md) for the latest five releases and a summary of this archive.
 
+## 1.1.5 — 2026-09-25
+
+### Fixed
+
+- Releases explicitly deploy GitHub Pages and verify the deployed commit, preventing outdated documentation after a version bump.
+
 ## 1.1.4 — 2026-09-25
 
 ### Added
