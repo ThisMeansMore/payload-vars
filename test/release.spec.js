@@ -54,9 +54,10 @@ if (args[0] === 'test') {
   const files = ['package.json', 'package-lock.json', 'CHANGELOG.md', 'docs/index.md', 'docs/changelog.md'];
   const contents = files.map(file => fs.readFileSync(file, 'utf8')).join('');
   const integrity = 'sha512-' + crypto.createHash('sha512').update(contents).digest('base64');
-  const packed = { version: pkg.version, integrity, filename: 'fixture.tgz' };
+  const packed = { name: pkg.name, version: pkg.version, integrity, filename: 'fixture.tgz' };
+  if (fs.existsSync(path.join(root, 'wrong-pack-version'))) packed.version = '0.0.0';
   fs.writeFileSync(path.join(args[args.indexOf('--pack-destination') + 1], packed.filename), JSON.stringify(packed));
-  console.log(JSON.stringify([packed]));
+  console.log(JSON.stringify(fs.existsSync(path.join(root, 'npm12-pack')) ? { [pkg.name]: packed } : [packed]));
 } else if (args[0] === 'view') {
   if (fs.existsSync(path.join(root, 'network-error'))) {
     console.log(JSON.stringify({ error: { code: 'EAI_AGAIN' } })); process.exit(1);
@@ -64,7 +65,8 @@ if (args[0] === 'test') {
   if (!fs.existsSync(path.join(root, 'published'))) {
     console.log(JSON.stringify({ error: { code: 'E404' } })); process.exit(1);
   }
-  console.log(fs.readFileSync(path.join(root, 'published'), 'utf8'));
+  const published = JSON.parse(fs.readFileSync(path.join(root, 'published'), 'utf8'));
+  console.log(JSON.stringify(fs.existsSync(path.join(root, 'npm12-pack')) ? [published] : published));
 } else if (args[0] === 'publish') {
   if (fs.existsSync(path.join(root, 'fail-publish'))) process.exit(1);
   if (fs.readFileSync('CHANGELOG.md', 'utf8').match(/<!-- (reviewed|requires-review) -->/g) || fs.readFileSync('docs/changelog.md', 'utf8').match(/<!-- (reviewed|requires-review) -->/g)) process.exit(3);
@@ -155,6 +157,27 @@ test('publication refreshes reviewed docs, commits only release files and publis
   assert.equal(f.run('publish-version', '--check').status, 0);
   assert.match(f.git('ls-remote', 'origin', 'refs/tags/v1.2.4^{}'), new RegExp(f.git('rev-parse', 'HEAD')));
   assert.equal(existsSync(join(f.cwd, '.git/payload-vars-release.json')), false);
+});
+
+test('npm 12 pack metadata supports publication and retry without republishing', t => {
+  const f = fixture(t);
+  f.prepare(); f.review(); f.flag('npm12-pack'); f.flag('pages-fails');
+  assert.match(f.run('publish-version').stderr, /Pages deployment failed/);
+  rmSync(join(f.root, 'pages-fails'));
+  const retry = f.run('publish-version');
+  assert.equal(retry.status, 0, retry.stderr);
+  assert.match(retry.stdout, /skipping publication/);
+  assert.equal(readFileSync(join(f.root, 'calls'), 'utf8').split('\n').filter(line => line.startsWith('publish ')).length, 1);
+});
+
+test('both npm pack formats reject a mismatched version before publication', t => {
+  for (const npm12 of [false, true]) {
+    const f = fixture(t);
+    f.prepare(); f.review(); f.flag('wrong-pack-version');
+    if (npm12) f.flag('npm12-pack');
+    assert.match(f.run('publish-version').stderr, /Packed artifact does not match the prepared version/);
+    assert.equal(existsSync(join(f.root, 'published')), false);
+  }
 });
 
 test('publication rejects unrelated edits, pending notes, example review markers and failing tests', t => {

@@ -121,8 +121,11 @@ function commitRelease(state, save) {
 function publishPackage(pkg) {
   const directory = mkdtempSync(join(tmpdir(), 'payload-vars-publish-'));
   try {
-    const packs = JSON.parse(run('npm', ['pack', '--json', '--pack-destination', directory]));
-    if (packs.length !== 1 || packs[0].version !== pkg.version || !packs[0].integrity) throw new Error('Packed artifact does not match the prepared version.');
+    const result = JSON.parse(run('npm', ['pack', '--json', '--pack-destination', directory]));
+    // npm 12 keys pack results by package name; earlier versions return an array.
+    const packs = Array.isArray(result) ? result : Object.values(result ?? {});
+    if (packs.length !== 1 || packs[0]?.name !== pkg.name || packs[0]?.version !== pkg.version
+      || !packs[0]?.integrity || !packs[0]?.filename) throw new Error('Packed artifact does not match the prepared version.');
     const pack = packs[0];
     const registry = pkg.publishConfig?.registry ?? run('npm', ['config', 'get', 'registry']);
     const published = publishedArtifact(pkg, registry);
@@ -140,7 +143,13 @@ function publishPackage(pkg) {
 
 function publishedArtifact(pkg, registry) {
   try {
-    return JSON.parse(run('npm', ['view', `${pkg.name}@${pkg.version}`, 'version', 'dist.integrity', '--json', '--registry', registry]));
+    const result = JSON.parse(run('npm', ['view', `${pkg.name}@${pkg.version}`, 'version', 'dist.integrity', '--json', '--registry', registry]));
+    // npm 12 wraps the selected version in an array.
+    const versions = Array.isArray(result) ? result : [result];
+    if (versions.length !== 1 || versions[0]?.version !== pkg.version || !versions[0]?.['dist.integrity']) {
+      throw new Error('Registry metadata does not match the prepared version.');
+    }
+    return versions[0];
   } catch (error) {
     let code;
     try { code = JSON.parse(String(error.stdout)).error?.code; } catch { /* Only E404 proves absence. */ }
