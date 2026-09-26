@@ -11,6 +11,12 @@ Notable changes, starting with 1.0.0. Historical dates follow Git tags.
 
 The latest five releases are detailed below. Older releases have one-line summaries linking to their full notes in the [archive](changelog-archive.md).
 
+## 1.4.1 — 2026-09-26
+
+### Changes
+
+- docs: plugins examples
+
 ## 1.4.0 — 2026-09-26
 
 ### Breaking changes
@@ -41,12 +47,9 @@ The latest five releases are detailed below. Older releases have one-line summar
 - chore: simplified release and changelog
 - docs: simplified changelog and documentation
 
-## 1.2.0 — 2026-09-26
-
-- Add pluggable validators (`@`) and type-preserving transformers (`>`), with date, email, and collection built-ins, member/collection scopes, and unchanged fallback behavior.
-
 ## Older releases
 
+- [1.2.0 — 2026-09-26](changelog-archive.md#120--2026-09-26) — Add pluggable validators (`@`) and type-preserving transformers (`>`), with date, email, and collection built-ins, member/collection scopes, and unchanged fallback behavior.
 - [1.1.8 — 2026-09-25](changelog-archive.md#118--2026-09-25) — Improved releasing notes logic
 - [1.1.7 — 2026-09-25](changelog-archive.md#117--2026-09-25) — Hide the empty Unreleased heading on the documentation site.
 - [1.1.6 — 2026-09-25](changelog-archive.md#116--2026-09-25) — Remove internal review markers from changelogs before release while preserving safe publication retries.
