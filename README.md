@@ -41,7 +41,7 @@ The template provides these methods:
 
 | Method | Returns |
 | --- | --- |
-| `compile()` | Variable contracts in first occurrence order, with matching declarations deduplicated. |
+| `variables()` | Variable contracts in first occurrence order, with matching declarations deduplicated. |
 | `toJSON()` | A copy of the normalized template. |
 | `render(values)` | The payload with runtime values filled in. |
 | `tokenizePayloadExpression()` | Highlighting tokens for each normalized placeholder occurrence. |
@@ -59,7 +59,7 @@ const normalized = template.toJSON();
 Inspect the compiled variable contracts:
 
 ```js
-const variables = template.compile();
+const variables = template.variables();
 // [
 //   {
 //     name: 'orderId',

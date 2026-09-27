@@ -70,7 +70,7 @@ export function parsePlaceholder(value: string, path: string): Declaration | und
   };
 }
 
-export function compile(template: JsonTemplateValue, options: PayloadTemplateOptions = {}): Contract {
+export function buildContract(template: JsonTemplateValue, options: PayloadTemplateOptions = {}): Contract {
   const plugins = createRegistries(options.plugins);
   const declarations = new Map<string, Declaration>();
   const locations = new Map<string, Declaration>();

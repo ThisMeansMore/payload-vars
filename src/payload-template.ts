@@ -2,7 +2,7 @@ import type { PayloadTemplateOptions } from './plugins.js';
 import { tokenizePayloadExpression } from './tokenize-payload-expression.js';
 import type { PayloadTemplateVariables } from './payload-template-input.types.js';
 import type { JsonValue, JsonTemplateValue, PayloadVariable, TokenizedPayloadExpression } from './payload-template.types.js';
-import { compile, type Contract } from './template-internal.js';
+import { buildContract, type Contract } from './template-internal.js';
 import { renderContract } from './render-internal.js';
 
 function copyJson(value: JsonValue): JsonValue {
@@ -24,7 +24,7 @@ export class PayloadTemplate<const T extends JsonTemplateValue = JsonTemplateVal
 
   /** Compile and snapshot the template. Invalid declarations throw PayloadTemplateError. */
   constructor(template: T, options: PayloadTemplateOptions = {}) {
-    this.#contract = compile(template, options);
+    this.#contract = buildContract(template, options);
   }
 
   /** Return highlighting tokens for every normalized placeholder occurrence. */
@@ -42,7 +42,7 @@ export class PayloadTemplate<const T extends JsonTemplateValue = JsonTemplateVal
   }
 
   /** Return independent variable contracts in first occurrence order. */
-  compile(): PayloadVariable[] {
+  variables(): PayloadVariable[] {
     return Array.from(this.#contract.declarations.values(), ({ name, type, declaration, memberFallback, valueFallback, memberOperations, valueOperations }) => ({
       name, type, declaration,
       ...(memberOperations ? { memberOperations: memberOperations.map(op => ({ ...op })) } : {}),

@@ -11,6 +11,16 @@ Notable changes, starting with 1.0.0. Historical dates follow Git tags.
 
 The latest five releases are detailed below. Older releases have one-line summaries linking to their full notes in the [archive](changelog-archive.md).
 
+## Unreleased
+
+### Breaking changes
+
+- Rename `PayloadTemplate.compile()` to `PayloadTemplate.variables()`. The returned variable contracts and copy semantics are unchanged; compilation remains in the constructor.
+
+### Changes
+
+- Rename the internal constructor helper to `buildContract()` and update tests, README, and documentation to distinguish construction from variable inspection.
+
 ## 2.0.1 — 2026-09-27
 
 ### Breaking changes

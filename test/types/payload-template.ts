@@ -156,7 +156,9 @@ operations.render({ required: '2026-01-01', conditional: 'unchanged' });
 operations.render({ required: '2026-01-01' });
 // @ts-expect-error Conditional validation preserves the declared base type.
 operations.render({ required: '2026-01-01', conditional: 1 });
-const contracts: PayloadVariable[] = operations.compile();
+const contracts: PayloadVariable[] = operations.variables();
 void contracts;
-// @ts-expect-error Renamed to compile() in v2.
+// @ts-expect-error Replaced by variables().
 operations.extractVariables();
+// @ts-expect-error Compilation happens in the constructor; inspect variables with variables().
+operations.compile();
