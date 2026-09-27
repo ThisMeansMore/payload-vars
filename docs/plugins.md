@@ -17,29 +17,39 @@ The template stores operation names. Your application supplies the functions beh
 - [Built-in operations](#built-in-operations)
 - [Writing a custom plugin](#writing-a-custom-plugin)
 - [Errors and TypeScript](#errors-and-typescript)
+- [Conditional validation](#conditional-validation)
 - [Migrating from flat plugin names](#migrating-from-flat-plugin-names)
 
 ## Validators and transformers
 
 | Syntax | Purpose | Result |
 | --- | --- | --- |
-| `@ namespace.operation` | Check a value against a rule. | Keep the value when valid; throw when invalid. |
+| `! namespace.operation` | Check a value against a rule. | Keep the value when valid; throw when invalid. |
+| `? namespace.operation` | Check a value conditionally. | Apply the following `>` on success; otherwise apply `~`, or keep the value. |
+| `~ namespace.operation` | Transform when conditional validation fails. | Allowed only within a `?` group. |
 | `> namespace.operation` | Transform a value. | Use the returned value, which must keep the declared base type. |
 
 ```ts
 import { PayloadTemplate } from 'payload-vars';
 
 const template = new PayloadTemplate({
-  domain: '{{email:string @ email.email > email.domain}}',
+  domain: '{{email:string ! email.email > email.domain}}',
 });
 
 template.render({ email: 'user@Example.com' });
 // { domain: 'example.com' }
 ```
 
-Here `string` checks the base type, `@ email.email` validates the address, and `> email.domain` extracts a lowercase domain. Both the supplied email and the resulting domain are strings. A transformer cannot turn a string into a number or an object.
+Here `string` checks the base type, `! email.email` validates the address, and `> email.domain` extracts a lowercase domain. Both the supplied email and the resulting domain are strings. A transformer cannot turn a string into a number or an object.
 
-Operation order matters: each operation receives the preceding operation's result. Validators leave the value unchanged. Built-in and custom operations both require `namespace.operation`, such as `email.email` or `custom.trim`. Each name segment must match `[A-Za-z_][A-Za-z0-9_]*`. Names are case-sensitive; exactly one dot and no whitespace around it are allowed. Variable names remain unchanged.
+Operation order matters: each operation receives the preceding operation's result. Throwing validators leave the value unchanged. Built-in and custom operations both require `namespace.operation`, such as `email.email` or `custom.trim`. Each name segment must match `[A-Za-z_][A-Za-z0-9_]*`. Names are case-sensitive; exactly one dot and no whitespace around it are allowed. Variable names remain unchanged.
+
+## Conditional validation
+
+`? validator [> transformer] [~ transformer]` selects at most one transformation. Without `~`, a failed check keeps the value unchanged. Both branches receive the tested value, preserve its declared type, and use the same plugins as ordinary transformations. Exceptions from callbacks still throw. Fallbacks run before these operations. See [conditional syntax](syntax.md#validators-and-transformers).
+
+Replace the old `@` operator with `!` for the same throwing behavior. Old expressions now fail during compilation with `LEGACY_VALIDATION_SYNTAX` and migration guidance.
+
 
 ## Execution order and array scopes
 
@@ -47,7 +57,7 @@ Inside `[]`, operations apply to each array member. After `]`, operations apply 
 
 ```ts
 const period = new PayloadTemplate(
-  '{{dates:string[ @ date.dateonly > date.isodatetime ?? omit ] @ collection.range ?? throw}}',
+  '{{dates:string[ ! date.dateonly > date.isodatetime ?? omit ] ! collection.range ?? throw}}',
 );
 
 period.render({ dates: ['2026-01-01', null, '2026-12-31'] });
@@ -76,8 +86,8 @@ const customPlugin: PayloadVarsPlugin = {
   transformers: { trim },
 };
 
-new PayloadTemplate('{{x:string @ date.dateonly}}', { plugins: [] });
-new PayloadTemplate('{{x:string > textAndNumbers.trim @ email.email}}', {
+new PayloadTemplate('{{x:string ! date.dateonly}}', { plugins: [] });
+new PayloadTemplate('{{x:string > textAndNumbers.trim ! email.email}}', {
   plugins: [customPlugin],
 });
 ```
@@ -127,7 +137,7 @@ The built-ins are always available:
 
 `email.email` validates common ASCII dot-atom addresses with a dotted DNS domain (quoted local parts and internationalized addresses are unsupported). `email.domain` validates dotted ASCII DNS labels. The `email.domain` transformer extracts and lowercases the domain of a valid email: `user@Example.com` becomes `example.com`.
 
-`collection.unique` checks the entire collection using `Set` equality. `collection.range` requires exactly two strictly ascending strings or numbers; strings use JavaScript lexicographic order. Member transformations run first, so `string[ @ date.dateonly > date.isodatetime ] @ collection.range` compares the transformed strings.
+`collection.unique` checks the entire collection using `Set` equality. `collection.range` requires exactly two strictly ascending strings or numbers; strings use JavaScript lexicographic order. Member transformations run first, so `string[ ! date.dateonly > date.isodatetime ] ! collection.range` compares the transformed strings.
 
 ## Writing a custom plugin
 
@@ -147,7 +157,7 @@ const customPlugin: PayloadVarsPlugin = {
 };
 
 const greeting = new PayloadTemplate({
-  name: '{{name:string > custom.trim @ custom.nonempty}}',
+  name: '{{name:string > custom.trim ! custom.nonempty}}',
 }, { plugins: [customPlugin] });
 
 greeting.render({ name: '  Ada  ' }); // { name: 'Ada' }
@@ -174,7 +184,7 @@ Construction checks plugin namespaces, operation identifiers, callback functions
 
 `PayloadTemplateError.issue` identifies the full operation reference (including the namespace for built-in and custom callbacks) and variable; member errors include the original input member path. See [structured errors](development.md#errors) for complete fields.
 
-Plugin validators do not narrow the TypeScript input type: `string @ email.email` still accepts a `string` at compile time. Email validity is checked at runtime. The syntax carries no metadata linking a callback's parameter type to a scope, so configure and use operations with compatible base types. See [TypeScript input inference](development.md#typescript-input-inference).
+Plugin validators do not narrow the TypeScript input type: `string ! email.email` still accepts a `string` at compile time. Email validity is checked at runtime. The syntax carries no metadata linking a callback's parameter type to a scope, so configure and use operations with compatible base types. See [TypeScript input inference](development.md#typescript-input-inference).
 
 ## Migrating from flat plugin names
 
@@ -189,7 +199,7 @@ All built-in references must now be qualified:
 | `unique` | `collection.unique` |
 | `range` | `collection.range` |
 
-The mapping applies to both `@` validators and `>` transformers where supported. Bare references are rejected with `INVALID_FALLBACK_SYNTAX`; no compatibility aliases are provided. Rename any custom plugin using a reserved namespace (for example, `text` to `custom`) and update its template references.
+The mapping applies to both `!` validators and `>` transformers where supported. Bare references are rejected with `INVALID_FALLBACK_SYNTAX`; no compatibility aliases are provided. Rename any custom plugin using a reserved namespace (for example, `text` to `custom`) and update its template references.
 
 Change custom references such as `> trim` to `> custom.trim`, using the plugin's `name`. Rename plugin names containing hyphens, spaces, or dots to valid identifiers. Remove built-in plugins from configuration: `{ plugins: [...builtInPlugins, customPlugin] }` becomes `{ plugins: [customPlugin] }`.
 

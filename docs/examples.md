@@ -431,7 +431,7 @@ The missing note disappears from this list. The name and total stay in order.
 
 ## Chain plugins to clean and validate values
 
-Use `>` for transformers and `@` for validators. Operations run left-to-right: each receives the previous operation's result. Validators leave the value unchanged, and transformers must preserve the declared type.
+Use `>` for transformers and `!` for validators. Operations run left-to-right: each receives the previous operation's result. Validators leave the value unchanged, and transformers must preserve the declared type.
 
 The examples below use the same values from the top of this page. Register these custom transformers once; the email and collection operations are built in:
 
@@ -486,7 +486,7 @@ Trim the input, validate the email address, extract its domain, then validate th
 <tbody>
 <tr>
 <td valign="top"><pre><code>{
-  "domain": "{{email:string &gt; custom.trim @ email.email &gt; email.domain @ email.domain}}"
+  "domain": "{{email:string &gt; custom.trim ! email.email &gt; email.domain ! email.domain}}"
 }</code></pre></td>
 <td valign="top"><pre><code>{
   "domain": "example.com"
@@ -506,7 +506,7 @@ The member fallback removes empty and null tags first. Each remaining tag is tri
 <tbody>
 <tr>
 <td valign="top"><pre><code>{
-  "tags": "{{tags:string[ &gt; custom.trim &gt; custom.uppercase || omit ] @ collection.unique}}"
+  "tags": "{{tags:string[ &gt; custom.trim &gt; custom.uppercase || omit ] ! collection.unique}}"
 }</code></pre></td>
 <td valign="top"><pre><code>{
   "tags": [

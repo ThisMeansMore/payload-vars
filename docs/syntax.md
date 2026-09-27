@@ -66,20 +66,30 @@ The outer fallback processes the supplied variable first. Only an actual array r
 
 ## Validators and transformers
 
-Use `@ namespace.operation` to validate and `> namespace.operation` to transform. Each segment uses the same identifier syntax as variable names. Operations run left-to-right within a scope and precede that scope's optional fallback in the declaration:
+Use `! namespace.operation` for throwing validation, `? namespace.operation` for conditional validation, and `> namespace.operation` to transform. Each segment uses the same identifier syntax as variable names. Operations run left-to-right within a scope and precede that scope's optional fallback in the declaration:
 
 ```text
-{{value:string @ email.email > email.domain}}
-{{value:string[ @ date.dateonly > date.isodatetime ?? omit ] @ collection.range ?? throw}}
+{{value:string ! email.email > email.domain}}
+{{value:string[ ! date.dateonly > date.isodatetime ?? omit ] ! collection.range ?? throw}}
 ```
 
 At runtime, the whole-value fallback runs first, followed by type checking. For arrays, each member's fallback, type check, and operations run before collection operations. A fallback-produced `null` bypasses member operations but remains visible to collection operations; omitted members are removed first.
 
-Validators return a boolean without modifying the input. `false` raises `VALIDATION_FAILED`; it never triggers a fallback. Transformers preserve the declared type. Their results are checked without running fallbacks again, so a string transformer may return `""` even with `|| null`. Returning `null`, `undefined`, an omission marker, another type, or a non-finite number fails with `INVALID_TRANSFORMER_RESULT`. Collection transformations may retain existing member-fallback nulls but cannot add new nulls. Collection validators receive a frozen copy; collection transformers receive a mutable copy.
+Validators return a boolean without modifying the input. With `!`, failure raises `VALIDATION_FAILED`. With `?`, success applies the immediately following optional `>` transformation; failure applies the optional `~` transformation, or leaves the value unchanged when `~` is absent. Neither kind of validation triggers a fallback. Plugin exceptions still raise `PLUGIN_EXECUTION_FAILED`, including inside conditionals. Transformers preserve the declared type. Their results are checked without running fallbacks again, so a string transformer may return `""` even with `|| null`. Returning `null`, `undefined`, an omission marker, another type, or a non-finite number fails with `INVALID_TRANSFORMER_RESULT`. Collection transformations may retain existing member-fallback nulls but cannot add new nulls. Collection validators receive a frozen copy; collection transformers receive a mutable copy.
+
+A conditional group is `? validator [> transformer] [~ transformer]`. Both transformations are optional. `~` belongs only to the immediately preceding conditional group in the same scope; it is invalid after `!`, a standalone transformation, or a fallback. Only the chosen branch runs, receiving the value tested by the validator. Subsequent operations continue left-to-right; a second `>` after a success transformation is unconditional.
+
+```text
+{{value:string ? date.dateonly > date.isodatetime}}
+{{value:string ? date.dateonly > date.isodatetime ~ custom.trim}}
+{{values:string[ ? date.dateonly > date.isodatetime ?? omit ] ?? null}}
+```
+
+The second example requires a registered `custom.trim` transformer. Operation names and plugin behavior are unchanged. All operations, including both branches, are resolved during construction. The old `@` operator is rejected with `LEGACY_VALIDATION_SYNTAX`; replace it with `!` to preserve its behavior.
 
 See [Plugins](plugins.md) for the built-in operations, configuration, and custom validator and transformer examples.
 
-Plugin whitespace follows the existing canonical rules: `string[@date.dateonly>date.isodatetime]@collection.range` becomes `string[ @ date.dateonly > date.isodatetime ] @ collection.range`. Repeated declarations must include identical operations in identical order. Unknown operation names fail during construction. Built-in and custom operations both require `@ namespace.operation` or `> namespace.operation`, for example `@ email.email` or `> custom.trim`. Each segment matches `[A-Za-z_][A-Za-z0-9_]*`, with exactly one dot and no whitespace around it for all operation references. This syntax applies in both member and whole-value scopes.
+Plugin whitespace follows the existing canonical rules: `string[!date.dateonly>date.isodatetime]!collection.range` becomes `string[ ! date.dateonly > date.isodatetime ] ! collection.range`. Repeated declarations must include identical operations in identical order. Unknown operation names fail during construction. Built-in and custom operation references require `namespace.operation` with any of `!`, `?`, `>`, or `~`, for example `! email.email` or `> custom.trim`. Each segment matches `[A-Za-z_][A-Za-z0-9_]*`, with exactly one dot and no whitespace around it for all operation references. This syntax applies in both member and whole-value scopes.
 
 ## Omission
 

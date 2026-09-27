@@ -42,7 +42,7 @@ const template = new PayloadTemplate({
 });
 ```
 
-Validation happens once in the constructor. Extraction and rendering reuse the validated contract. Later changes to the original input cannot change the instance.
+Compilation happens once in the constructor; the internal `compile()` function builds the reusable contract. There is no public compile method. Extraction and rendering reuse the validated contract. Later changes to the original input cannot change the instance.
 
 ### Plugin configuration
 
@@ -76,7 +76,7 @@ template.extractVariables();
 // }]
 ```
 
-`BaseType` contains only the five supported base types. `PayloadVariableType` aliases `BaseType`. `ParsedVariableExpression` contains `name`, `type`, optional `memberFallback`, and optional `valueFallback`. `PayloadVariable` adds the canonical `declaration` string. Optional `memberOperations` and `valueOperations` contain ordered `PayloadOperation` objects (`{ kind: 'validator' | 'transformer', name: string }`). Absent fallbacks and empty operation lists are omitted from extracted objects.
+`BaseType` contains only the five supported base types. `PayloadVariableType` aliases `BaseType`. `ParsedVariableExpression` contains `name`, `type`, optional `memberFallback`, and optional `valueFallback`. `PayloadVariable` adds the canonical `declaration` string. Optional `memberOperations` and `valueOperations` contain ordered `PayloadOperation` objects (`{ kind: 'validator' | 'transformer', name: string, operator?: '?' | '~' }`). The optional `operator` marks conditional validators (`?`) and alternative transformers (`~`); it is absent for `!` and `>`. Absent fallbacks and empty operation lists are omitted from extracted objects.
 
 ### Rendering
 
@@ -95,13 +95,13 @@ template.render({ products: ['C'] });            // { products: ['C'] }
 
 ### Errors
 
-`PayloadTemplateError.issue` is a discriminated union. `error.message` is the issue code. Runtime values are never included in errors.
+`PayloadTemplateError.issue` is a discriminated union. `error.message` is the issue code except for syntax errors, which provide guidance. Use `error.issue.code` for programmatic checks. Runtime values are never included in errors.
 
 | Code | Details |
 | --- | --- |
 | `INVALID_PLACEHOLDER` | `path`, `placeholder` |
 | `UNSUPPORTED_TYPE` | `path`, `variableName`, `declaredType` |
-| `INVALID_FALLBACK_SYNTAX` | `path`, `variableName`, `placeholder` |
+| `INVALID_FALLBACK_SYNTAX`, `LEGACY_VALIDATION_SYNTAX` | `path`, `variableName`, `placeholder` |
 | `VARIABLE_EXPRESSION_CONFLICT` | `variableName`, `declaration`, `declaredAt`, `conflictingDeclaration`, `conflictingAt` |
 | `INVALID_PLUGIN_NAME`, `DUPLICATE_PLUGIN_NAME`, `RESERVED_PLUGIN_NAME` | `plugin` |
 | `INVALID_PLUGIN_OPERATION_NAME`, `INVALID_PLUGIN_OPERATION` | `kind`, `operation`, `plugin` |
@@ -328,7 +328,7 @@ npm ci
 npm test
 ```
 
-Tests cover parsing, canonical contracts, scalar and array fallbacks, omission, validation, structured errors, and immutability. Compile-time tests use positive cases and `@ts-expect-error` assertions and run as part of both `npm test` and `npm run typecheck`. The package has no runtime dependencies. Error codes and issue shapes are public API.
+Unit suites separate compilation (valid syntax, invalid combinations, and contract errors), operation execution, plugin behavior, extraction, highlighting, template snapshots, and rendering/fallbacks. They cover `!`, `?`, and `~` in scalar, member, and collection scopes. Compile-time tests use positive cases and `@ts-expect-error` assertions and run as part of both `npm test` and `npm run typecheck`. The package has no runtime dependencies. Error codes and issue shapes are public API.
 
 Templates must be parsed JSON trees. Raw JSON parsing, partial interpolation, object variables, and `boolean[]` are outside this API. [Plugins](plugins.md) provide date and email validation and transformations that preserve the declared type.
 

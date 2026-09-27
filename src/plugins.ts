@@ -15,7 +15,12 @@ export interface PayloadVarsPlugin {
 }
 /** Custom extensions. Built-in operations are always available. */
 export interface PayloadTemplateOptions { plugins?: readonly PayloadVarsPlugin[] }
-export interface PayloadOperation { kind: 'validator' | 'transformer'; name: string }
+export interface PayloadOperation {
+  kind: 'validator' | 'transformer';
+  name: string;
+  /** Conditional validator or alternative transformer; absent for ! and >. */
+  operator?: '?' | '~';
+}
 
 function dateonly(value: string): boolean {
   if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;

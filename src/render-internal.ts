@@ -43,7 +43,9 @@ function validate(value: unknown, declaration: Declaration, plugins: PluginRegis
   };
   const operations = (initial: JsonValue, ops: PayloadOperation[] | undefined, type: string, valuePath?: string): JsonValue => {
     let current = initial;
-    for (const op of ops ?? []) {
+    const steps = ops ?? [];
+    for (let index = 0; index < steps.length; index++) {
+      const op = steps[index]!;
       const issue = { ...details(declaration), kind: op.kind, operation: op.name,
         ...(valuePath === undefined ? {} : { valuePath }) };
       // Validators see an immutable snapshot; transformers may edit their own copy.
@@ -56,6 +58,15 @@ function validate(value: unknown, declaration: Declaration, plugins: PluginRegis
         throw new PayloadTemplateError({ code: 'PLUGIN_EXECUTION_FAILED', ...issue });
       }
       if (op.kind === 'validator') {
+        if (op.operator === '?') {
+          let success: PayloadOperation | undefined;
+          let alternative: PayloadOperation | undefined;
+          if (steps[index + 1]?.kind === 'transformer' && steps[index + 1]?.operator !== '~') success = steps[++index];
+          if (steps[index + 1]?.operator === '~') alternative = steps[++index];
+          const selected = next === true ? success : alternative;
+          if (selected) current = operations(current, [selected], type, valuePath);
+          continue;
+        }
         if (next !== true) throw new PayloadTemplateError({ code: 'VALIDATION_FAILED', ...issue });
         continue;
       }

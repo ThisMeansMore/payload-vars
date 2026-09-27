@@ -25,7 +25,7 @@ type Expression = { input: unknown; optional: boolean };
 type ScopeFallback<S extends string> = S extends `${string}??${infer Rest}` ? `??${Rest}`
   : S extends `${string}||${infer Rest}` ? `||${Rest}` : '';
 type Base<S extends string, Acc extends string = ''> = S extends `${infer Head}${infer Tail}`
-  ? Head extends Whitespace | '@' | '>' | '?' | '|' ? Acc : Base<Tail, `${Acc}${Head}`> : Acc;
+  ? Head extends Whitespace | '!' | '~' | '>' | '?' | '|' ? Acc : Base<Tail, `${Acc}${Head}`> : Acc;
 type ApplyFallback<Value, S extends string> = Trim<S> extends '' ? { input: Value; optional: false }
   : ParseFallback<S> extends infer F extends Fallback
     ? { input: WithFallback<Value, F>; optional: F['action'] extends 'throw' ? false : true }

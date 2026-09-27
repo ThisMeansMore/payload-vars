@@ -9,19 +9,7 @@ title: Getting started
 
 Package version: v1.4.1
 
-**Create payload templates as data, not code.** Variable names, types, and fallback rules live inside the template itself. Load a template at runtime, validate it, extract its variable contract, and render a JSON payload with supplied values.
-
-The complete definition is plain JSON, so templates can be created, edited, serialized, and exchanged independently of application code.
-
-## How it compares
-
-| Category | A good fit when you need… |
-| --- | --- |
-| Schema validation | General data validation with schemas defined in JavaScript or TypeScript (e.g. [Zod](https://zod.dev/basics)). |
-| General JSON templating | JSON templates stored as data, with expressions, conditions, and loops for generating dynamic output (e.g. [JSON-e](https://json-e.js.org/operators.html)). |
-| Typed placeholder templates | JSON templates with a small syntax for typed placeholders and fallback rules, plus an input contract you can inspect before rendering (the focus of **payload-vars**). |
-
-**Define the output shape and input contract together, using a small placeholder syntax.** Choose payload-vars for configurable payloads where filling typed values into a predefined structure covers your needs. Declarations such as `{{orderId:string}}` keep the rules in the template, and `extractVariables()` lets an application or editor discover its inputs.
+**Imagine a DTO with validation and transformation rules, all expressed in plain, human-readable JSON.** Templates live in data, so you can store them, inspect their input contracts, and render them into payloads with runtime values.
 
 The package has no runtime dependencies and supports browsers and Node.js 18+, with ES module and CommonJS entry points.
 
@@ -48,9 +36,9 @@ const rawTemplate = {
 };
 ```
 
-### 2. Validation
+### 2. Compilation
 
-Construct a validated template and inspect its normalized formatting.
+The constructor compiles a reusable contract. Inspect its normalized formatting:
 
 ```js
 const template = new PayloadTemplate(rawTemplate);
@@ -105,18 +93,21 @@ TypeScript infers `render()` inputs from literal templates. Use `as const` on se
 
 **Validate an email. Extract its domain. Turn calendar dates into UTC timestamps. All in the template.**
 
-Chain `@` validators and `>` transformers to express what a value must satisfy and how it should change. Built-in plugins cover dates, email addresses, and collections. Add your own reusable business rules with a few functions; the template stays portable JSON.
+Chain `!` validators, `?` conditional validators, and `>` transformers to express what a value must satisfy and how it should change. Built-in plugins cover dates, email addresses, and collections. Add your own reusable business rules with a few functions; the template stays portable JSON.
 
 ```ts
-new PayloadTemplate('{{value:string @ email.email > email.domain}}')
+new PayloadTemplate('{{value:string ! email.email > email.domain}}')
   .render({ value: 'user@Example.com' }); // 'example.com'
 
-new PayloadTemplate('{{value:string[ @ date.dateonly > date.isodatetime ] @ collection.range}}')
+new PayloadTemplate('{{value:string ? date.dateonly > date.isodatetime}}')
+  .render({ value: 'not a date' }); // 'not a date'
+
+new PayloadTemplate('{{value:string[ ! date.dateonly > date.isodatetime ] ! collection.range}}')
   .render({ value: ['2026-01-01', '2026-12-31'] });
 // ['2026-01-01T00:00:00.000Z', '2026-12-31T00:00:00.000Z']
 ```
 
-Use `@` for validation and `>` for transformation, in execution order. Existing `??` and `||` fallbacks still handle only nullish/falsy inputs; validation failures throw errors. Built-in operations are always available, including with `plugins: []`. Register custom extensions with `{ plugins: [customPlugin] }` and reference their operations as `@ customPlugin.validateSomething` or `> customPlugin.transformSomething`, using the plugin's `name` as its namespace. All operations require `namespace.operation`. Custom plugins cannot use the [16 reserved built-in namespaces](plugins.md#reserved-namespaces) or override built-ins.
+Use `!` to throw on validation failure. Use `?` to transform with `>` on success, or with the optional `~` alternative on failure. Without `~`, failed conditional validation leaves the value unchanged. `??` and `||` still handle only nullish/falsy inputs before operations run. Built-in operations are always available, including with `plugins: []`. Register custom extensions with `{ plugins: [customPlugin] }` and reference their operations as `! customPlugin.validateSomething` or `> customPlugin.transformSomething`, using the plugin's `name` as its namespace. All operations require `namespace.operation`. Custom plugins cannot use the [16 reserved built-in namespaces](plugins.md#reserved-namespaces) or override built-ins.
 
 **[Explore Plugins →](plugins.md)** — built-ins, execution order, and a complete custom-plugin example.
 

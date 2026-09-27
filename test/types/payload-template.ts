@@ -143,3 +143,18 @@ new PayloadTemplate(deep).render({ x: 'runtime checked' });
 // The documented rendered return type remains JsonValue in this input-inference release.
 const result: JsonValue = fromLiteral.render({ x: 1 });
 void result;
+
+const operations = new PayloadTemplate({
+  required: '{{required:string!date.dateonly>date.isodatetime}}',
+  conditional: '{{conditional:string?date.dateonly>date.isodatetime~date.isodatetime}}',
+  members: '{{members:string[?date.dateonly>date.isodatetime??omit]??null}}',
+  optional: '{{optional:string?date.dateonly>date.isodatetime||null}}',
+});
+operations.render({ required: '2026-01-01', conditional: 'unchanged', members: [null, '2026-01-01'], optional: false });
+operations.render({ required: '2026-01-01', conditional: 'unchanged' });
+// @ts-expect-error Conditional validation does not make an input optional.
+operations.render({ required: '2026-01-01' });
+// @ts-expect-error Conditional validation preserves the declared base type.
+operations.render({ required: '2026-01-01', conditional: 1 });
+// @ts-expect-error There is no public compilation method; construction compiles once.
+operations.compile();

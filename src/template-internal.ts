@@ -12,7 +12,9 @@ export interface Contract {
 }
 
 const identifierPattern = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
-const operationsSource = String.raw`(?:[@>]\s*${operationNameSource}\s*)*`;
+const operationSource = String.raw`${operationNameSource}\s*`;
+// A conditional owns at most one success transform and one alternative.
+const operationsSource = String.raw`(?:[!>]\s*${operationSource}|\?\s*${operationSource}(?:>\s*${operationSource})?(?:~\s*${operationSource})?)*`;
 const scopeSource = String.raw`(${operationsSource})(?:(${operatorSource})\s*(${actionSource})\s*)?`;
 const expressionPattern = new RegExp(String.raw`^(${typeSource})\s*(?:\[\s*${scopeSource}\])?\s*${scopeSource}$`);
 const placeholderPattern = new RegExp(String.raw`^\{\{\s*(${variableNameSource})\s*:\s*([^{}:]*?)\s*\}\}$`);
@@ -30,6 +32,9 @@ export function parsePlaceholder(value: string, path: string): Declaration | und
   }
   const name = match[1]!;
   const expression = match[2]!;
+  if (expression.includes('@')) {
+    throw new PayloadTemplateError({ code: 'LEGACY_VALIDATION_SYNTAX', path, variableName: name, placeholder: value });
+  }
   const parsed = expressionPattern.exec(expression);
   if (!parsed) {
     if (!supportedTypePattern.test(expression)) {
@@ -44,12 +49,13 @@ export function parsePlaceholder(value: string, path: string): Declaration | und
   const memberFallback = parsed[3] ? { operator: parsed[3], action: parsed[4] } as FallbackExpression : undefined;
   const valueFallback = parsed[6] ? { operator: parsed[6], action: parsed[7] } as FallbackExpression : undefined;
   const operations = (source: string): PayloadOperation[] => Array.from(
-    source.matchAll(new RegExp(String.raw`([@>])\s*(${operationNameSource})`, 'g')),
-    match => ({ kind: match[1] === '@' ? 'validator' : 'transformer', name: match[2]! }));
+    source.matchAll(new RegExp(String.raw`([!?>~])\s*(${operationNameSource})`, 'g')),
+    match => ({ kind: match[1] === '!' || match[1] === '?' ? 'validator' : 'transformer', name: match[2]!,
+      ...(match[1] === '?' || match[1] === '~' ? { operator: match[1] as '?' | '~' } : {}) }));
   const memberOperations = operations(parsed[2] ?? '');
   const valueOperations = operations(parsed[5] ?? '');
   const format = (ops: PayloadOperation[], fallback?: FallbackExpression) => [
-    ...ops.map(op => `${op.kind === 'validator' ? '@' : '>'} ${op.name}`),
+    ...ops.map(op => `${op.operator ?? (op.kind === 'validator' ? '!' : '>')} ${op.name}`),
     ...(fallback ? [`${fallback.operator} ${fallback.action}`] : []),
   ].join(' ');
   const member = format(memberOperations, memberFallback);
@@ -64,7 +70,7 @@ export function parsePlaceholder(value: string, path: string): Declaration | und
   };
 }
 
-export function validateTemplate(template: JsonTemplateValue, options: PayloadTemplateOptions = {}): Contract {
+export function compile(template: JsonTemplateValue, options: PayloadTemplateOptions = {}): Contract {
   const plugins = createRegistries(options.plugins);
   const declarations = new Map<string, Declaration>();
   const locations = new Map<string, Declaration>();

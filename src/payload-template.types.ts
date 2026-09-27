@@ -38,7 +38,7 @@ export type PayloadTemplateIssue =
   | (RuntimeIssue & { code: 'VALIDATION_FAILED' | 'PLUGIN_EXECUTION_FAILED' | 'INVALID_TRANSFORMER_RESULT'; kind: PayloadOperation['kind']; operation: string; valuePath?: string })
   | { code: 'INVALID_PLACEHOLDER'; path: string; placeholder: string }
   | { code: 'UNSUPPORTED_TYPE'; path: string; variableName: string; declaredType: string }
-  | { code: 'INVALID_FALLBACK_SYNTAX'; path: string; variableName: string; placeholder: string }
+  | { code: 'INVALID_FALLBACK_SYNTAX' | 'LEGACY_VALIDATION_SYNTAX'; path: string; variableName: string; placeholder: string }
   | { code: 'VARIABLE_EXPRESSION_CONFLICT'; variableName: string; declaration: string; declaredAt: string; conflictingDeclaration: string; conflictingAt: string }
   | (RuntimeIssue & { code: 'MISSING_VARIABLE' })
   | (RuntimeIssue & { code: 'INVALID_VARIABLE_TYPE'; actualType: string; valuePath?: string })
