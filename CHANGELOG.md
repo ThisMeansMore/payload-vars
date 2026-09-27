@@ -6,6 +6,10 @@ The latest five releases are detailed below. Older releases have one-line summar
 
 ## Unreleased
 
+### Breaking changes
+
+- Correct the missed public API rename intended for 2.0.0: replace `PayloadTemplate.extractVariables()` with `PayloadTemplate.compile()`. The return type and behavior remain unchanged.
+
 ## 2.0.0 — 2026-09-27
 
 ### Changes

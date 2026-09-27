@@ -10,7 +10,7 @@ for (const [format, api] of [['ESM', esm], ['CommonJS', cjs]]) {
   test(`${format} package exports support template operations`, () => {
     const template = new api.PayloadTemplate({ name: '{{ name : string }}' });
     assert.deepEqual(template.toJSON(), { name: '{{name:string}}' });
-    assert.equal(template.extractVariables()[0].name, 'name');
+    assert.equal(template.compile()[0].name, 'name');
     assert.deepEqual(template.render({ name: 'Ada' }), { name: 'Ada' });
     assert.ok(template.tokenizePayloadExpression()[0].tokens.length);
     const conditional = new api.PayloadTemplate('{{x:string ? date.dateonly > date.isodatetime}}');

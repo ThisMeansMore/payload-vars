@@ -17,7 +17,7 @@ describe('template snapshots and reuse', () => {
     assert.notEqual(normalized.nested, template.nested);
     assert.notEqual(normalized.nested[2], template.nested[2]);
     assert.equal(template.nested[0], '{{ x : string[??omit]??throw }}');
-    assert.deepEqual(new PayloadTemplate(template).extractVariables(), new PayloadTemplate(normalized).extractVariables());
+    assert.deepEqual(new PayloadTemplate(template).compile(), new PayloadTemplate(normalized).compile());
     assert.deepEqual(new PayloadTemplate(template).render({ x: ['a', null], n: 0 }), new PayloadTemplate(normalized).render({ x: ['a', null], n: 0 }));
   });
 
@@ -44,14 +44,14 @@ describe('template snapshots and reuse', () => {
     input.nested.push('changed');
     const normalized = template.toJSON();
     normalized.nested[0].x = 'changed';
-    const variables = template.extractVariables();
+    const variables = template.compile();
     variables[0].name = 'changed';
     variables[0].type = 'number';
     variables[0].memberFallback.action = 'throw';
     variables[0].valueFallback.action = 'null';
     variables.push({ name: 'extra', type: 'string', declaration: '{{extra:string}}' });
     assert.deepEqual(template.toJSON(), { nested: [{ x: '{{x:string[ ?? omit ] ?? throw}}' }] });
-    assert.deepEqual(template.extractVariables(), [{ name: 'x', type: 'string[]',
+    assert.deepEqual(template.compile(), [{ name: 'x', type: 'string[]',
       declaration: '{{x:string[ ?? omit ] ?? throw}}', memberFallback: { operator: '??', action: 'omit' },
       valueFallback: { operator: '??', action: 'throw' } }]);
     assert.deepEqual(template.render({ x: ['a', null] }), { nested: [{ x: ['a'] }] });
@@ -79,7 +79,7 @@ describe('template snapshots and reuse', () => {
     assert.deepEqual(template.render({ x: [3, null] }), { items: [3] });
     assert.deepEqual(template.render({ x: [] }), { items: [] });
     template.toJSON();
-    template.extractVariables();
+    template.compile();
     assert.equal(reads, 1);
   });
 

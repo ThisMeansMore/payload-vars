@@ -1,5 +1,5 @@
 import { PayloadTemplate, type JsonValue, type JsonTemplateValue,
-  type PayloadTemplateVariables } from '../../src/index.js';
+  type PayloadTemplateVariables, type PayloadVariable } from '../../src/index.js';
 
 const strict = new PayloadTemplate({
   orderId: '{{orderId:string}}', nested: ['{{amount:number}}', { enabled: '{{enabled:boolean}}' }],
@@ -156,5 +156,7 @@ operations.render({ required: '2026-01-01', conditional: 'unchanged' });
 operations.render({ required: '2026-01-01' });
 // @ts-expect-error Conditional validation preserves the declared base type.
 operations.render({ required: '2026-01-01', conditional: 1 });
-// @ts-expect-error There is no public compilation method; construction compiles once.
-operations.compile();
+const contracts: PayloadVariable[] = operations.compile();
+void contracts;
+// @ts-expect-error Renamed to compile() in v2.
+operations.extractVariables();

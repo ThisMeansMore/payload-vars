@@ -42,7 +42,7 @@ const template = new PayloadTemplate({
 });
 ```
 
-Compilation happens once in the constructor; the internal `compile()` function builds the reusable contract. There is no public compile method. Extraction and rendering reuse the validated contract. Later changes to the original input cannot change the instance.
+Compilation happens once in the constructor; the internal `compile()` function builds the reusable contract. The public `compile()` method returns copies of the variable contracts; it and `render()` reuse the validated contract. Later changes to the original input cannot change the instance.
 
 ### Plugin configuration
 
@@ -61,12 +61,12 @@ JSON.stringify(template, null, 2); // Indented, normalized JSON
 
 The constructor accepts already parsed JSON. Normalization is idempotent. Editing a returned template cannot change future method results.
 
-### Extraction
+### Compiled variable contracts
 
-`template.extractVariables(): PayloadVariable[]` returns the compiled variable contracts in first occurrence order, deduplicating matching declarations. Each call returns fresh objects, including nested fallback expressions and operation arrays.
+`template.compile(): PayloadVariable[]` returns the compiled variable contracts in first occurrence order, deduplicating matching declarations. Each call returns fresh objects, including nested fallback expressions and operation arrays.
 
 ```ts
-template.extractVariables();
+template.compile();
 // [{
 //   name: 'products',
 //   type: 'string[]',
@@ -269,7 +269,7 @@ TypeScript inference supplements validation; it does not replace it:
 - TypeScript cannot subtract `0` from `number` or `''` from `string`. Such values still compile for `|| throw` and fail at runtime.
 - `NaN` has no distinct literal type. A non-number `|| null` or `|| omit` declaration accepts it at runtime, but its inferred input excludes general numbers other than `0`.
 - Syntax errors and conflicting declarations are still reported by the constructor. The type layer does not promise compile-time syntax diagnostics.
-- `render()` and `toJSON()` still return `JsonValue`, and `extractVariables()` returns `PayloadVariable[]`. Precise output inference is outside this input-inference feature.
+- `render()` and `toJSON()` still return `JsonValue`, and `compile()` returns `PayloadVariable[]`. Precise output inference is outside this input-inference feature.
 
 ## Migration and project development
 
@@ -290,11 +290,11 @@ import { PayloadTemplate } from 'payload-vars';
 
 const template = new PayloadTemplate(rawTemplate); // Validate once
 const normalized = template.toJSON();
-const variables = template.extractVariables();
+const variables = template.compile();
 const payload = template.render(values);
 ```
 
-Replace `validatePayloadTemplate(rawTemplate)` with construction followed by `toJSON()`, `extractPayloadVariables(rawTemplate)` with `extractVariables()`, and `renderPayloadTemplate(rawTemplate, values)` with `render(values)`. Template syntax and conflict errors now occur during construction; runtime value errors occur during rendering. The standalone functions are no longer exported.
+Replace `validatePayloadTemplate(rawTemplate)` with construction followed by `toJSON()`, `extractPayloadVariables(rawTemplate)` with `compile()`, and `renderPayloadTemplate(rawTemplate, values)` with `render(values)`. Template syntax and conflict errors now occur during construction; runtime value errors occur during rendering. The standalone functions are no longer exported.
 
 Instances snapshot their input. To change a template, create a new instance. Returned templates and extracted contracts are independent copies. Runtime values are passed to each render call and are not retained.
 

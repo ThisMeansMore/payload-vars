@@ -12,7 +12,7 @@ describe('contract extraction', () => {
   test('extracts structured contracts in first occurrence order and skips constants', () => {
     const template = { nested: types.map((type, i) => ({ value: `{{v${i}:${type}}}` })),
       repeated: '{{v0:string}}', constants: ['ordinary', null, 0, false] };
-    assert.deepEqual(new PayloadTemplate(template).extractVariables(), types.map((type, i) => ({
+    assert.deepEqual(new PayloadTemplate(template).compile(), types.map((type, i) => ({
       name: `v${i}`, type, declaration: `{{v${i}:${type}}}`,
     })));
   });
@@ -20,7 +20,7 @@ describe('contract extraction', () => {
   test('canonicalizes every value/member fallback combination and whitespace between tokens', () => {
     for (const type of types) for (const operator of operators) for (const action of actions) {
       const declaration = `{{x:${type} ${operator} ${action}}}`;
-      assert.deepEqual(new PayloadTemplate([`{{ \nx\t : ${type.replace('[]', ' [ \t ]')} ${operator}${action}\n}}`, declaration]).extractVariables(),
+      assert.deepEqual(new PayloadTemplate([`{{ \nx\t : ${type.replace('[]', ' [ \t ]')} ${operator}${action}\n}}`, declaration]).compile(),
         [{ name: 'x', type, valueFallback: { operator, action }, declaration }]);
     }
     for (const type of ['string', 'number']) for (const operator of operators) for (const action of actions) {
@@ -28,11 +28,11 @@ describe('contract extraction', () => {
         const declaration = `{{x:${type}[ ${operator} ${action} ] ${wholeOperator} ${wholeAction}}}`;
         const variants = [declaration, `{{x:${type}[${operator}${action}]${wholeOperator}${wholeAction}}}`,
           `{{ x : ${type} \n[\t${operator}  ${action}\n] \t${wholeOperator} ${wholeAction} }}`];
-        assert.deepEqual(new PayloadTemplate(variants).extractVariables(), [{ name: 'x', type: `${type}[]`,
+        assert.deepEqual(new PayloadTemplate(variants).compile(), [{ name: 'x', type: `${type}[]`,
           memberFallback: { operator, action }, valueFallback: { operator: wholeOperator, action: wholeAction }, declaration }]);
       }
       const declaration = `{{x:${type}[ ${operator} ${action} ]}}`;
-      assert.deepEqual(new PayloadTemplate(`{{x:${type}[${operator}${action}]}}`).extractVariables(),
+      assert.deepEqual(new PayloadTemplate(`{{x:${type}[${operator}${action}]}}`).compile(),
         [{ name: 'x', type: `${type}[]`, memberFallback: { operator, action }, declaration }]);
     }
   });
@@ -42,7 +42,7 @@ describe('contract extraction', () => {
     const template = new PayloadTemplate('{{ x : string[?date.dateonly>date.isodatetime~date.isodatetime??omit]?collection.unique }}');
     const canonical = '{{x:string[ ? date.dateonly > date.isodatetime ~ date.isodatetime ?? omit ] ? collection.unique}}';
     assert.equal(template.toJSON(), canonical);
-    const [variable] = template.extractVariables();
+    const [variable] = template.compile();
     assert.deepEqual(variable.memberOperations, [
       { kind: 'validator', name: 'date.dateonly', operator: '?' },
       { kind: 'transformer', name: 'date.isodatetime' },
@@ -51,8 +51,8 @@ describe('contract extraction', () => {
     assert.deepEqual(variable.valueOperations, [{ kind: 'validator', name: 'collection.unique', operator: '?' }]);
     variable.memberOperations[0].operator = '!';
     variable.memberOperations[2].name = 'changed';
-    assert.equal(template.extractVariables()[0].memberOperations[0].operator, '?');
-    assert.equal(template.extractVariables()[0].memberOperations[2].name, 'date.isodatetime');
+    assert.equal(template.compile()[0].memberOperations[0].operator, '?');
+    assert.equal(template.compile()[0].memberOperations[2].name, 'date.isodatetime');
     assert.equal(template.toJSON(), canonical);
   });
 
@@ -61,10 +61,10 @@ describe('contract extraction', () => {
     const canonical = '{{x:string[ ! date.dateonly > date.isodatetime ?? omit ] ! collection.range ?? throw}}';
     assert.equal(template.toJSON(), canonical);
     assert.equal(new PayloadTemplate(canonical).toJSON(), canonical);
-    const extracted = template.extractVariables();
+    const extracted = template.compile();
     assert.deepEqual(extracted[0].memberOperations, [{ kind: 'validator', name: 'date.dateonly' }, { kind: 'transformer', name: 'date.isodatetime' }]);
     extracted[0].memberOperations[0].name = 'corrupt';
-    assert.equal(template.extractVariables()[0].memberOperations[0].name, 'date.dateonly');
+    assert.equal(template.compile()[0].memberOperations[0].name, 'date.dateonly');
   });
 
   test('qualified operations normalize and extract in both scopes', () => {
@@ -75,7 +75,7 @@ describe('contract extraction', () => {
     assert.equal(template.toJSON(), canonical);
     assert.equal(new PayloadTemplate(canonical, options).toJSON(), canonical);
     assert.deepEqual(template.render({ x: [' a ', null] }), ['a']);
-    const [variable] = template.extractVariables();
+    const [variable] = template.compile();
     assert.deepEqual(variable.memberOperations, [
       { kind: 'transformer', name: 'test.trim' }, { kind: 'validator', name: 'test.check' },
     ]);

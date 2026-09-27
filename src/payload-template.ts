@@ -42,7 +42,7 @@ export class PayloadTemplate<const T extends JsonTemplateValue = JsonTemplateVal
   }
 
   /** Return independent variable contracts in first occurrence order. */
-  extractVariables(): PayloadVariable[] {
+  compile(): PayloadVariable[] {
     return Array.from(this.#contract.declarations.values(), ({ name, type, declaration, memberFallback, valueFallback, memberOperations, valueOperations }) => ({
       name, type, declaration,
       ...(memberOperations ? { memberOperations: memberOperations.map(op => ({ ...op })) } : {}),

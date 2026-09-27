@@ -31,10 +31,24 @@ const rawTemplate = {
 
 ### 2. Compilation
 
-The constructor compiles a reusable contract. Inspect its normalized formatting:
+The constructor validates the template and compiles a reusable contract:
 
 ```js
 const template = new PayloadTemplate(rawTemplate);
+```
+
+The template provides these methods:
+
+| Method | Returns |
+| --- | --- |
+| `compile()` | Variable contracts in first occurrence order, with matching declarations deduplicated. |
+| `toJSON()` | A copy of the normalized template. |
+| `render(values)` | The payload with runtime values filled in. |
+| `tokenizePayloadExpression()` | Highlighting tokens for each normalized placeholder occurrence. |
+
+Inspect the normalized template:
+
+```js
 const normalized = template.toJSON();
 // {
 //   orderId: '{{orderId:string}}',
@@ -42,12 +56,10 @@ const normalized = template.toJSON();
 // }
 ```
 
-### 3. Extraction
-
-Extract variable contracts from the validated template.
+Inspect the compiled variable contracts:
 
 ```js
-const variables = template.extractVariables();
+const variables = template.compile();
 // [
 //   {
 //     name: 'orderId',
@@ -64,7 +76,7 @@ const variables = template.extractVariables();
 // ]
 ```
 
-### 4. Rendering
+### 3. Rendering
 
 Render the resulting object with runtime values.
 

@@ -11,6 +11,12 @@ Notable changes, starting with 1.0.0. Historical dates follow Git tags.
 
 The latest five releases are detailed below. Older releases have one-line summaries linking to their full notes in the [archive](changelog-archive.md).
 
+## Unreleased
+
+### Breaking changes
+
+- Correct the missed public API rename intended for 2.0.0: replace `PayloadTemplate.extractVariables()` with `PayloadTemplate.compile()`. The return type and behavior remain unchanged.
+
 ## 2.0.0 — 2026-09-27
 
 ### Changes
