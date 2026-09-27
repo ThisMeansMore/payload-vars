@@ -6,6 +6,15 @@ The latest five releases are detailed below. Older releases have one-line summar
 
 ## Unreleased
 
+## 2.0.0 — 2026-09-27
+
+### Changes
+
+- Replaced @ with ! for mandatory validation.
+- Added ? for conditional validation and optional ~ for the alternative transformation.
+- Renamed the internal validateTemplate() function to compile() and organized unit tests into suites.
+- Simplified the README introduction around templates stored as human-readable JSON.
+
 ## 1.4.1 — 2026-09-26
 
 ### Changes
@@ -35,15 +44,9 @@ The latest five releases are detailed below. Older releases have one-line summar
 
 - chore: add integration tests message
 
-## 1.2.1 — 2026-09-26
-
-### Changes
-
-- chore: simplified release and changelog
-- docs: simplified changelog and documentation
-
 ## Older releases
 
+- [1.2.1 — 2026-09-26](CHANGELOG-ARCHIVE.md#121--2026-09-26) — chore: simplified release and changelog
 - [1.2.0 — 2026-09-26](CHANGELOG-ARCHIVE.md#120--2026-09-26) — Add pluggable validators (`@`) and type-preserving transformers (`>`), with date, email, and collection built-ins, member/collection scopes, and unchanged fallback behavior.
 - [1.1.8 — 2026-09-25](CHANGELOG-ARCHIVE.md#118--2026-09-25) — Improved releasing notes logic
 - [1.1.7 — 2026-09-25](CHANGELOG-ARCHIVE.md#117--2026-09-25) — Hide the empty Unreleased heading on the documentation site.

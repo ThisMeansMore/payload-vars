@@ -2,6 +2,13 @@
 
 Full notes for older releases. See the [changelog](CHANGELOG.md) for the latest five releases and a summary of this archive.
 
+## 1.2.1 — 2026-09-26
+
+### Changes
+
+- chore: simplified release and changelog
+- docs: simplified changelog and documentation
+
 ## 1.2.0 — 2026-09-26
 
 - Add pluggable validators (`@`) and type-preserving transformers (`>`), with date, email, and collection built-ins, member/collection scopes, and unchanged fallback behavior.
