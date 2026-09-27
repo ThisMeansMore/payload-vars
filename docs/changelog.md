@@ -11,6 +11,12 @@ Notable changes, starting with 1.0.0. Historical dates follow Git tags.
 
 The latest five releases are detailed below. Older releases have one-line summaries linking to their full notes in the [archive](changelog-archive.md).
 
+## 2.0.4 — 2026-09-27
+
+### Changes
+
+- feat: text plugin
+
 ## 2.0.3 — 2026-09-27
 
 ### Changes
@@ -42,14 +48,9 @@ The latest five releases are detailed below. Older releases have one-line summar
 - Renamed the internal validateTemplate() function to compile() and organized unit tests into suites.
 - Simplified the README introduction around templates stored as human-readable JSON.
 
-## 1.4.1 — 2026-09-26
-
-### Changes
-
-- docs: plugins examples
-
 ## Older releases
 
+- [1.4.1 — 2026-09-26](changelog-archive.md#141--2026-09-26) — docs: plugins examples
 - [1.4.0 — 2026-09-26](changelog-archive.md#140--2026-09-26) — Require `namespace.operation` for built-in and custom operations. Built-ins now use `date.dateonly`, `date.isodatetime`, `email.email`, `email.domain`, `collection.unique`, and `collection.range`; bare names are invalid syntax.
 - [1.3.0 — 2026-09-26](changelog-archive.md#130--2026-09-26) — Built-in validators and transformers are always available, regardless of `plugins` configuration.
 - [1.2.2 — 2026-09-26](changelog-archive.md#122--2026-09-26) — chore: add integration tests message

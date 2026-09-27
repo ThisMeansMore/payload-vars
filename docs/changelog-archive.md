@@ -9,6 +9,12 @@ title: Changelog archive
 
 Full notes for older releases. See the [changelog](changelog.md) for the latest five releases and a summary of this archive.
 
+## 1.4.1 — 2026-09-26
+
+### Changes
+
+- docs: plugins examples
+
 ## 1.4.0 — 2026-09-26
 
 ### Breaking changes
