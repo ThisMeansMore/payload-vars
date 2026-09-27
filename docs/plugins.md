@@ -129,9 +129,44 @@ The built-ins are always available:
 
 | Group | Validators | Transformers |
 | --- | --- | --- |
+| Text styles | `text.camelCase`, `text.pascalCase`, `text.snakeCase`, `text.kebabCase`, `text.knownCase` | `text.camelCase`, `text.pascalCase`, `text.snakeCase`, `text.kebabCase` |
+| Text casing and whitespace | `text.upperCase`, `text.lowerCase`, `text.trim`, `text.normalizeSpaces` | `text.upperCase`, `text.lowerCase`, `text.trim`, `text.normalizeSpaces` |
 | Dates | `date.dateonly`, `date.isodatetime` | `date.isodatetime` |
 | Email | `email.email`, `email.domain` | `email.domain` |
 | Collections | `collection.unique`, `collection.range` | None |
+
+The four text styles share a tokenizer. It splits on JavaScript whitespace (`\s`), underscores, hyphens, lowercase-to-uppercase boundaries, digit-to-uppercase boundaries, and acronym boundaries (`URLValue` → `URL`, `Value`). Digits stay attached to the preceding word (`version2Value42` → `version2`, `Value42`). Repeated and edge separators are ignored when transforming. Words contain only ASCII letters and digits; punctuation, non-ASCII letters, and other unsupported characters are rejected, never discarded. Empty and separator-only inputs are also rejected. Invalid style input returns `false` from validators and throws from transformers (reported as `VALIDATION_FAILED` and `PLUGIN_EXECUTION_FAILED`, respectively).
+
+Words are lowercased before formatting, so acronyms normalize as words: `URLValue` becomes `UrlValue` in PascalCase. Mixed input such as `Customer fullAddress` or `customerFull_address` is allowed by transformers:
+
+| Operation | Output for `Customer fullAddress` |
+| --- | --- |
+| `text.camelCase` | `customerFullAddress` |
+| `text.pascalCase` | `CustomerFullAddress` |
+| `text.snakeCase` | `customer_full_address` |
+| `text.kebabCase` | `customer-full-address` |
+
+Each style validator requires the input to equal its own normalized output exactly. `text.knownCase` is a validator only and passes if any of those four validators passes. It rejects mixed styles, spaces, and noncanonical acronyms such as `URLValue`. Single words can match several styles: `customer` passes camel, snake, and kebab case; `Customer` passes PascalCase; digit-only strings such as `123` pass all four.
+
+```ts
+new PayloadTemplate('{{name:string > text.snakeCase}}')
+  .render({ name: 'Customer fullAddress' }); // 'customer_full_address'
+new PayloadTemplate('{{name:string ! text.knownCase > text.snakeCase}}')
+  .render({ name: 'Customer fullAddress' }); // throws VALIDATION_FAILED before conversion
+new PayloadTemplate('{{name:string > text.snakeCase ! text.knownCase}}')
+  .render({ name: 'Customer fullAddress' }); // 'customer_full_address'
+```
+
+`text.upperCase` and `text.lowerCase` use JavaScript `toUpperCase()` and `toLowerCase()`, including their Unicode casing behavior, without changing separators or whitespace. `text.trim` uses JavaScript `trim()`. `text.normalizeSpaces` replaces every run of JavaScript whitespace (`/\s+/g`) with one ordinary space. It preserves a resulting space at either edge: `"  A\t test\n"` becomes `" A test "`. Compose it with `text.trim` to remove those edge spaces. Each of these four validators passes exactly when its transformer would leave the string unchanged; empty strings pass. These operations allow punctuation and Unicode text.
+
+```ts
+new PayloadTemplate('{{name:string > text.upperCase ! text.upperCase}}')
+  .render({ name: 'some-name' }); // 'SOME-NAME'
+new PayloadTemplate('{{name:string > text.lowerCase}}')
+  .render({ name: 'Some_Name' }); // 'some_name'
+new PayloadTemplate('{{name:string > text.normalizeSpaces > text.trim}}')
+  .render({ name: '  A\t test\n' }); // 'A test'
+```
 
 `date.dateonly` requires a real calendar date in `YYYY-MM-DD` form. `date.isodatetime` requires a valid date and time with seconds and an explicit `Z` or `±HH:MM` offset; fractional seconds are optional. The transformer accepts either form and returns UTC ISO text, for example `2026-01-01T00:00:00.000Z`.
 
