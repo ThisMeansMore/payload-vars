@@ -9,6 +9,15 @@ title: Changelog archive
 
 Full notes for older releases. See the [changelog](changelog.md) for the latest five releases and a summary of this archive.
 
+## 2.0.0 — 2026-09-27
+
+### Changes
+
+- Replaced @ with ! for mandatory validation.
+- Added ? for conditional validation and optional ~ for the alternative transformation.
+- Renamed the internal validateTemplate() function to compile() and organized unit tests into suites.
+- Simplified the README introduction around templates stored as human-readable JSON.
+
 ## 1.4.1 — 2026-09-26
 
 ### Changes
