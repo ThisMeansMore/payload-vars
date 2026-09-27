@@ -2,6 +2,12 @@
 
 Full notes for older releases. See the [changelog](CHANGELOG.md) for the latest five releases and a summary of this archive.
 
+## 1.2.2 — 2026-09-26
+
+### Changes
+
+- chore: add integration tests message
+
 ## 1.2.1 — 2026-09-26
 
 ### Changes

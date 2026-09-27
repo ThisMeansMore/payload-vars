@@ -11,7 +11,7 @@ Notable changes, starting with 1.0.0. Historical dates follow Git tags.
 
 The latest five releases are detailed below. Older releases have one-line summaries linking to their full notes in the [archive](changelog-archive.md).
 
-## Unreleased
+## 2.0.1 — 2026-09-27
 
 ### Breaking changes
 
@@ -49,14 +49,9 @@ The latest five releases are detailed below. Older releases have one-line summar
 - Remove the `builtInPlugins`, `datePlugin`, `emailPlugin`, and `collectionPlugin` registration exports. Register only custom plugins.
 - Replace `DUPLICATE_PLUGIN_OPERATION` with `DUPLICATE_PLUGIN_NAME`, and add construction errors for invalid plugin names, operation names, and callbacks.
 
-## 1.2.2 — 2026-09-26
-
-### Changes
-
-- chore: add integration tests message
-
 ## Older releases
 
+- [1.2.2 — 2026-09-26](changelog-archive.md#122--2026-09-26) — chore: add integration tests message
 - [1.2.1 — 2026-09-26](changelog-archive.md#121--2026-09-26) — chore: simplified release and changelog
 - [1.2.0 — 2026-09-26](changelog-archive.md#120--2026-09-26) — Add pluggable validators (`@`) and type-preserving transformers (`>`), with date, email, and collection built-ins, member/collection scopes, and unchanged fallback behavior.
 - [1.1.8 — 2026-09-25](changelog-archive.md#118--2026-09-25) — Improved releasing notes logic
