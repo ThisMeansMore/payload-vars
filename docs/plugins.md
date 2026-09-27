@@ -100,11 +100,12 @@ Lookup is exact: every reference must include its namespace. Bare operation name
 
 ## Reserved namespaces
 
-These 16 case-sensitive namespaces belong to the library:
+These 17 case-sensitive namespaces belong to the library:
 
 | Namespace | Intended scope |
 | --- | --- |
-| `text` | General string operations |
+| `style` | Named casing and word styles |
+| `text` | Trimming and whitespace normalization |
 | `number` | Numeric operations |
 | `boolean` | Boolean operations |
 | `date` | Dates and datetimes |
@@ -125,44 +126,45 @@ Custom plugins using any of these names throw `RESERVED_PLUGIN_NAME` during cons
 
 ## Built-in operations
 
-The built-ins are always available:
+The built-ins are always available. `style` handles named casing and word styles; `text` handles trimming and whitespace normalization. The former casing operations under `text` have no compatibility aliases; referencing them throws `UNKNOWN_PLUGIN_OPERATION` during construction.
 
 | Group | Validators | Transformers |
 | --- | --- | --- |
-| Text styles | `text.camelCase`, `text.pascalCase`, `text.snakeCase`, `text.kebabCase`, `text.knownCase` | `text.camelCase`, `text.pascalCase`, `text.snakeCase`, `text.kebabCase` |
-| Text casing and whitespace | `text.upperCase`, `text.lowerCase`, `text.trim`, `text.normalizeSpaces` | `text.upperCase`, `text.lowerCase`, `text.trim`, `text.normalizeSpaces` |
+| Word styles | `style.camelCase`, `style.pascalCase`, `style.snakeCase`, `style.kebabCase`, `style.knownCase` | `style.camelCase`, `style.pascalCase`, `style.snakeCase`, `style.kebabCase` |
+| Casing | `style.upperCase`, `style.lowerCase` | `style.upperCase`, `style.lowerCase` |
+| Whitespace | `text.trim`, `text.normalizeSpaces` | `text.trim`, `text.normalizeSpaces` |
 | Dates | `date.dateonly`, `date.isodatetime` | `date.isodatetime` |
 | Email | `email.email`, `email.domain` | `email.domain` |
 | Collections | `collection.unique`, `collection.range` | None |
 
-The four text styles share a tokenizer. It splits on JavaScript whitespace (`\s`), underscores, hyphens, lowercase-to-uppercase boundaries, digit-to-uppercase boundaries, and acronym boundaries (`URLValue` → `URL`, `Value`). Digits stay attached to the preceding word (`version2Value42` → `version2`, `Value42`). Repeated and edge separators are ignored when transforming. Words contain only ASCII letters and digits; punctuation, non-ASCII letters, and other unsupported characters are rejected, never discarded. Empty and separator-only inputs are also rejected. Invalid style input returns `false` from validators and throws from transformers (reported as `VALIDATION_FAILED` and `PLUGIN_EXECUTION_FAILED`, respectively).
+The four word styles share a tokenizer. It splits on JavaScript whitespace (`\s`), underscores, hyphens, lowercase-to-uppercase boundaries, digit-to-uppercase boundaries, and acronym boundaries (`URLValue` → `URL`, `Value`). Digits stay attached to the preceding word (`version2Value42` → `version2`, `Value42`). Repeated and edge separators are ignored when transforming. Words contain only ASCII letters and digits; punctuation, non-ASCII letters, and other unsupported characters are rejected, never discarded. Empty and separator-only inputs are also rejected. Invalid style input returns `false` from validators and throws from transformers (reported as `VALIDATION_FAILED` and `PLUGIN_EXECUTION_FAILED`, respectively).
 
 Words are lowercased before formatting, so acronyms normalize as words: `URLValue` becomes `UrlValue` in PascalCase. Mixed input such as `Customer fullAddress` or `customerFull_address` is allowed by transformers:
 
 | Operation | Output for `Customer fullAddress` |
 | --- | --- |
-| `text.camelCase` | `customerFullAddress` |
-| `text.pascalCase` | `CustomerFullAddress` |
-| `text.snakeCase` | `customer_full_address` |
-| `text.kebabCase` | `customer-full-address` |
+| `style.camelCase` | `customerFullAddress` |
+| `style.pascalCase` | `CustomerFullAddress` |
+| `style.snakeCase` | `customer_full_address` |
+| `style.kebabCase` | `customer-full-address` |
 
-Each style validator requires the input to equal its own normalized output exactly. `text.knownCase` is a validator only and passes if any of those four validators passes. It rejects mixed styles, spaces, and noncanonical acronyms such as `URLValue`. Single words can match several styles: `customer` passes camel, snake, and kebab case; `Customer` passes PascalCase; digit-only strings such as `123` pass all four.
+Each style validator requires the input to equal its own normalized output exactly. `style.knownCase` is a validator only and passes if any of those four validators passes. It rejects mixed styles, spaces, and noncanonical acronyms such as `URLValue`. Single words can match several styles: `customer` passes camel, snake, and kebab case; `Customer` passes PascalCase; digit-only strings such as `123` pass all four.
 
 ```ts
-new PayloadTemplate('{{name:string > text.snakeCase}}')
+new PayloadTemplate('{{name:string > style.snakeCase}}')
   .render({ name: 'Customer fullAddress' }); // 'customer_full_address'
-new PayloadTemplate('{{name:string ! text.knownCase > text.snakeCase}}')
+new PayloadTemplate('{{name:string ! style.knownCase > style.snakeCase}}')
   .render({ name: 'Customer fullAddress' }); // throws VALIDATION_FAILED before conversion
-new PayloadTemplate('{{name:string > text.snakeCase ! text.knownCase}}')
+new PayloadTemplate('{{name:string > style.snakeCase ! style.knownCase}}')
   .render({ name: 'Customer fullAddress' }); // 'customer_full_address'
 ```
 
-`text.upperCase` and `text.lowerCase` use JavaScript `toUpperCase()` and `toLowerCase()`, including their Unicode casing behavior, without changing separators or whitespace. `text.trim` uses JavaScript `trim()`. `text.normalizeSpaces` replaces every run of JavaScript whitespace (`/\s+/g`) with one ordinary space. It preserves a resulting space at either edge: `"  A\t test\n"` becomes `" A test "`. Compose it with `text.trim` to remove those edge spaces. Each of these four validators passes exactly when its transformer would leave the string unchanged; empty strings pass. These operations allow punctuation and Unicode text.
+`style.upperCase` and `style.lowerCase` use JavaScript `toUpperCase()` and `toLowerCase()`, including their Unicode casing behavior, without changing separators or whitespace. `text.trim` uses JavaScript `trim()`. `text.normalizeSpaces` replaces every run of JavaScript whitespace (`/\s+/g`) with one ordinary space. It preserves a resulting space at either edge: `"  A\t test\n"` becomes `" A test "`. Compose it with `text.trim` to remove those edge spaces. Each of these four validators passes exactly when its transformer would leave the string unchanged; empty strings pass. These operations allow punctuation and Unicode text.
 
 ```ts
-new PayloadTemplate('{{name:string > text.upperCase ! text.upperCase}}')
+new PayloadTemplate('{{name:string > style.upperCase ! style.upperCase}}')
   .render({ name: 'some-name' }); // 'SOME-NAME'
-new PayloadTemplate('{{name:string > text.lowerCase}}')
+new PayloadTemplate('{{name:string > style.lowerCase}}')
   .render({ name: 'Some_Name' }); // 'some_name'
 new PayloadTemplate('{{name:string > text.normalizeSpaces > text.trim}}')
   .render({ name: '  A\t test\n' }); // 'A test'

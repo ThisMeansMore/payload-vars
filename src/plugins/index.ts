@@ -1,4 +1,5 @@
 import type { PayloadVarsPlugin } from '../plugins.js';
+import { stylePlugin } from './style.js';
 import { textPlugin } from './text.js';
 import { numberPlugin } from './number.js';
 import { booleanPlugin } from './boolean.js';
@@ -17,6 +18,7 @@ import { idPlugin } from './id.js';
 import { corePlugin } from './core.js';
 
 export const builtInPlugins: readonly PayloadVarsPlugin[] = [
+  stylePlugin,
   textPlugin,
   numberPlugin,
   booleanPlugin,

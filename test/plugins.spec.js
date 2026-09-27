@@ -11,10 +11,22 @@ describe('plugin registration and built-ins', () => {
     const esm = await import('../dist/index.js');
     const cjs = createRequire(import.meta.url)('../dist/cjs/index.js');
     for (const api of [esm, cjs]) {
-      for (const name of ['builtInPlugins', 'datePlugin', 'emailPlugin', 'collectionPlugin']) {
+      for (const name of ['builtInPlugins', 'stylePlugin', 'textPlugin', 'datePlugin', 'emailPlugin', 'collectionPlugin']) {
         assert.equal(Object.hasOwn(api, name), false);
       }
       for (const options of [undefined, { plugins: [] }, { plugins: [plugin({ email: () => false })] }]) {
+        assert.equal(new api.PayloadTemplate('{{x:string > style.pascalCase ! style.knownCase}}', options)
+          .render({ x: 'URLValue' }), 'UrlValue');
+        assert.equal(new api.PayloadTemplate('{{x:string > text.normalizeSpaces > text.trim ! text.trim ! text.normalizeSpaces}}', options)
+          .render({ x: ' A  test ' }), 'A test');
+        for (const name of ['camelCase', 'pascalCase', 'snakeCase', 'kebabCase', 'upperCase', 'lowerCase', 'knownCase']) {
+          for (const operator of ['!', '>']) {
+            const operation = `text.${name}`;
+            assert.throws(() => new api.PayloadTemplate(`{{x:string ${operator} ${operation}}}`, options),
+              error => error instanceof api.PayloadTemplateError
+                && error.issue.code === 'UNKNOWN_PLUGIN_OPERATION' && error.issue.operation === operation);
+          }
+        }
         assert.equal(new api.PayloadTemplate('{{x:string ! date.dateonly > date.isodatetime}}', options)
           .render({ x: '2026-01-01' }), '2026-01-01T00:00:00.000Z');
         assert.equal(new api.PayloadTemplate('{{x:string ! email.email > email.domain ! email.domain}}', options)
@@ -59,7 +71,7 @@ describe('plugin registration and built-ins', () => {
     const esm = await import('../dist/index.js');
     const cjs = createRequire(import.meta.url)('../dist/cjs/index.js');
     for (const api of [esm, cjs]) {
-      for (const name of ['text', 'number', 'boolean', 'date', 'collection', 'array', 'email', 'url',
+      for (const name of ['style', 'text', 'number', 'boolean', 'date', 'collection', 'array', 'email', 'url',
         'json', 'encoding', 'iso', 'time', 'phone', 'network', 'id', 'core']) {
         for (const extension of [{}, { validators: { extra: () => true } }, { transformers: { extra: x => x } }]) {
           assert.throws(() => new api.PayloadTemplate(null, { plugins: [{ name, ...extension }] }), error => {
