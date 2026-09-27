@@ -6,6 +6,8 @@ The latest five releases are detailed below. Older releases have one-line summar
 
 ## Unreleased
 
+## 2.0.2 — 2026-09-27
+
 ### Breaking changes
 
 - Rename `PayloadTemplate.compile()` to `PayloadTemplate.variables()`. The returned variable contracts and copy semantics are unchanged; compilation remains in the constructor.
@@ -43,17 +45,9 @@ The latest five releases are detailed below. Older releases have one-line summar
 - Reserve `text`, `number`, `boolean`, `date`, `collection`, `array`, `email`, `url`, `json`, `encoding`, `iso`, `time`, `phone`, `network`, `id`, and `core`. Custom registrations using these names fail with `RESERVED_PLUGIN_NAME`, including empty plugins and non-conflicting operations.
 - Update plugin examples, syntax documentation, and migration guidance for qualified built-ins and reserved namespaces.
 
-## 1.3.0 — 2026-09-26
-
-### Breaking changes
-
-- Built-in validators and transformers are always available, regardless of `plugins` configuration.
-- Custom operations require `pluginName.operationName`; plugin namespaces must be unique identifiers. Bare custom aliases are no longer supported.
-- Remove the `builtInPlugins`, `datePlugin`, `emailPlugin`, and `collectionPlugin` registration exports. Register only custom plugins.
-- Replace `DUPLICATE_PLUGIN_OPERATION` with `DUPLICATE_PLUGIN_NAME`, and add construction errors for invalid plugin names, operation names, and callbacks.
-
 ## Older releases
 
+- [1.3.0 — 2026-09-26](CHANGELOG-ARCHIVE.md#130--2026-09-26) — Built-in validators and transformers are always available, regardless of `plugins` configuration.
 - [1.2.2 — 2026-09-26](CHANGELOG-ARCHIVE.md#122--2026-09-26) — chore: add integration tests message
 - [1.2.1 — 2026-09-26](CHANGELOG-ARCHIVE.md#121--2026-09-26) — chore: simplified release and changelog
 - [1.2.0 — 2026-09-26](CHANGELOG-ARCHIVE.md#120--2026-09-26) — Add pluggable validators (`@`) and type-preserving transformers (`>`), with date, email, and collection built-ins, member/collection scopes, and unchanged fallback behavior.
