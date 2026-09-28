@@ -116,6 +116,22 @@ Use `!` to throw on validation failure. Use `?` to transform with `>` on success
 
 **[Explore Plugins →](docs/plugins.md)** — built-ins, execution order, and a complete custom-plugin example.
 
+## Derived values and output omission
+
+```ts
+const template = new PayloadTemplate({
+  date1: '{{date1:string ! date.isodatetime > core.omit}}',
+  date2: '{{date2:string ! date.isodatetime > core.omit}}',
+  hoursDifference: '{{hoursDifference:number = date.interval(date1,date2) > date.msToHours}}',
+});
+template.render({ date1: '2026-01-01T00:00:00Z', date2: '2026-01-01T01:30:00Z' });
+// { hoursDifference: 1.5 }
+```
+
+Every occurrence reads original render inputs independently. Function arguments need no separate placeholders, so a template containing only `hoursDifference` also works. Derived output names are not required inputs. Repeated source names may use different operations and fallbacks, provided their base types agree.
+
+`core.omit` removes the containing property or array entry after evaluation. It must be an unconditional, terminal whole-value operation; root omission throws `CANNOT_OMIT_ROOT`. See [derived functions](docs/plugins/guide.md#derived-functions) for custom signatures, execution order, and extraction metadata.
+
 ## Syntax highlighting
 
 ```js

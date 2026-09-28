@@ -1,3 +1,4 @@
+import { matchesBaseType } from './plugins.js';
 import type { PayloadOperation, PluginRegistries } from './plugins.js';
 import { PayloadTemplateError } from './payload-template.error.js';
 import type { FallbackExpression, JsonValue } from './payload-template.types.js';
@@ -46,6 +47,7 @@ function validate(value: unknown, declaration: Declaration, plugins: PluginRegis
     const steps = ops ?? [];
     for (let index = 0; index < steps.length; index++) {
       const op = steps[index]!;
+      if (op.name === 'core.omit') continue;
       const issue = { ...details(declaration), kind: op.kind, operation: op.name,
         ...(valuePath === undefined ? {} : { valuePath }) };
       // Validators see an immutable snapshot; transformers may edit their own copy.
@@ -97,17 +99,34 @@ function validate(value: unknown, declaration: Declaration, plugins: PluginRegis
 }
 
 export function renderContract(contract: Contract, variables: Readonly<Record<string, unknown>>): JsonValue {
-  const values = new Map<string, RenderedValue>();
-  for (const declaration of contract.declarations.values()) {
-    const present = Object.prototype.hasOwnProperty.call(variables, declaration.name);
-    if (!present && !declaration.valueFallback) {
-      throw new PayloadTemplateError({ code: 'MISSING_VARIABLE', ...details(declaration) });
-    }
-    values.set(declaration.name, validate(present ? variables[declaration.name] : undefined, declaration, contract.plugins));
-  }
   function render(value: JsonValue, path: string): RenderedValue {
     const declaration = contract.locations.get(path);
-    if (declaration) return values.get(declaration.name)!;
+    if (declaration) {
+      let source: unknown;
+      if (declaration.function) {
+        const fn = contract.plugins.function.get(declaration.function.name)!;
+        const issue = { ...details(declaration), operation: declaration.function.name };
+        const args = declaration.function.arguments.map((name, index) => {
+          const input = Object.prototype.hasOwnProperty.call(variables, name) ? variables[name] : undefined;
+          if (!matchesBaseType(input, fn.argumentTypes[index]!)) throw new PayloadTemplateError({
+            code: 'INVALID_FUNCTION_ARGUMENT', ...issue, argumentName: name, argumentIndex: index,
+          });
+          return Array.isArray(input) ? [...input] : input;
+        });
+        const execute = fn.execute;
+        try { source = execute(...args as never[]); }
+        catch { throw new PayloadTemplateError({ code: 'PLUGIN_EXECUTION_FAILED', kind: 'function', ...issue }); }
+        // Async callbacks are unsupported; consume rejections before reporting the invalid result.
+        if (source instanceof Promise) void source.catch(() => {});
+        if (!matchesBaseType(source, fn.resultType)) throw new PayloadTemplateError({ code: 'INVALID_FUNCTION_RESULT', ...issue });
+      } else {
+        const present = Object.prototype.hasOwnProperty.call(variables, declaration.name);
+        if (!present && !declaration.valueFallback) throw new PayloadTemplateError({ code: 'MISSING_VARIABLE', ...details(declaration) });
+        source = present ? variables[declaration.name] : undefined;
+      }
+      const result = validate(source, declaration, contract.plugins);
+      return declaration.valueOperations?.some(op => op.name === 'core.omit') ? OMIT : result;
+    }
     if (Array.isArray(value)) {
       const result: JsonValue[] = [];
       value.forEach((item, index) => {

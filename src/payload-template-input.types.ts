@@ -1,3 +1,4 @@
+import type { PayloadTemplateOptions } from './plugins.js';
 import type { JsonTemplateValue } from './payload-template.types.js';
 
 // Match JavaScript's whitespace tokens without removing whitespace inside identifiers.
@@ -25,7 +26,7 @@ type Expression = { input: unknown; optional: boolean };
 type ScopeFallback<S extends string> = S extends `${string}??${infer Rest}` ? `??${Rest}`
   : S extends `${string}||${infer Rest}` ? `||${Rest}` : '';
 type Base<S extends string, Acc extends string = ''> = S extends `${infer Head}${infer Tail}`
-  ? Head extends Whitespace | '!' | '~' | '>' | '?' | '|' ? Acc : Base<Tail, `${Acc}${Head}`> : Acc;
+  ? Head extends Whitespace | '=' | '!' | '~' | '>' | '?' | '|' ? Acc : Base<Tail, `${Acc}${Head}`> : Acc;
 type ApplyFallback<Value, S extends string> = Trim<S> extends '' ? { input: Value; optional: false }
   : ParseFallback<S> extends infer F extends Fallback
     ? { input: WithFallback<Value, F>; optional: F['action'] extends 'throw' ? false : true }
@@ -39,28 +40,48 @@ type ParseExpression<S extends string> = S extends `${infer Base}[${infer Member
 declare const dynamicTemplate: unique symbol;
 type Dynamic = typeof dynamicTemplate;
 type Variable = Expression & { name: string };
-type ParseString<S extends string> = string extends S ? Dynamic
+type TypeValue<S> = S extends `${infer B}[]` ? ReadonlyArray<Primitive<B>> : S extends string ? Primitive<S> : unknown;
+type FunctionTypes<Name extends string, P extends PayloadTemplateOptions> = Name extends 'date.interval' ? readonly ['string', 'string']
+  : Name extends `${infer Namespace}.${infer Method}`
+    ? P extends { plugins: readonly (infer Plugin)[] }
+      ? Extract<Plugin, { name: Namespace }> extends { functions: infer F }
+        ? Method extends keyof F ? F[Method] extends { argumentTypes: infer Args } ? Args : never : never
+        : never
+      : never
+    : never;
+type ArgumentInput<Types, Index extends number> = [Types] extends [never] ? unknown
+  : Types extends readonly unknown[] ? TypeValue<Types[Index]> : unknown;
+type Arguments<S extends string, Types, Index extends unknown[] = []> = Trim<S> extends '' ? never
+  : S extends `${infer Name},${infer Rest}`
+    ? { name: Trim<Name>; input: ArgumentInput<Types, Index['length']>; optional: false } | Arguments<Rest, Types, [...Index, unknown]>
+    : { name: Trim<S>; input: ArgumentInput<Types, Index['length']>; optional: false };
+type ParseString<S extends string, P extends PayloadTemplateOptions> = string extends S ? Dynamic
   : S extends `{{${infer Name}:${infer E}}}`
-    ? ParseExpression<Trim<E>> extends infer Parsed extends Expression ? Parsed & { name: Trim<Name> } : never
+    ? E extends `${string}=${infer Fn}(${infer Args})${string}`
+      ? Arguments<Args, FunctionTypes<Trim<Fn>, P>>
+      : ParseExpression<Trim<E>> extends infer Parsed extends Expression ? Parsed & { name: Trim<Name> } : never
     : never;
 
 // Widened JSON and exceptionally deep trees retain the runtime-validated API.
-type Variables<T, Depth extends readonly unknown[] = []> = 0 extends (1 & T) ? Dynamic
+type Variables<T, P extends PayloadTemplateOptions, Depth extends readonly unknown[] = []> = 0 extends (1 & T) ? Dynamic
   : JsonTemplateValue extends T ? Dynamic
   : Depth['length'] extends 16 ? Dynamic
-  : T extends string ? ParseString<T>
-  : T extends readonly unknown[] ? Variables<T[number], [...Depth, unknown]>
-  : T extends object ? { [K in keyof T]: Variables<T[K], [...Depth, unknown]> }[keyof T]
+  : T extends string ? ParseString<T, P>
+  : T extends readonly unknown[] ? Variables<T[number], P, [...Depth, unknown]>
+  : T extends object ? { [K in keyof T]: Variables<T[K], P, [...Depth, unknown]> }[keyof T]
   : never;
 type Named<V, Name extends string> = Extract<V, { name: Name }>;
+// All occurrences must accept the supplied source value.
+type SharedInput<V> = (V extends Variable ? (value: V['input']) => void : never) extends
+  (value: infer Input) => void ? Input : never;
 type RequiredNames<V extends Variable> = V extends { optional: false } ? V['name'] : never;
 type Inputs<V extends Variable> = {
-  readonly [Name in RequiredNames<V>]: Named<V, Name>['input'];
+  readonly [Name in RequiredNames<V>]: SharedInput<Named<V, Name>>;
 } & {
-  readonly [Name in Exclude<V['name'], RequiredNames<V>>]?: Named<V, Name>['input'];
+  readonly [Name in Exclude<V['name'], RequiredNames<V>>]?: SharedInput<Named<V, Name>>;
 };
 
 /** Inferred render inputs for a literal template; dynamic templates use runtime validation. */
-export type PayloadTemplateVariables<T extends JsonTemplateValue> =
-  Dynamic extends Variables<T> ? Readonly<Record<string, unknown>>
-  : Inputs<Extract<Variables<T>, Variable>> & Readonly<Record<string, unknown>>;
+export type PayloadTemplateVariables<T extends JsonTemplateValue, P extends PayloadTemplateOptions = PayloadTemplateOptions> =
+  Dynamic extends Variables<T, P> ? Readonly<Record<string, unknown>>
+  : Inputs<Extract<Variables<T, P>, Variable>> & Readonly<Record<string, unknown>>;

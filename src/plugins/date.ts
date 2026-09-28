@@ -19,5 +19,14 @@ function toIsoDateTime(value: string): string {
 export const datePlugin = {
   name: 'date',
   validators: { dateonly, isodatetime },
-  transformers: { isodatetime: toIsoDateTime },
+  functions: {
+    interval: {
+      argumentTypes: ['string', 'string'], resultType: 'number',
+      execute: (date1: string, date2: string) => {
+        if (!isodatetime(date1) || !isodatetime(date2)) throw new Error('Invalid date');
+        return Date.parse(date2) - Date.parse(date1);
+      },
+    },
+  },
+  transformers: { isodatetime: toIsoDateTime, msToHours: (value: number) => value / 3_600_000 },
 } satisfies PayloadVarsPlugin;

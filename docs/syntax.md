@@ -89,7 +89,7 @@ The second example requires a registered `custom.trim` transformer. Operation na
 
 See [Plugins](plugins.md) for the built-in operations, configuration, and custom validator and transformer examples.
 
-Plugin whitespace follows the existing canonical rules: `string[!date.dateonly>date.isodatetime]!collection.range` becomes `string[ ! date.dateonly > date.isodatetime ] ! collection.range`. Repeated declarations must include identical operations in identical order. Unknown operation names fail during construction. Built-in and custom operation references require `namespace.operation` with any of `!`, `?`, `>`, or `~`, for example `! email.email` or `> custom.trim`. Each segment matches `[A-Za-z_][A-Za-z0-9_]*`, with exactly one dot and no whitespace around it for all operation references. This syntax applies in both member and whole-value scopes.
+Plugin whitespace follows the existing canonical rules: `string[!date.dateonly>date.isodatetime]!collection.range` becomes `string[ ! date.dateonly > date.isodatetime ] ! collection.range`. Repeated source names may use different operations and fallbacks; each occurrence is evaluated independently from the original input. Their base types must agree. Unknown operation names fail during construction. Built-in and custom operation references require `namespace.operation` with any of `!`, `?`, `>`, or `~`, for example `! email.email` or `> custom.trim`. Each segment matches `[A-Za-z_][A-Za-z0-9_]*`, with exactly one dot and no whitespace around it for all operation references. This syntax applies in both member and whole-value scopes.
 
 ## Omission
 
@@ -109,8 +109,16 @@ Whitespace between tokens is insignificant, including spaces, tabs, and newlines
 | `string[?? omit]` | `string[ ?? omit ]` |
 | `string [   ?? omit ]??throw` | `string[ ?? omit ] ?? throw` |
 
-`toJSON()` returns a template with canonical placeholders. Extraction exposes the complete canonical placeholder as `declaration`. It does not mutate template strings. Repeated names must have identical canonical declarations, including both fallback operators and actions. Whitespace differences do not conflict.
+`toJSON()` returns a template with canonical placeholders. Extraction exposes the complete canonical placeholder as `declaration`. It does not mutate template strings. Identical canonical declarations remain deduplicated by `variables()`. Distinct expressions for the same source name retain their own declarations and paths. Incompatible base types raise `VARIABLE_TYPE_CONFLICT`.
 
 Unsupported examples include `string?`, `string!`, `string_`, `boolean[]`, `string ? null`, `string ?? undefined`, `string && throw`, `string[ omit ]`, unbalanced brackets, and multiple fallbacks at the same level.
+
+## Derived expressions and omission
+
+Use `resultName:baseType = namespace.function(arg1,arg2)` before whole-value operations and the optional fallback. Array result base types use empty brackets, such as `number[] = custom.values(source)`. Canonical calls remove whitespace inside the argument list: `{{hours:number = date.interval(start,end) > date.msToHours}}`.
+
+Arguments are original input names, not property paths, literals, nested calls, or references to derived outputs. Each argument's base type comes from the registered function. No separate placeholder is needed. Result names do not become required render inputs.
+
+Use terminal `> core.omit` to remove the containing property or array entry unconditionally after evaluation. It cannot be used inside member brackets or as a conditional branch. A trailing fallback keeps its usual timing. See [functions and omission](plugins/guide.md#derived-functions).
 
 <!-- {% endraw %} -->

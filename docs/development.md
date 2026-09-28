@@ -34,7 +34,7 @@ import {
 
 ### Construction and validation
 
-`new PayloadTemplate(template)` (accepting `JsonTemplateValue`) validates all placeholders and repeated variable contracts, then stores a private, normalized snapshot and compiled contract. Invalid syntax or conflicting declarations throw `PayloadTemplateError` with original template paths. Construction does not require runtime variables or evaluate fallbacks.
+`new PayloadTemplate(template)` (accepting `JsonTemplateValue`) validates all placeholders and repeated variable contracts, then stores a private, normalized snapshot and compiled contract. Invalid syntax or incompatible source base types throw `PayloadTemplateError` with original template paths. Construction does not require runtime variables or evaluate fallbacks.
 
 ```ts
 const template = new PayloadTemplate({
@@ -46,7 +46,7 @@ Compilation happens once in the constructor; the internal `buildContract()` func
 
 ### Plugin configuration
 
-Pass `PayloadTemplateOptions` as the second constructor argument to register custom plugins. Built-in operations remain available regardless of this configuration. See [Plugins](plugins.md#plugin-configuration) for configuration, custom callbacks, and built-ins.
+Pass `PayloadTemplateOptions` as the second constructor argument to register custom plugins. Built-in operations remain available regardless of this configuration. See [Plugins](plugins/guide.md#plugin-configuration) for configuration, custom callbacks, and built-ins.
 
 ### Normalized template
 
@@ -102,7 +102,10 @@ template.render({ products: ['C'] });            // { products: ['C'] }
 | `INVALID_PLACEHOLDER` | `path`, `placeholder` |
 | `UNSUPPORTED_TYPE` | `path`, `variableName`, `declaredType` |
 | `INVALID_FALLBACK_SYNTAX`, `LEGACY_VALIDATION_SYNTAX` | `path`, `variableName`, `placeholder` |
-| `VARIABLE_EXPRESSION_CONFLICT` | `variableName`, `declaration`, `declaredAt`, `conflictingDeclaration`, `conflictingAt` |
+| `VARIABLE_TYPE_CONFLICT` | `variableName`, `expectedType`, `conflictingType`, `path` |
+| `INVALID_FUNCTION_ARGUMENTS`, `FUNCTION_RESULT_TYPE_MISMATCH`, `INVALID_OMIT_OPERATION` | `path`, `variableName`, `operation` |
+| `INVALID_FUNCTION_ARGUMENT` | Runtime details, `operation`, `argumentName`, `argumentIndex` |
+| `INVALID_FUNCTION_RESULT` | Runtime details, `operation` |
 | `INVALID_PLUGIN_NAME`, `DUPLICATE_PLUGIN_NAME`, `RESERVED_PLUGIN_NAME` | `plugin` |
 | `INVALID_PLUGIN_OPERATION_NAME`, `INVALID_PLUGIN_OPERATION` | `kind`, `operation`, `plugin` |
 | `UNKNOWN_PLUGIN_OPERATION` | `kind`, `operation`, `path`, `variableName` |
@@ -114,7 +117,7 @@ template.render({ products: ['C'] });            // { products: ['C'] }
 | `FALLBACK_THROW` | Runtime details, `operator`, optional `valuePath` |
 | `CANNOT_OMIT_ROOT` | Runtime details |
 
-Runtime details are `variableName`, canonical `declaration`, `expectedType` (the base type), and `templatePaths` (all occurrences). Conflict declarations are canonical. Syntax errors include original template text because it cannot be normalized.
+Runtime details are `variableName`, canonical `declaration`, `expectedType` (the base type), and `templatePaths` (all occurrences). Syntax errors include original template text because it cannot be normalized.
 
 Paths start at `$`, use `.key` for identifier keys, and `[0]` for array positions. Other keys use bracketed JSON strings, such as `$["order-id"]`. Member errors include an original input `valuePath`, such as `$[2]`, even when earlier members were omitted.
 
@@ -142,7 +145,7 @@ Each result contains a JSON `path`, the normalized `expression` including mustac
 
 Each token has `kind`, exact normalized `text`, and `start` (inclusive) and `end` (exclusive) UTF-16 offsets relative to that entry's expression, not the serialized JSON. Concatenating its token texts reproduces the normalized expression. `TokenizedPayloadExpression`, `PayloadExpressionToken`, and `PayloadExpressionTokenKind` are exported types.
 
-Kinds are `delimiter`, `variable`, `punctuation`, `type`, `operator`, `action`, `validator`, `transformer`, `whitespace`, and `unknown`. Keywords are classified by position: `string` is a variable in `{{string:boolean}}`. Constructor validation rejects incomplete or invalid expressions before tokenization; original whitespace is not retained. Tokenization does not change validation, rendering, or the stored payload, and does not tokenize surrounding JSON.
+Kinds are `delimiter`, `variable`, `punctuation`, `type`, `operator`, `action`, `validator`, `transformer`, `function`, `whitespace`, and `unknown`. Keywords are classified by position: `string` is a variable in `{{string:boolean}}`. Constructor validation rejects incomplete or invalid expressions before tokenization; original whitespace is not retained. Tokenization does not change validation, rendering, or the stored payload, and does not tokenize surrounding JSON.
 
 The consumer chooses styling, for example with arbitrary CSS classes:
 
@@ -152,7 +155,7 @@ import { PayloadTemplate, type PayloadExpressionTokenKind } from 'payload-vars';
 const template = new PayloadTemplate({ products: '{{products:string[??omit]??throw}}' });
 const classes: Record<PayloadExpressionTokenKind, string> = {
   delimiter: 'muted', variable: 'blue', punctuation: 'muted', type: 'purple',
-  operator: 'orange', action: 'green', validator: 'blue', transformer: 'purple', whitespace: 'plain', unknown: 'underlined',
+  operator: 'orange', action: 'green', validator: 'blue', transformer: 'purple', function: 'purple', whitespace: 'plain', unknown: 'underlined',
 };
 for (const { path, tokens } of template.tokenizePayloadExpression()) {
   const container = document.createElement('pre');
@@ -206,6 +209,12 @@ template.render({ id: 'ORD-123', amount: 19.95 });
 ```
 
 Nested objects and arrays are inspected. Object keys are literal and do not declare variables. Repeated variables share one input property. Readonly template arrays and readonly supplied arrays are supported. Extra variables remain allowed, matching the runtime behavior that ignores unused inputs.
+
+### Derived inputs and repeated expressions
+
+Function arguments are required inputs; derived output names are excluded. `date.interval` infers two string arguments. Custom signatures are inferred from literal constructor options. Preserve plugin names and argument tuples with `as const satisfies PayloadVarsPlugin`. `PayloadTemplateVariables<T, Options>` accepts an optional second type parameter for custom plugin options. If metadata has been widened, argument names remain required with unknown types, and runtime validation enforces the signature.
+
+`variables()` keeps existing extraction shapes for identical ordinary declarations. Distinct uses of a name appear separately with their own `declaration` and `paths`. Derived entries include `derived: true`, `function: { name, arguments }`, and `paths`. Inputs used only as function arguments are appended in first-use order with `functionArgument: true`, their declared type, a synthetic plain `declaration`, and the paths of calls using them. Returned metadata is copied and may be edited without affecting the template.
 
 ### Fallback input types
 
@@ -319,7 +328,7 @@ Choose explicit fallback behavior:
 
 The old nullable behavior has no exact universal replacement: empty arrays now remain empty, and `||` follows JavaScript truthiness consistently. Normalize special business values before supplying variables if needed.
 
-Extracted variables now include a canonical `declaration` and optional structured fallbacks. The `type` field always contains a base type. Replace handling of `VARIABLE_TYPE_CONFLICT` with `VARIABLE_EXPRESSION_CONFLICT`, and use canonical declaration fields when displaying contracts. Runtime issues now also include `declaration`. See [API and errors](#errors).
+Extracted variables now include a canonical `declaration` and optional structured fallbacks. The `type` field always contains a base type. Incompatible source base types use `VARIABLE_TYPE_CONFLICT`; differing operations and fallbacks are allowed. Use canonical declaration fields when displaying contracts. Runtime issues now also include `declaration`. See [API and errors](#errors).
 
 ### Migrating TypeScript callers
 

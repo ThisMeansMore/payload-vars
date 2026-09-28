@@ -6,4 +6,4 @@ export type { JsonPrimitive, JsonValue, JsonTemplateValue, JsonObject, BaseType,
 export type { PayloadTemplateVariables } from './payload-template-input.types.js';
 export type { PayloadExpressionToken, PayloadExpressionTokenKind, TokenizedPayloadExpression } from './payload-template.types.js';
 
-export type { PayloadValidator, PayloadTransformer, PayloadVarsPlugin, PayloadTemplateOptions, PayloadOperation } from './plugins.js';
+export type { PayloadValidator, PayloadTransformer, PayloadFunction, PayloadVarsPlugin, PayloadTemplateOptions, PayloadOperation } from './plugins.js';

@@ -6,19 +6,17 @@ const plugin = (validators = {}, transformers = {}) => ({ name: 'test', validato
 const issue = code => error => error instanceof PayloadTemplateError && error.issue.code === code;
 
 describe('template construction', () => {
-  test('conflicts compare complete normalized expressions and expose both paths', () => {
+  test('different expressions are independent but incompatible base types fail', () => {
     const pairs = [['string', 'string ?? null'], ['string ?? null', 'string ?? omit'],
       ['string ?? throw', 'string || throw'], ['string[]', 'string[ ?? omit ]'],
-      ['string[ ?? omit ]', 'string[ || omit ]'],
-      ['string[ ?? omit ] ?? throw', 'string[ ?? omit ] ?? null'], ['number', 'string']];
+      ['string[ ?? omit ]', 'string[ || omit ]']];
     for (const [first, second] of pairs) {
-      assert.throws(() => new PayloadTemplate({ a: `{{x:${first}}}`, nested: [`{{x:${second}}}`] }), error => {
-        assert.ok(error instanceof PayloadTemplateError);
-        assert.deepEqual(error.issue, { code: 'VARIABLE_EXPRESSION_CONFLICT', variableName: 'x',
-          declaration: `{{x:${first}}}`, declaredAt: '$.a', conflictingDeclaration: `{{x:${second}}}`, conflictingAt: '$.nested[0]' });
-        return true;
-      });
+      const template = new PayloadTemplate({ a: `{{x:${first}}}`, nested: [`{{x:${second}}}`] });
+      assert.deepEqual(template.variables().map(v => v.paths), [['$.a'], ['$.nested[0]']]);
     }
+    assert.throws(() => new PayloadTemplate({ a: '{{x:number}}', nested: ['{{x:string}}'] }), {
+      issue: { code: 'VARIABLE_TYPE_CONFLICT', variableName: 'x', expectedType: 'number', conflictingType: 'string', path: '$.nested[0]' },
+    });
   });
 
   test('rejects unsupported types, old suffixes, and malformed fallback syntax', () => {
@@ -52,7 +50,7 @@ describe('template construction', () => {
       [{ nested: ['{{x:string ?? invalid}}'] }, 'INVALID_FALLBACK_SYNTAX', '$.nested[0]'],
       [{ nested: ['prefix {{x:string}}'] }, 'INVALID_PLACEHOLDER', '$.nested[0]'],
       [{ nested: ['{{x:object}}'] }, 'UNSUPPORTED_TYPE', '$.nested[0]'],
-      [{ a: '{{x:string??null}}', nested: ['{{x:string??omit}}'] }, 'VARIABLE_EXPRESSION_CONFLICT', '$.nested[0]'],
+      [{ a: '{{x:string??null}}', nested: ['{{x:number??omit}}'] }, 'VARIABLE_TYPE_CONFLICT', '$.nested[0]'],
     ]) {
       assert.throws(() => new PayloadTemplate(template), error => {
         assert.ok(error instanceof PayloadTemplateError);
@@ -124,11 +122,11 @@ describe('template construction', () => {
       assert.throws(() => new PayloadTemplate({ x: `{{x:string ${tail}}}` }), error =>
         issue('UNKNOWN_PLUGIN_OPERATION')(error) && error.issue.path === '$.x' && error.issue.operation.startsWith('missing.'));
     }
-    assert.throws(() => new PayloadTemplate(['{{x:string ! date.dateonly}}', '{{x:string ? date.dateonly}}']), issue('VARIABLE_EXPRESSION_CONFLICT'));
+    assert.doesNotThrow(() => new PayloadTemplate(['{{x:string ! date.dateonly}}', '{{x:string ? date.dateonly}}']));
   });
 
   test('rejects conflicting and malformed built-in operations', () => {
-    assert.throws(() => new PayloadTemplate(['{{x:string ! date.dateonly > date.isodatetime}}', '{{x:string > date.isodatetime ! date.dateonly}}']), issue('VARIABLE_EXPRESSION_CONFLICT'));
+    assert.doesNotThrow(() => new PayloadTemplate(['{{x:string ! date.dateonly > date.isodatetime}}', '{{x:string > date.isodatetime ! date.dateonly}}']));
     for (const tail of ['!', '>', '! date only', '?? null ! date.dateonly', '! date.dateonly[]', '[! date.dateonly] >', '!! date.dateonly']) {
       assert.throws(() => new PayloadTemplate(`{{x:string ${tail}}}`), issue('INVALID_FALLBACK_SYNTAX'));
     }
@@ -138,9 +136,9 @@ describe('template construction', () => {
   test('rejects conflicting and malformed custom operations', () => {
     const custom = plugin({ check: () => true }, { trim: x => x.trim() });
     const options = { plugins: [custom] };
-    assert.throws(() => new PayloadTemplate(['{{x:string ! test.check}}', '{{x:string ! other.check}}'], {
+    assert.doesNotThrow(() => new PayloadTemplate(['{{x:string ! test.check}}', '{{x:string ! other.check}}'], {
       plugins: [custom, { ...custom, name: 'other' }],
-    }), issue('VARIABLE_EXPRESSION_CONFLICT'));
+    }));
     for (const reference of ['test.', '.check', 'test..check', 'test.group.check', 'test .check', 'test. check', '1test.check', 'test.1check']) {
       for (const tail of [`! ${reference}`, `[ > ${reference} ]`]) {
         assert.throws(() => new PayloadTemplate(`{{x:string ${tail}}}`, options), issue('INVALID_FALLBACK_SYNTAX'));

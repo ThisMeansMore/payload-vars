@@ -83,7 +83,7 @@ describe('syntax highlighting', () => {
   });
 
   test('invalid operators, unsupported types and unexpected characters remain unknown', () => {
-    for (const operator of ['|', '???', '|||', '?|', '&&', '=']) {
+    for (const operator of ['|', '???', '|||', '?|', '&&']) {
       const tokens = coverage(`{{x:string ${operator} null}}`);
       assert.ok(!tokens.some(t => t.kind === 'operator'));
       assert.ok(tokens.some(t => t.kind === 'unknown'));

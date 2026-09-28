@@ -6,6 +6,10 @@ The latest five releases are detailed below. Older releases have one-line summar
 
 ## Unreleased
 
+- Add typed synchronous plugin functions with original-input arguments, including `date.interval`, and the `date.msToHours` transformer.
+- Add terminal whole-value `> core.omit` to remove evaluated output properties and array entries.
+- Evaluate repeated source expressions independently, allowing different operations and fallbacks while rejecting incompatible base types. Extend variable inspection, input inference, highlighting, and structured errors for derived values.
+
 ## 2.0.5 — 2026-09-27
 
 ### Changes

@@ -15,6 +15,7 @@ export interface FallbackExpression {
 export interface ParsedVariableExpression {
   name: string;
   type: BaseType;
+  function?: { name: string; arguments: string[] };
   memberOperations?: PayloadOperation[];
   valueOperations?: PayloadOperation[];
   memberFallback?: FallbackExpression;
@@ -23,6 +24,10 @@ export interface ParsedVariableExpression {
 export interface PayloadVariable extends ParsedVariableExpression {
   /** Complete canonical placeholder, including its name and fallback expressions. */
   declaration: string;
+  /** Included for distinct uses and function-only inputs. */
+  paths?: string[];
+  derived?: true;
+  functionArgument?: true;
 }
 interface RuntimeIssue {
   variableName: string;
@@ -33,13 +38,15 @@ interface RuntimeIssue {
 export type PayloadTemplateIssue =
   | { code: 'INVALID_PLUGIN_NAME'; plugin: unknown }
   | { code: 'DUPLICATE_PLUGIN_NAME' | 'RESERVED_PLUGIN_NAME'; plugin: string }
-  | { code: 'INVALID_PLUGIN_OPERATION_NAME' | 'INVALID_PLUGIN_OPERATION'; kind: PayloadOperation['kind']; operation: string; plugin: string }
-  | { code: 'UNKNOWN_PLUGIN_OPERATION'; kind: PayloadOperation['kind']; operation: string; path: string; variableName: string }
-  | (RuntimeIssue & { code: 'VALIDATION_FAILED' | 'PLUGIN_EXECUTION_FAILED' | 'INVALID_TRANSFORMER_RESULT'; kind: PayloadOperation['kind']; operation: string; valuePath?: string })
+  | { code: 'INVALID_PLUGIN_OPERATION_NAME' | 'INVALID_PLUGIN_OPERATION'; kind: PayloadOperation['kind'] | 'function'; operation: string; plugin: string }
+  | { code: 'UNKNOWN_PLUGIN_OPERATION'; kind: PayloadOperation['kind'] | 'function'; operation: string; path: string; variableName: string }
+  | (RuntimeIssue & { code: 'VALIDATION_FAILED' | 'PLUGIN_EXECUTION_FAILED' | 'INVALID_TRANSFORMER_RESULT'; kind: PayloadOperation['kind'] | 'function'; operation: string; valuePath?: string })
+  | { code: 'INVALID_FUNCTION_ARGUMENTS' | 'FUNCTION_RESULT_TYPE_MISMATCH' | 'INVALID_OMIT_OPERATION'; path: string; variableName: string; operation: string }
+  | { code: 'VARIABLE_TYPE_CONFLICT'; variableName: string; expectedType: BaseType; conflictingType: BaseType; path: string }
+  | (RuntimeIssue & { code: 'INVALID_FUNCTION_ARGUMENT' | 'INVALID_FUNCTION_RESULT'; operation: string; argumentName?: string; argumentIndex?: number })
   | { code: 'INVALID_PLACEHOLDER'; path: string; placeholder: string }
   | { code: 'UNSUPPORTED_TYPE'; path: string; variableName: string; declaredType: string }
   | { code: 'INVALID_FALLBACK_SYNTAX' | 'LEGACY_VALIDATION_SYNTAX'; path: string; variableName: string; placeholder: string }
-  | { code: 'VARIABLE_EXPRESSION_CONFLICT'; variableName: string; declaration: string; declaredAt: string; conflictingDeclaration: string; conflictingAt: string }
   | (RuntimeIssue & { code: 'MISSING_VARIABLE' })
   | (RuntimeIssue & { code: 'INVALID_VARIABLE_TYPE'; actualType: string; valuePath?: string })
   | (RuntimeIssue & { code: 'FALLBACK_THROW'; operator: FallbackExpression['operator']; valuePath?: string })
@@ -47,7 +54,7 @@ export type PayloadTemplateIssue =
 
 export type PayloadExpressionTokenKind =
   | 'delimiter' | 'variable' | 'punctuation' | 'type'
-  | 'validator' | 'transformer' | 'operator' | 'action' | 'whitespace' | 'unknown';
+  | 'validator' | 'transformer' | 'function' | 'operator' | 'action' | 'whitespace' | 'unknown';
 
 export interface PayloadExpressionToken {
   kind: PayloadExpressionTokenKind;

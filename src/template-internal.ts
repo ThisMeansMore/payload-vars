@@ -31,7 +31,18 @@ export function parsePlaceholder(value: string, path: string): Declaration | und
     throw new PayloadTemplateError({ code: 'INVALID_PLACEHOLDER', path, placeholder: value });
   }
   const name = match[1]!;
-  const expression = match[2]!;
+  let expression = match[2]!;
+  let derived: { name: string; arguments: string[] } | undefined;
+  if (expression.includes('=')) {
+    const call = new RegExp(String.raw`^((?:${typeSource})(?:\s*\[\s*\])?)\s*=\s*(${operationNameSource})\s*\(([^()]*)\)([\s\S]*)$`).exec(expression);
+    if (!call) throw new PayloadTemplateError({ code: 'INVALID_PLACEHOLDER', path, placeholder: value });
+    const args = call[3]!.trim() ? call[3]!.split(',').map(arg => arg.trim()) : [];
+    if (args.some(arg => !new RegExp(`^${variableNameSource}$`).test(arg))) {
+      throw new PayloadTemplateError({ code: 'INVALID_FUNCTION_ARGUMENTS', path, variableName: name, operation: call[2]! });
+    }
+    derived = { name: call[2]!, arguments: args };
+    expression = call[1]! + call[4]!;
+  }
   if (expression.includes('@')) {
     throw new PayloadTemplateError({ code: 'LEGACY_VALIDATION_SYNTAX', path, variableName: name, placeholder: value });
   }
@@ -60,10 +71,11 @@ export function parsePlaceholder(value: string, path: string): Declaration | und
   ].join(' ');
   const member = format(memberOperations, memberFallback);
   const whole = format(valueOperations, valueFallback);
-  const canonical = parsed[1] + (array ? member ? `[ ${member} ]` : '[]' : '') + (whole ? ` ${whole}` : '');
+  const canonical = parsed[1] + (array ? member ? `[ ${member} ]` : '[]' : '') + (derived ? ` = ${derived.name}(${derived.arguments.join(',')})` : '') + (whole ? ` ${whole}` : '');
   return {
     ...(memberOperations.length ? { memberOperations } : {}),
     ...(valueOperations.length ? { valueOperations } : {}),
+    ...(derived ? { function: derived, derived: true as const } : {}),
     name, type: (parsed[1] + (array ? '[]' : '')) as BaseType,
     ...(memberFallback ? { memberFallback } : {}), ...(valueFallback ? { valueFallback } : {}),
     declaration: `{{${name}:${canonical}}}`, paths: [path],
@@ -74,6 +86,12 @@ export function buildContract(template: JsonTemplateValue, options: PayloadTempl
   const plugins = createRegistries(options.plugins);
   const declarations = new Map<string, Declaration>();
   const locations = new Map<string, Declaration>();
+  const inputs = new Map<string, BaseType>();
+  const requireInput = (name: string, type: BaseType, path: string) => {
+    const previous = inputs.get(name);
+    if (previous && previous !== type) throw new PayloadTemplateError({ code: 'VARIABLE_TYPE_CONFLICT', variableName: name, expectedType: previous, conflictingType: type, path });
+    inputs.set(name, type);
+  };
   function visit(value: JsonTemplateValue, path: string): JsonValue {
     if (typeof value === 'string') {
       const found = parsePlaceholder(value, path);
@@ -83,14 +101,25 @@ export function buildContract(template: JsonTemplateValue, options: PayloadTempl
           code: 'UNKNOWN_PLUGIN_OPERATION', path, variableName: found.name, kind: op.kind, operation: op.name,
         });
       }
-      const previous = declarations.get(found.name);
-      if (previous && previous.declaration !== found.declaration) {
-        throw new PayloadTemplateError({ code: 'VARIABLE_EXPRESSION_CONFLICT', variableName: found.name,
-          declaration: previous.declaration, declaredAt: previous.paths[0]!,
-          conflictingDeclaration: found.declaration, conflictingAt: path });
+      for (const [scope, ops] of [['member', found.memberOperations ?? []], ['value', found.valueOperations ?? []]] as const) {
+        ops.forEach((op, index) => {
+          if (op.name === 'core.omit' && (scope !== 'value' || op.kind !== 'transformer' || op.operator
+            || index !== ops.length - 1 || ops[index - 1]?.operator === '?')) {
+            throw new PayloadTemplateError({ code: 'INVALID_OMIT_OPERATION', path, variableName: found.name, operation: op.name });
+          }
+        });
       }
+      if (found.function) {
+        const fn = plugins.function.get(found.function.name);
+        const issue = { path, variableName: found.name, operation: found.function.name };
+        if (!fn) throw new PayloadTemplateError({ code: 'UNKNOWN_PLUGIN_OPERATION', kind: 'function', ...issue });
+        if (fn.argumentTypes.length !== found.function.arguments.length) throw new PayloadTemplateError({ code: 'INVALID_FUNCTION_ARGUMENTS', ...issue });
+        if (fn.resultType !== found.type) throw new PayloadTemplateError({ code: 'FUNCTION_RESULT_TYPE_MISMATCH', ...issue });
+        found.function.arguments.forEach((name, index) => requireInput(name, fn.argumentTypes[index]!, path));
+      } else requireInput(found.name, found.type, path);
+      const previous = declarations.get(found.declaration);
       if (previous) previous.paths.push(path);
-      else declarations.set(found.name, found);
+      else declarations.set(found.declaration, found);
       locations.set(path, previous ?? found);
       return found.declaration;
     } else if (Array.isArray(value)) {

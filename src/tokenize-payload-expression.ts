@@ -6,7 +6,7 @@ const operationPattern = new RegExp(`^${operationNameSource}$`);
 const typePattern = new RegExp(`^(${typeSource})$`);
 const actionPattern = new RegExp(`^(${actionSource})$`);
 const operatorPattern = new RegExp(`^(${operatorSource})$`);
-type Position = 'outside' | 'variable' | 'colon' | 'type' | 'tail'
+type Position = 'function' | 'call' | 'argument' | 'argumentEnd' | 'outside' | 'variable' | 'colon' | 'type' | 'tail'
   | 'memberValidator' | 'memberTransformer' | 'valueValidator' | 'valueTransformer'
   | 'member' | 'memberAction' | 'memberEnd' | 'arrayEnd' | 'valueAction' | 'end';
 
@@ -28,7 +28,19 @@ export function tokenizePayloadExpression(expression: string): PayloadExpression
       position = text === '{{' ? 'variable' : 'outside';
       conditional = undefined;
     } else if (position !== 'outside') {
-      if (text === ':' || text === '[' || text === ']') {
+      if (text === '=' && (position === 'tail' || position === 'arrayEnd')) {
+        kind = 'operator'; position = 'function';
+      } else if (position === 'function' && operationPattern.test(text)) {
+        kind = 'function'; position = 'call';
+      } else if (position === 'call' && text === '(') {
+        kind = 'punctuation'; position = 'argument';
+      } else if (position === 'argument' && variablePattern.test(text)) {
+        kind = 'variable'; position = 'argumentEnd';
+      } else if (position === 'argumentEnd' && text === ',') {
+        kind = 'punctuation'; position = 'argument';
+      } else if ((position === 'argument' || position === 'argumentEnd') && text === ')') {
+        kind = 'punctuation'; position = 'arrayEnd';
+      } else if (text === ':' || text === '[' || text === ']') {
         kind = 'punctuation';
         conditional = undefined;
         if (text === ':' && (position === 'colon' || position === 'variable')) position = 'type';
