@@ -45,9 +45,11 @@ export class PayloadTemplate<const T extends JsonTemplateValue = JsonTemplateVal
   variables(): PayloadVariable[] {
     const declarations = [...this.#contract.declarations.values()];
     const result: PayloadVariable[] = declarations.map(({ name, type, declaration, paths, function: fn, memberFallback, valueFallback, memberOperations, valueOperations }) => ({
-      name, type, declaration,
-      ...(fn ? { derived: true as const, function: { name: fn.name, arguments: [...fn.arguments] }, paths: [...paths] } : {}),
-      ...(declarations.filter(item => item.name === name).length > 1 ? { paths: [...paths] } : {}),
+      name, type, declaration, paths: [...paths],
+      ...(fn ? { derived: true as const, function: { name: fn.name, arguments: [...fn.arguments] } } : {}),
+      ...(fn ? { dependencies: fn.arguments.map(reference => reference.startsWith('$.')
+        ? { source: 'input' as const, name: reference.slice(2) }
+        : { source: 'property' as const, path: reference.startsWith('[') ? `$${reference}` : `$.${reference}` }) } : {}),
       ...(memberOperations ? { memberOperations: memberOperations.map(op => ({ ...op })) } : {}),
       ...(valueOperations ? { valueOperations: valueOperations.map(op => ({ ...op })) } : {}),
       ...(memberFallback ? { memberFallback: { ...memberFallback } } : {}),
@@ -56,7 +58,9 @@ export class PayloadTemplate<const T extends JsonTemplateValue = JsonTemplateVal
     for (const declaration of declarations) {
       if (!declaration.function) continue;
       const fn = this.#contract.plugins.function.get(declaration.function.name)!;
-      declaration.function.arguments.forEach((name, index) => {
+      declaration.function.arguments.forEach((reference, index) => {
+        if (!reference.startsWith('$.')) return;
+        const name = reference.slice(2);
         if (declarations.some(item => !item.function && item.name === name)) return;
         const previous = result.find(item => item.functionArgument && item.name === name);
         if (previous) { previous.paths = [...new Set([...previous.paths!, ...declaration.paths])]; return; }

@@ -1,7 +1,8 @@
-import { variableNameSource, operationNameSource, typeSource, actionSource, operatorSource } from './expression-syntax.js';
+import { argumentReferenceSource, variableNameSource, operationNameSource, typeSource, actionSource, operatorSource } from './expression-syntax.js';
 import type { PayloadExpressionToken, PayloadExpressionTokenKind } from './payload-template.types.js';
 
 const variablePattern = new RegExp(`^${variableNameSource}$`);
+const argumentPattern = new RegExp(`^${argumentReferenceSource}$`);
 const operationPattern = new RegExp(`^${operationNameSource}$`);
 const typePattern = new RegExp(`^(${typeSource})$`);
 const actionPattern = new RegExp(`^(${actionSource})$`);
@@ -16,7 +17,7 @@ export function tokenizePayloadExpression(expression: string): PayloadExpression
   let conditional: 'validator' | 'success' | undefined;
   // Whole word/operator runs avoid highlighting valid prefixes of invalid text.
   // The final alternative consumes any code point, including lone surrogates.
-  const pieces = /\s+|\{\{|\}\}|[A-Za-z0-9_$.]+|[?|]+|[^]/gu;
+  const pieces = /\s+|\{\{|\}\}|[A-Za-z0-9_$.]+(?:\[[0-9]+\](?:\.[A-Za-z0-9_]+)*)*|\[[0-9]+\](?:\.[A-Za-z0-9_]+|\[[0-9]+\])*|[?|]+|[^]/gu;
   for (const match of expression.matchAll(pieces)) {
     const text = match[0];
     const start = match.index!;
@@ -34,7 +35,7 @@ export function tokenizePayloadExpression(expression: string): PayloadExpression
         kind = 'function'; position = 'call';
       } else if (position === 'call' && text === '(') {
         kind = 'punctuation'; position = 'argument';
-      } else if (position === 'argument' && variablePattern.test(text)) {
+      } else if (position === 'argument' && argumentPattern.test(text)) {
         kind = 'variable'; position = 'argumentEnd';
       } else if (position === 'argumentEnd' && text === ',') {
         kind = 'punctuation'; position = 'argument';

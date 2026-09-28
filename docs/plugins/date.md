@@ -33,14 +33,14 @@ new PayloadTemplate('{{date:string ! date.dateonly > date.isodatetime}}')
 
 ```ts
 const template = new PayloadTemplate({
-  date1: '{{date1:string ! date.isodatetime > core.omit}}',
-  date2: '{{date2:string ! date.isodatetime > core.omit}}',
+  date1: '{{date1:string > date.isodatetime > core.omit}}',
+  date2: '{{date2:string > date.isodatetime > core.omit}}',
   hoursDifference: '{{hoursDifference:number = date.interval(date1,date2) > date.msToHours}}',
 });
-template.render({ date1: '2026-01-01T00:00:00Z', date2: '2026-01-01T01:30:00Z' });
-// { hoursDifference: 1.5 }
+template.render({ date1: '2026-01-01', date2: '2026-01-02' });
+// { hoursDifference: 24 }
 ```
 
-The function reads original render inputs and validates both dates itself. A template containing only `hoursDifference` also works. See [derived functions](guide.md#derived-functions) for execution order and [core.omit](core.md) for output omission.
+Bare arguments read the evaluated `date1` and `date2` properties, whose transformations run even though `core.omit` hides them. Date-only render inputs therefore work here. Use `date.interval($.date1,$.date2)` for untouched inputs (which must already be valid ISO datetimes), or `date.interval(date1,$.date2)` for mixed sources. A template containing only `hoursDifference` must use raw references. See [derived functions](guide.md#derived-functions) for execution order and [core.omit](core.md) for output omission.
 
 <!-- {% endraw %} -->

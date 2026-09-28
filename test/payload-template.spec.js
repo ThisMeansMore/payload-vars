@@ -51,7 +51,7 @@ describe('template snapshots and reuse', () => {
     variables[0].valueFallback.action = 'null';
     variables.push({ name: 'extra', type: 'string', declaration: '{{extra:string}}' });
     assert.deepEqual(template.toJSON(), { nested: [{ x: '{{x:string[ ?? omit ] ?? throw}}' }] });
-    assert.deepEqual(template.variables(), [{ name: 'x', type: 'string[]',
+    assert.deepEqual(template.variables(), [{ name: 'x', type: 'string[]', paths: ['$.nested[0].x'],
       declaration: '{{x:string[ ?? omit ] ?? throw}}', memberFallback: { operator: '??', action: 'omit' },
       valueFallback: { operator: '??', action: 'throw' } }]);
     assert.deepEqual(template.render({ x: ['a', null] }), { nested: [{ x: ['a'] }] });

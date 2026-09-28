@@ -70,13 +70,15 @@ Transformer results are checked against the declared type without rerunning fall
 
 ## Derived functions
 
-A function takes named original render inputs and produces a typed result:
+A function takes evaluated property references, original input references, or both, and produces a typed result:
 
 ```text
 {{hoursDifference:number = date.interval(date1,date2) > date.msToHours}}
 ```
 
-Arguments are comma-separated variable names, with optional whitespace. They are required even when the result has a fallback. No separate declarations are needed for these inputs. Arguments never refer to processed properties or derived outputs; nested calls and function chaining are unsupported. An argument sharing a derived output's name still requires that name in the original input.
+Arguments are comma-separated references with optional surrounding whitespace. Bare `date1` reads the evaluated template property at `$.date1`; it does not select the input variable named inside that placeholder. `$.date1` reads the untouched original render input. Mix both forms freely. Raw references need no separate placeholder. Bare references can target derived properties, provided the dependency graph has no cycles. Nested inline calls are unsupported. See [path syntax](../syntax.md#derived-expressions-and-omission).
+
+This is a breaking change from the original-input meaning of bare arguments. Prefix old raw arguments with `$.` to migrate. A result fallback does not make raw arguments optional; a referenced property retains its own input fallback rules.
 
 See [date](date.md#intervals-and-hours) for `date.interval` and `date.msToHours`.
 
@@ -96,7 +98,7 @@ const custom = {
   },
 } as const satisfies PayloadVarsPlugin;
 
-new PayloadTemplate('{{count:number = custom.count(items)}}', { plugins: [custom] })
+new PayloadTemplate('{{count:number = custom.count($.items)}}', { plugins: [custom] })
   .render({ items: ['A', 'B'] }); // 2
 ```
 
@@ -104,13 +106,13 @@ new PayloadTemplate('{{count:number = custom.count(items)}}', { plugins: [custom
 
 Execution order is:
 
-1. Read each argument from the original input and validate its declared base type.
+1. Resolve each raw argument from the original-input store, or evaluate and cache the referenced template location. Validate the resulting argument against the function signature.
 2. Call the function, wrapping exceptions as `PLUGIN_EXECUTION_FAILED` with `kind: 'function'` and no exception contents.
 3. Validate the result against `resultType`; a mismatch raises `INVALID_FUNCTION_RESULT` before fallbacks run.
 4. Apply the result's whole-value fallback, then normal base validation and operations. For example, a valid numeric result of `0` can trigger `|| null`. Fallbacks never catch function failures or invalid results.
-5. Apply terminal [core.omit](core.md), if present.
+5. Cache the evaluated value by template location. Apply terminal [core.omit](core.md) only when assembling output.
 
-Every occurrence evaluates independently. Transformers, validators, fallbacks, and omission in one property do not alter inputs seen elsewhere. Template property order does not change the values supplied to functions. Callbacks should avoid external side effects.
+Every occurrence evaluates independently from original inputs, including identical declarations at different locations. The per-render cache is never shared between renders. Function arguments never read assembled output. `core.omit` preserves the internal evaluated value; a fallback resolving to `omit` has no usable value and causes `INVALID_FUNCTION_ARGUMENT` when referenced. Fallback-produced null also causes that error because the supported function argument types exclude null. Arrays containing fallback nulls likewise fail function argument validation. Template order does not change dependency values. Callbacks should avoid external side effects.
 
 ## Plugin configuration
 

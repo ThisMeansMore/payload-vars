@@ -13,7 +13,7 @@ describe('variables()', () => {
     const template = { nested: types.map((type, i) => ({ value: `{{v${i}:${type}}}` })),
       repeated: '{{v0:string}}', constants: ['ordinary', null, 0, false] };
     assert.deepEqual(new PayloadTemplate(template).variables(), types.map((type, i) => ({
-      name: `v${i}`, type, declaration: `{{v${i}:${type}}}`,
+      name: `v${i}`, type, declaration: `{{v${i}:${type}}}`, paths: i === 0 ? ['$.nested[0].value', '$.repeated'] : [`$.nested[${i}].value`],
     })));
   });
 
@@ -21,19 +21,19 @@ describe('variables()', () => {
     for (const type of types) for (const operator of operators) for (const action of actions) {
       const declaration = `{{x:${type} ${operator} ${action}}}`;
       assert.deepEqual(new PayloadTemplate([`{{ \nx\t : ${type.replace('[]', ' [ \t ]')} ${operator}${action}\n}}`, declaration]).variables(),
-        [{ name: 'x', type, valueFallback: { operator, action }, declaration }]);
+        [{ name: 'x', type, paths: ['$[0]', '$[1]'], valueFallback: { operator, action }, declaration }]);
     }
     for (const type of ['string', 'number']) for (const operator of operators) for (const action of actions) {
       for (const wholeOperator of operators) for (const wholeAction of actions) {
         const declaration = `{{x:${type}[ ${operator} ${action} ] ${wholeOperator} ${wholeAction}}}`;
         const variants = [declaration, `{{x:${type}[${operator}${action}]${wholeOperator}${wholeAction}}}`,
           `{{ x : ${type} \n[\t${operator}  ${action}\n] \t${wholeOperator} ${wholeAction} }}`];
-        assert.deepEqual(new PayloadTemplate(variants).variables(), [{ name: 'x', type: `${type}[]`,
+        assert.deepEqual(new PayloadTemplate(variants).variables(), [{ name: 'x', type: `${type}[]`, paths: ['$[0]', '$[1]', '$[2]'],
           memberFallback: { operator, action }, valueFallback: { operator: wholeOperator, action: wholeAction }, declaration }]);
       }
       const declaration = `{{x:${type}[ ${operator} ${action} ]}}`;
       assert.deepEqual(new PayloadTemplate(`{{x:${type}[${operator}${action}]}}`).variables(),
-        [{ name: 'x', type: `${type}[]`, memberFallback: { operator, action }, declaration }]);
+        [{ name: 'x', type: `${type}[]`, paths: ['$'], memberFallback: { operator, action }, declaration }]);
     }
   });
 

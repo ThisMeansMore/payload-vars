@@ -51,10 +51,13 @@ type FunctionTypes<Name extends string, P extends PayloadTemplateOptions> = Name
     : never;
 type ArgumentInput<Types, Index extends number> = [Types] extends [never] ? unknown
   : Types extends readonly unknown[] ? TypeValue<Types[Index]> : unknown;
+// All property locations are visited below, so bare dependencies add no extra inputs.
+type RawArgument<S extends string, Input> = Trim<S> extends `$.${infer Name}`
+  ? { name: Name; input: Input; optional: false } : never;
 type Arguments<S extends string, Types, Index extends unknown[] = []> = Trim<S> extends '' ? never
   : S extends `${infer Name},${infer Rest}`
-    ? { name: Trim<Name>; input: ArgumentInput<Types, Index['length']>; optional: false } | Arguments<Rest, Types, [...Index, unknown]>
-    : { name: Trim<S>; input: ArgumentInput<Types, Index['length']>; optional: false };
+    ? RawArgument<Name, ArgumentInput<Types, Index['length']>> | Arguments<Rest, Types, [...Index, unknown]>
+    : RawArgument<S, ArgumentInput<Types, Index['length']>>;
 type ParseString<S extends string, P extends PayloadTemplateOptions> = string extends S ? Dynamic
   : S extends `{{${infer Name}:${infer E}}}`
     ? E extends `${string}=${infer Fn}(${infer Args})${string}`

@@ -24,7 +24,9 @@ export interface ParsedVariableExpression {
 export interface PayloadVariable extends ParsedVariableExpression {
   /** Complete canonical placeholder, including its name and fallback expressions. */
   declaration: string;
-  /** Included for distinct uses and function-only inputs. */
+  /** Original-input or evaluated-property dependencies, in function argument order. */
+  dependencies?: ({ source: 'input'; name: string } | { source: 'property'; path: string })[];
+  /** All template occurrences (or consumer locations for function-only inputs). */
   paths?: string[];
   derived?: true;
   functionArgument?: true;
@@ -42,8 +44,10 @@ export type PayloadTemplateIssue =
   | { code: 'UNKNOWN_PLUGIN_OPERATION'; kind: PayloadOperation['kind'] | 'function'; operation: string; path: string; variableName: string }
   | (RuntimeIssue & { code: 'VALIDATION_FAILED' | 'PLUGIN_EXECUTION_FAILED' | 'INVALID_TRANSFORMER_RESULT'; kind: PayloadOperation['kind'] | 'function'; operation: string; valuePath?: string })
   | { code: 'INVALID_FUNCTION_ARGUMENTS' | 'FUNCTION_RESULT_TYPE_MISMATCH' | 'INVALID_OMIT_OPERATION'; path: string; variableName: string; operation: string }
+  | { code: 'UNKNOWN_FUNCTION_REFERENCE' | 'FUNCTION_ARGUMENT_TYPE_MISMATCH'; path: string; variableName: string; operation: string; argumentName: string; argumentIndex: number; referencePath: string; expectedType?: BaseType; actualType?: BaseType }
+  | { code: 'CYCLIC_FUNCTION_REFERENCE'; path: string; templatePaths: string[] }
   | { code: 'VARIABLE_TYPE_CONFLICT'; variableName: string; expectedType: BaseType; conflictingType: BaseType; path: string }
-  | (RuntimeIssue & { code: 'INVALID_FUNCTION_ARGUMENT' | 'INVALID_FUNCTION_RESULT'; operation: string; argumentName?: string; argumentIndex?: number })
+  | (RuntimeIssue & { code: 'INVALID_FUNCTION_ARGUMENT' | 'INVALID_FUNCTION_RESULT'; operation: string; argumentName?: string; argumentIndex?: number; source?: 'input' | 'property'; referencePath?: string; reason?: 'omitted' | 'null' | 'invalid-type' })
   | { code: 'INVALID_PLACEHOLDER'; path: string; placeholder: string }
   | { code: 'UNSUPPORTED_TYPE'; path: string; variableName: string; declaredType: string }
   | { code: 'INVALID_FALLBACK_SYNTAX' | 'LEGACY_VALIDATION_SYNTAX'; path: string; variableName: string; placeholder: string }

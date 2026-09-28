@@ -53,7 +53,7 @@ Browse the [namespace reference](#namespace-reference) for operation signatures,
 
 ## Derived functions
 
-Functions read named original render inputs and produce a typed result. See the [function guide](plugins/guide.md#derived-functions) for custom signatures and execution order, or [date intervals](plugins/date.md#intervals-and-hours) for a complete example.
+Functions read evaluated template properties with bare paths, or original render inputs with `$.name`, and produce a typed result. See the [function guide](plugins/guide.md#derived-functions) for custom signatures and execution order, or [date intervals](plugins/date.md#intervals-and-hours) for a complete example.
 
 ## Output omission
 

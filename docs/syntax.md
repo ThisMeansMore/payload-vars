@@ -115,9 +115,13 @@ Unsupported examples include `string?`, `string!`, `string_`, `boolean[]`, `stri
 
 ## Derived expressions and omission
 
-Use `resultName:baseType = namespace.function(arg1,arg2)` before whole-value operations and the optional fallback. Array result base types use empty brackets, such as `number[] = custom.values(source)`. Canonical calls remove whitespace inside the argument list: `{{hours:number = date.interval(start,end) > date.msToHours}}`.
+Use `resultName:baseType = namespace.function(arg1,arg2)` before whole-value operations and the optional fallback. Array result base types use empty brackets, such as `number[] = custom.values($.source)`. Canonical calls remove whitespace inside the argument list: `{{hours:number = date.interval(start,end) > date.msToHours}}`.
 
-Arguments are original input names, not property paths, literals, nested calls, or references to derived outputs. Each argument's base type comes from the registered function. No separate placeholder is needed. Result names do not become required render inputs.
+Bare arguments are exact root-relative template paths to placeholders, including derived placeholders: `start`, `dates.start`, `items[0].date`, or `[0].date` for a root array. Property segments match `[A-Za-z_][A-Za-z0-9_]*`; array indices are nonnegative decimal integers with no leading zeros except `0`. No whitespace is allowed inside a path. Array positions refer to the original template before omitted entries are removed. Resolution never searches by leaf name or placeholder input name, so repeated leaf names are unambiguous when fully qualified. Literal keys containing dots/brackets are not treated as paths. Quoted keys, keys outside this identifier grammar, wildcards, relative paths, literals, container references, root references, and nested calls are unsupported. Unknown paths and incompatible declared property types fail during construction, as do self-references and cycles.
+
+`$.name` explicitly reads a single original render input by name; it is not a nested input path. Its required type comes from the function signature. No placeholder is needed for a raw argument. A bare reference uses the referenced placeholder's declared result type for construction checks and its fully evaluated value at runtime. Derived output names do not become required render inputs. Canonical calls preserve the source distinction and remove whitespace around arguments.
+
+**Migration:** bare arguments previously read original inputs. Change `fn(a,b)` to `fn($.a,$.b)` to preserve that behavior.
 
 Use terminal `> core.omit` to remove the containing property or array entry unconditionally after evaluation. It cannot be used inside member brackets or as a conditional branch. A trailing fallback keeps its usual timing. See [functions and omission](plugins/guide.md#derived-functions).
 

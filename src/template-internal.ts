@@ -1,5 +1,5 @@
 import { createRegistries, type PayloadTemplateOptions, type PayloadOperation, type PluginRegistries } from './plugins.js';
-import { variableNameSource, operationNameSource, typeSource, actionSource, operatorSource } from './expression-syntax.js';
+import { argumentReferenceSource, variableNameSource, operationNameSource, typeSource, actionSource, operatorSource } from './expression-syntax.js';
 import { PayloadTemplateError } from './payload-template.error.js';
 import type { BaseType, FallbackExpression, JsonValue, JsonTemplateValue, PayloadVariable } from './payload-template.types.js';
 
@@ -37,7 +37,7 @@ export function parsePlaceholder(value: string, path: string): Declaration | und
     const call = new RegExp(String.raw`^((?:${typeSource})(?:\s*\[\s*\])?)\s*=\s*(${operationNameSource})\s*\(([^()]*)\)([\s\S]*)$`).exec(expression);
     if (!call) throw new PayloadTemplateError({ code: 'INVALID_PLACEHOLDER', path, placeholder: value });
     const args = call[3]!.trim() ? call[3]!.split(',').map(arg => arg.trim()) : [];
-    if (args.some(arg => !new RegExp(`^${variableNameSource}$`).test(arg))) {
+    if (args.some(arg => !new RegExp(`^${argumentReferenceSource}$`).test(arg))) {
       throw new PayloadTemplateError({ code: 'INVALID_FUNCTION_ARGUMENTS', path, variableName: name, operation: call[2]! });
     }
     derived = { name: call[2]!, arguments: args };
@@ -115,7 +115,9 @@ export function buildContract(template: JsonTemplateValue, options: PayloadTempl
         if (!fn) throw new PayloadTemplateError({ code: 'UNKNOWN_PLUGIN_OPERATION', kind: 'function', ...issue });
         if (fn.argumentTypes.length !== found.function.arguments.length) throw new PayloadTemplateError({ code: 'INVALID_FUNCTION_ARGUMENTS', ...issue });
         if (fn.resultType !== found.type) throw new PayloadTemplateError({ code: 'FUNCTION_RESULT_TYPE_MISMATCH', ...issue });
-        found.function.arguments.forEach((name, index) => requireInput(name, fn.argumentTypes[index]!, path));
+        found.function.arguments.forEach((name, index) => {
+          if (name.startsWith('$.')) requireInput(name.slice(2), fn.argumentTypes[index]!, path);
+        });
       } else requireInput(found.name, found.type, path);
       const previous = declarations.get(found.declaration);
       if (previous) previous.paths.push(path);
@@ -135,5 +137,35 @@ export function buildContract(template: JsonTemplateValue, options: PayloadTempl
     return value;
   }
   const normalizedTemplate = visit(template, '$');
+  const dependencies = new Map<string, string[]>();
+  for (const [path, declaration] of locations) {
+    const fn = declaration.function;
+    const targets: string[] = [];
+    fn?.arguments.forEach((reference, index) => {
+      if (reference.startsWith('$.')) return;
+      const target = reference.startsWith('[') ? `$${reference}` : `$.${reference}`;
+      const referenced = locations.get(target);
+      const issue = { path, variableName: declaration.name, operation: fn.name,
+        argumentName: reference, argumentIndex: index, referencePath: target };
+      if (!referenced) throw new PayloadTemplateError({ code: 'UNKNOWN_FUNCTION_REFERENCE', ...issue });
+      const expectedType = plugins.function.get(fn.name)!.argumentTypes[index]!;
+      if (referenced.type !== expectedType) throw new PayloadTemplateError({
+        code: 'FUNCTION_ARGUMENT_TYPE_MISMATCH', ...issue, expectedType, actualType: referenced.type,
+      });
+      targets.push(target);
+    });
+    dependencies.set(path, targets);
+  }
+  const complete = new Set<string>();
+  const active = new Set<string>();
+  function check(path: string, chain: string[]): void {
+    if (active.has(path)) throw new PayloadTemplateError({ code: 'CYCLIC_FUNCTION_REFERENCE', path, templatePaths: [...chain, path] });
+    if (complete.has(path)) return;
+    active.add(path);
+    for (const target of dependencies.get(path)!) check(target, [...chain, path]);
+    active.delete(path);
+    complete.add(path);
+  }
+  for (const path of locations.keys()) check(path, []);
   return { template: normalizedTemplate, declarations, locations, plugins };
 }

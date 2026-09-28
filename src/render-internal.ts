@@ -99,32 +99,49 @@ function validate(value: unknown, declaration: Declaration, plugins: PluginRegis
 }
 
 export function renderContract(contract: Contract, variables: Readonly<Record<string, unknown>>): JsonValue {
+  // Snapshot original inputs separately from the per-location evaluation cache.
+  const inputs = new Map(Object.getOwnPropertyNames(variables).map(name => {
+    const value = variables[name];
+    return [name, Array.isArray(value) ? [...value] : value] as const;
+  }));
+  const evaluated = new Map<string, RenderedValue>();
+  function evaluate(path: string): RenderedValue {
+    if (evaluated.has(path)) return evaluated.get(path)!;
+    const declaration = contract.locations.get(path)!;
+    let source: unknown;
+    if (declaration.function) {
+      const fn = contract.plugins.function.get(declaration.function.name)!;
+      const issue = { ...details(declaration), operation: declaration.function.name };
+      const args = declaration.function.arguments.map((name, index) => {
+        const referencePath = name.startsWith('$.') ? undefined : name.startsWith('[') ? `$${name}` : `$.${name}`;
+        const input = referencePath === undefined ? inputs.get(name.slice(2)) : evaluate(referencePath);
+        if (!matchesBaseType(input, fn.argumentTypes[index]!)) throw new PayloadTemplateError({
+          code: 'INVALID_FUNCTION_ARGUMENT', ...issue, argumentName: name, argumentIndex: index,
+          source: referencePath === undefined ? 'input' : 'property',
+          ...(referencePath === undefined ? {} : { referencePath }),
+          reason: input === OMIT ? 'omitted' : input === null ? 'null' : 'invalid-type',
+        });
+        return Array.isArray(input) ? [...input] : input;
+      });
+      const execute = fn.execute;
+      try { source = execute(...args as never[]); }
+      catch { throw new PayloadTemplateError({ code: 'PLUGIN_EXECUTION_FAILED', kind: 'function', ...issue }); }
+      // Async callbacks are unsupported; consume rejections before reporting the invalid result.
+      if (source instanceof Promise) void source.catch(() => {});
+      if (!matchesBaseType(source, fn.resultType)) throw new PayloadTemplateError({ code: 'INVALID_FUNCTION_RESULT', ...issue });
+    } else {
+      const present = inputs.has(declaration.name);
+      if (!present && !declaration.valueFallback) throw new PayloadTemplateError({ code: 'MISSING_VARIABLE', ...details(declaration) });
+      source = present ? inputs.get(declaration.name) : undefined;
+    }
+    const result = validate(source, declaration, contract.plugins);
+    evaluated.set(path, result);
+    return result;
+  }
   function render(value: JsonValue, path: string): RenderedValue {
     const declaration = contract.locations.get(path);
     if (declaration) {
-      let source: unknown;
-      if (declaration.function) {
-        const fn = contract.plugins.function.get(declaration.function.name)!;
-        const issue = { ...details(declaration), operation: declaration.function.name };
-        const args = declaration.function.arguments.map((name, index) => {
-          const input = Object.prototype.hasOwnProperty.call(variables, name) ? variables[name] : undefined;
-          if (!matchesBaseType(input, fn.argumentTypes[index]!)) throw new PayloadTemplateError({
-            code: 'INVALID_FUNCTION_ARGUMENT', ...issue, argumentName: name, argumentIndex: index,
-          });
-          return Array.isArray(input) ? [...input] : input;
-        });
-        const execute = fn.execute;
-        try { source = execute(...args as never[]); }
-        catch { throw new PayloadTemplateError({ code: 'PLUGIN_EXECUTION_FAILED', kind: 'function', ...issue }); }
-        // Async callbacks are unsupported; consume rejections before reporting the invalid result.
-        if (source instanceof Promise) void source.catch(() => {});
-        if (!matchesBaseType(source, fn.resultType)) throw new PayloadTemplateError({ code: 'INVALID_FUNCTION_RESULT', ...issue });
-      } else {
-        const present = Object.prototype.hasOwnProperty.call(variables, declaration.name);
-        if (!present && !declaration.valueFallback) throw new PayloadTemplateError({ code: 'MISSING_VARIABLE', ...details(declaration) });
-        source = present ? variables[declaration.name] : undefined;
-      }
-      const result = validate(source, declaration, contract.plugins);
+      const result = evaluate(path);
       return declaration.valueOperations?.some(op => op.name === 'core.omit') ? OMIT : result;
     }
     if (Array.isArray(value)) {

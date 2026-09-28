@@ -65,6 +65,7 @@ const variables = template.variables();
 //     name: 'orderId',
 //     type: 'string',
 //     declaration: '{{orderId:string}}',
+//     paths: ['$.orderId'],
 //   },
 //   {
 //     name: 'products',
@@ -72,6 +73,7 @@ const variables = template.variables();
 //     memberFallback: { operator: '??', action: 'omit' },
 //     valueFallback: { operator: '??', action: 'throw' },
 //     declaration: '{{products:string[ ?? omit ] ?? throw}}',
+//     paths: ['$.products'],
 //   },
 // ]
 ```
@@ -120,15 +122,17 @@ Use `!` to throw on validation failure. Use `?` to transform with `>` on success
 
 ```ts
 const template = new PayloadTemplate({
-  date1: '{{date1:string ! date.isodatetime > core.omit}}',
-  date2: '{{date2:string ! date.isodatetime > core.omit}}',
+  date1: '{{date1:string > date.isodatetime > core.omit}}',
+  date2: '{{date2:string > date.isodatetime > core.omit}}',
   hoursDifference: '{{hoursDifference:number = date.interval(date1,date2) > date.msToHours}}',
 });
-template.render({ date1: '2026-01-01T00:00:00Z', date2: '2026-01-01T01:30:00Z' });
-// { hoursDifference: 1.5 }
+template.render({ date1: '2026-01-01', date2: '2026-01-02' });
+// { hoursDifference: 24 }
 ```
 
-Every occurrence reads original render inputs independently. Function arguments need no separate placeholders, so a template containing only `hoursDifference` also works. Derived output names are not required inputs. Repeated source names may use different operations and fallbacks, provided their base types agree.
+**Breaking change:** bare function arguments now read evaluated template properties, including properties hidden by `core.omit`. Use `date.interval($.date1,$.date2)` to retain the original-input behavior, or `date.interval(date1,$.date2)` to mix sources. Raw date-only strings still fail `date.interval` validation; transformed ISO datetimes succeed.
+
+Bare references are root-relative placeholder locations (`date1`, `dates.start`, `items[0].date`), not the input names inside placeholders. Array indices refer to template positions before omissions. References evaluate by dependency, once per location per render, regardless of property order; derived-property chains are supported, and unknown references and cycles fail at construction. Each ordinary occurrence starts from its original input. Derived output names are never required inputs. See [function syntax](docs/syntax.md#derived-expressions-and-omission) for path restrictions and [the function guide](docs/plugins/guide.md#derived-functions).
 
 `core.omit` removes the containing property or array entry after evaluation. It must be an unconditional, terminal whole-value operation; root omission throws `CANNOT_OMIT_ROOT`. See [derived functions](docs/plugins/guide.md#derived-functions) for custom signatures, execution order, and extraction metadata.
 

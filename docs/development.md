@@ -73,6 +73,7 @@ template.variables();
 //   memberFallback: { operator: '??', action: 'omit' },
 //   valueFallback: { operator: '??', action: 'throw' },
 //   declaration: '{{products:string[ ?? omit ] ?? throw}}',
+//   paths: ['$.products'],
 // }]
 ```
 
@@ -104,7 +105,9 @@ template.render({ products: ['C'] });            // { products: ['C'] }
 | `INVALID_FALLBACK_SYNTAX`, `LEGACY_VALIDATION_SYNTAX` | `path`, `variableName`, `placeholder` |
 | `VARIABLE_TYPE_CONFLICT` | `variableName`, `expectedType`, `conflictingType`, `path` |
 | `INVALID_FUNCTION_ARGUMENTS`, `FUNCTION_RESULT_TYPE_MISMATCH`, `INVALID_OMIT_OPERATION` | `path`, `variableName`, `operation` |
-| `INVALID_FUNCTION_ARGUMENT` | Runtime details, `operation`, `argumentName`, `argumentIndex` |
+| `UNKNOWN_FUNCTION_REFERENCE`, `FUNCTION_ARGUMENT_TYPE_MISMATCH` | `path`, `variableName`, `operation`, `argumentName`, `argumentIndex`, `referencePath`; type mismatches also include `expectedType`, `actualType` |
+| `CYCLIC_FUNCTION_REFERENCE` | `path`, `templatePaths` (dependency chain including the repeated location) |
+| `INVALID_FUNCTION_ARGUMENT` | Runtime details, `operation`, `argumentName`, `argumentIndex`, `source`, optional `referencePath`, and `reason` (`omitted`, `null`, or `invalid-type`) |
 | `INVALID_FUNCTION_RESULT` | Runtime details, `operation` |
 | `INVALID_PLUGIN_NAME`, `DUPLICATE_PLUGIN_NAME`, `RESERVED_PLUGIN_NAME` | `plugin` |
 | `INVALID_PLUGIN_OPERATION_NAME`, `INVALID_PLUGIN_OPERATION` | `kind`, `operation`, `plugin` |
@@ -212,9 +215,11 @@ Nested objects and arrays are inspected. Object keys are literal and do not decl
 
 ### Derived inputs and repeated expressions
 
-Function arguments are required inputs; derived output names are excluded. `date.interval` infers two string arguments. Custom signatures are inferred from literal constructor options. Preserve plugin names and argument tuples with `as const satisfies PayloadVarsPlugin`. `PayloadTemplateVariables<T, Options>` accepts an optional second type parameter for custom plugin options. If metadata has been widened, argument names remain required with unknown types, and runtime validation enforces the signature.
+Raw `$.name` function arguments are required inputs; derived output names are excluded. `date.interval` infers two string arguments. Custom signatures are inferred from literal constructor options. Preserve plugin names and argument tuples with `as const satisfies PayloadVarsPlugin`. `PayloadTemplateVariables<T, Options>` accepts an optional second type parameter for custom plugin options. If metadata has been widened, raw argument names remain required with unknown types, and runtime validation enforces the signature.
 
-`variables()` keeps existing extraction shapes for identical ordinary declarations. Distinct uses of a name appear separately with their own `declaration` and `paths`. Derived entries include `derived: true`, `function: { name, arguments }`, and `paths`. Inputs used only as function arguments are appended in first-use order with `functionArgument: true`, their declared type, a synthetic plain `declaration`, and the paths of calls using them. Returned metadata is copied and may be edited without affecting the template.
+`variables()` groups identical canonical declarations and now always includes all occurrence `paths`, including ordinary declarations. Distinct uses of a name appear separately with their own `declaration` and `paths`. Derived entries include `derived: true`, `function: { name, arguments }`, and ordered `dependencies`: `{ source: "input", name }` for raw inputs or `{ source: "property", path }` for evaluated locations. Following property dependencies reaches ordinary input contracts or further derived calls. Original inputs used only as raw function arguments are appended in first-use order with `functionArgument: true`, their declared type, a synthetic plain `declaration`, and the paths of calls using them. Returned metadata is copied and may be edited without affecting the template.
+
+Literal templates infer original inputs from every ordinary placeholder and every `$.name` argument, including those reached through derived-property chains. Bare references never create input requirements: their source placeholders already supply those requirements. Result names are never required as inputs. Referenced ordinary placeholders retain their fallback optionality; raw arguments remain required even when a result has a fallback. Repeated input requirements are intersected.
 
 ### Fallback input types
 

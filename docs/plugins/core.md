@@ -28,6 +28,6 @@ new PayloadTemplate({
 // { domain: 'example.com' }
 ```
 
-Each property reads the original input independently. Omitting one property does not hide its source value from another property or function. To omit only nullish or falsy values, use the existing [fallback syntax](../syntax.md).
+Each ordinary property starts from its original input independently. `core.omit` controls final output assembly only: functions using a bare reference still receive the omitted property’s evaluated value, including its transformations. Raw `$.name` references still receive the original input. A [fallback](../syntax.md) resolving to `omit`, unlike `core.omit`, produces no usable evaluated value and causes a structured argument error if referenced.
 
 <!-- {% endraw %} -->
