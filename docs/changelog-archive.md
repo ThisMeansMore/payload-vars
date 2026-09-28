@@ -9,6 +9,16 @@ title: Changelog archive
 
 Full notes for older releases. See the [changelog](changelog.md) for the latest five releases and a summary of this archive.
 
+## 2.0.2 — 2026-09-27
+
+### Breaking changes
+
+- Rename `PayloadTemplate.compile()` to `PayloadTemplate.variables()`. The returned variable contracts and copy semantics are unchanged; compilation remains in the constructor.
+
+### Changes
+
+- Rename the internal constructor helper to `buildContract()` and update tests, README, and documentation to distinguish construction from variable inspection.
+
 ## 2.0.1 — 2026-09-27
 
 ### Breaking changes

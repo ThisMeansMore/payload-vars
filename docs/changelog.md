@@ -11,6 +11,12 @@ Notable changes, starting with 1.0.0. Historical dates follow Git tags.
 
 The latest five releases are detailed below. Older releases have one-line summaries linking to their full notes in the [archive](changelog-archive.md).
 
+## 2.1.1 — 2026-09-28
+
+### Changes
+
+- docs: plugins sorted
+
 ## 2.1.0 — 2026-09-28
 
 - Add typed synchronous plugin functions with original-input arguments, including `date.interval`, and the `date.msToHours` transformer.
@@ -35,18 +41,9 @@ The latest five releases are detailed below. Older releases have one-line summar
 
 - refactor: plugin namespaces file separation
 
-## 2.0.2 — 2026-09-27
-
-### Breaking changes
-
-- Rename `PayloadTemplate.compile()` to `PayloadTemplate.variables()`. The returned variable contracts and copy semantics are unchanged; compilation remains in the constructor.
-
-### Changes
-
-- Rename the internal constructor helper to `buildContract()` and update tests, README, and documentation to distinguish construction from variable inspection.
-
 ## Older releases
 
+- [2.0.2 — 2026-09-27](changelog-archive.md#202--2026-09-27) — Rename `PayloadTemplate.compile()` to `PayloadTemplate.variables()`. The returned variable contracts and copy semantics are unchanged; compilation remains in the constructor.
 - [2.0.1 — 2026-09-27](changelog-archive.md#201--2026-09-27) — Correct the missed public API rename intended for 2.0.0: replace `PayloadTemplate.extractVariables()` with `PayloadTemplate.compile()`. The return type and behavior remain unchanged.
 - [2.0.0 — 2026-09-27](changelog-archive.md#200--2026-09-27) — Replaced @ with ! for mandatory validation.
 - [1.4.1 — 2026-09-26](changelog-archive.md#141--2026-09-26) — docs: plugins examples
