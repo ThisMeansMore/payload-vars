@@ -6,6 +6,8 @@ The latest five releases are detailed below. Older releases have one-line summar
 
 ## Unreleased
 
+## 2.2.0 — 2026-09-28
+
 - **Breaking:** bare function arguments now reference evaluated template properties. Prefix arguments with `$.` to retain original render-input semantics; mixed sources are supported.
 - Resolve root-relative nested and array paths by dependency, cache each location once per render, support derived-property chains, and reject unknown references, incompatible types, and cycles at construction.
 - Keep evaluated values available through `core.omit`; report structured argument errors for fallback omission, null, and invalid argument types.
@@ -35,14 +37,9 @@ The latest five releases are detailed below. Older releases have one-line summar
 
 - feat: text plugin
 
-## 2.0.3 — 2026-09-27
-
-### Changes
-
-- refactor: plugin namespaces file separation
-
 ## Older releases
 
+- [2.0.3 — 2026-09-27](CHANGELOG-ARCHIVE.md#203--2026-09-27) — refactor: plugin namespaces file separation
 - [2.0.2 — 2026-09-27](CHANGELOG-ARCHIVE.md#202--2026-09-27) — Rename `PayloadTemplate.compile()` to `PayloadTemplate.variables()`. The returned variable contracts and copy semantics are unchanged; compilation remains in the constructor.
 - [2.0.1 — 2026-09-27](CHANGELOG-ARCHIVE.md#201--2026-09-27) — Correct the missed public API rename intended for 2.0.0: replace `PayloadTemplate.extractVariables()` with `PayloadTemplate.compile()`. The return type and behavior remain unchanged.
 - [2.0.0 — 2026-09-27](CHANGELOG-ARCHIVE.md#200--2026-09-27) — Replaced @ with ! for mandatory validation.

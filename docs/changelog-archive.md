@@ -9,6 +9,12 @@ title: Changelog archive
 
 Full notes for older releases. See the [changelog](changelog.md) for the latest five releases and a summary of this archive.
 
+## 2.0.3 — 2026-09-27
+
+### Changes
+
+- refactor: plugin namespaces file separation
+
 ## 2.0.2 — 2026-09-27
 
 ### Breaking changes
