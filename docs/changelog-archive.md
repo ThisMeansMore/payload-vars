@@ -9,6 +9,12 @@ title: Changelog archive
 
 Full notes for older releases. See the [changelog](changelog.md) for the latest five releases and a summary of this archive.
 
+## 2.0.1 — 2026-09-27
+
+### Breaking changes
+
+- Correct the missed public API rename intended for 2.0.0: replace `PayloadTemplate.extractVariables()` with `PayloadTemplate.compile()`. The return type and behavior remain unchanged.
+
 ## 2.0.0 — 2026-09-27
 
 ### Changes

@@ -6,6 +6,8 @@ The latest five releases are detailed below. Older releases have one-line summar
 
 ## Unreleased
 
+## 2.1.0 — 2026-09-28
+
 - Add typed synchronous plugin functions with original-input arguments, including `date.interval`, and the `date.msToHours` transformer.
 - Add terminal whole-value `> core.omit` to remove evaluated output properties and array entries.
 - Evaluate repeated source expressions independently, allowing different operations and fallbacks while rejecting incompatible base types. Extend variable inspection, input inference, highlighting, and structured errors for derived values.
@@ -38,14 +40,9 @@ The latest five releases are detailed below. Older releases have one-line summar
 
 - Rename the internal constructor helper to `buildContract()` and update tests, README, and documentation to distinguish construction from variable inspection.
 
-## 2.0.1 — 2026-09-27
-
-### Breaking changes
-
-- Correct the missed public API rename intended for 2.0.0: replace `PayloadTemplate.extractVariables()` with `PayloadTemplate.compile()`. The return type and behavior remain unchanged.
-
 ## Older releases
 
+- [2.0.1 — 2026-09-27](CHANGELOG-ARCHIVE.md#201--2026-09-27) — Correct the missed public API rename intended for 2.0.0: replace `PayloadTemplate.extractVariables()` with `PayloadTemplate.compile()`. The return type and behavior remain unchanged.
 - [2.0.0 — 2026-09-27](CHANGELOG-ARCHIVE.md#200--2026-09-27) — Replaced @ with ! for mandatory validation.
 - [1.4.1 — 2026-09-26](CHANGELOG-ARCHIVE.md#141--2026-09-26) — docs: plugins examples
 - [1.4.0 — 2026-09-26](CHANGELOG-ARCHIVE.md#140--2026-09-26) — Require `namespace.operation` for built-in and custom operations. Built-ins now use `date.dateonly`, `date.isodatetime`, `email.email`, `email.domain`, `collection.unique`, and `collection.range`; bare names are invalid syntax.
