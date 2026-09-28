@@ -12,23 +12,23 @@ Plugins add named validators, transformers, and derived functions to JSON templa
 
 | Namespace | Scope | Availability |
 | --- | --- | --- |
+| [array](plugins/array.md) | Array-specific operations | Reserved; no operations yet |
+| [boolean](plugins/boolean.md) | Boolean operations | Reserved; no operations yet |
+| [collection](plugins/collection.md) | General collection operations | Available |
+| [core](plugins/core.md) | General operations across types | Available |
+| [date](plugins/date.md) | Dates, datetimes, and intervals | Available |
+| [email](plugins/email.md) | Email addresses and domains | Available |
+| [encoding](plugins/encoding.md) | Encoding and decoding | Reserved; no operations yet |
+| [id](plugins/id.md) | Identifiers such as UUIDs | Reserved; no operations yet |
+| [iso](plugins/iso.md) | ISO country, currency, and language codes | Reserved; no operations yet |
+| [json](plugins/json.md) | JSON text | Reserved; no operations yet |
+| [network](plugins/network.md) | IP addresses and network identifiers | Reserved; no operations yet |
+| [number](plugins/number.md) | Numeric operations | Reserved; no operations yet |
+| [phone](plugins/phone.md) | Phone numbers | Reserved; no operations yet |
 | [style](plugins/style.md) | Named casing and word styles | Available |
 | [text](plugins/text.md) | Trimming and whitespace normalization | Available |
-| [number](plugins/number.md) | Numeric operations | Reserved; no operations yet |
-| [boolean](plugins/boolean.md) | Boolean operations | Reserved; no operations yet |
-| [date](plugins/date.md) | Dates, datetimes, and intervals | Available |
-| [collection](plugins/collection.md) | General collection operations | Available |
-| [array](plugins/array.md) | Array-specific operations | Reserved; no operations yet |
-| [email](plugins/email.md) | Email addresses and domains | Available |
-| [url](plugins/url.md) | URLs and TLDs | Reserved; no operations yet |
-| [json](plugins/json.md) | JSON text | Reserved; no operations yet |
-| [encoding](plugins/encoding.md) | Encoding and decoding | Reserved; no operations yet |
-| [iso](plugins/iso.md) | ISO country, currency, and language codes | Reserved; no operations yet |
 | [time](plugins/time.md) | Times of day and durations | Reserved; no operations yet |
-| [phone](plugins/phone.md) | Phone numbers | Reserved; no operations yet |
-| [network](plugins/network.md) | IP addresses and network identifiers | Reserved; no operations yet |
-| [id](plugins/id.md) | Identifiers such as UUIDs | Reserved; no operations yet |
-| [core](plugins/core.md) | General operations across types | Available |
+| [url](plugins/url.md) | URLs and TLDs | Reserved; no operations yet |
 
 ## Plugin guide
 
