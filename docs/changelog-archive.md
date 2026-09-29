@@ -9,6 +9,12 @@ title: Changelog archive
 
 Full notes for older releases. See the [changelog](changelog.md) for the latest five releases and a summary of this archive.
 
+## 2.1.0 — 2026-09-28
+
+- Add typed synchronous plugin functions with original-input arguments, including `date.interval`, and the `date.msToHours` transformer.
+- Add terminal whole-value `> core.omit` to remove evaluated output properties and array entries.
+- Evaluate repeated source expressions independently, allowing different operations and fallbacks while rejecting incompatible base types. Extend variable inspection, input inference, highlighting, and structured errors for derived values.
+
 ## 2.0.5 — 2026-09-27
 
 ### Changes

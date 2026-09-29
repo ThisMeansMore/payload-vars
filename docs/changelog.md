@@ -11,6 +11,12 @@ Notable changes, starting with 1.0.0. Historical dates follow Git tags.
 
 The latest five releases are detailed below. Older releases have one-line summaries linking to their full notes in the [archive](changelog-archive.md).
 
+## 2.2.3 — 2026-09-29
+
+### Changes
+
+- style: page width another try
+
 ## 2.2.2 — 2026-09-29
 
 ### Changes
@@ -36,14 +42,9 @@ The latest five releases are detailed below. Older releases have one-line summar
 
 - docs: plugins sorted
 
-## 2.1.0 — 2026-09-28
-
-- Add typed synchronous plugin functions with original-input arguments, including `date.interval`, and the `date.msToHours` transformer.
-- Add terminal whole-value `> core.omit` to remove evaluated output properties and array entries.
-- Evaluate repeated source expressions independently, allowing different operations and fallbacks while rejecting incompatible base types. Extend variable inspection, input inference, highlighting, and structured errors for derived values.
-
 ## Older releases
 
+- [2.1.0 — 2026-09-28](changelog-archive.md#210--2026-09-28) — Add typed synchronous plugin functions with original-input arguments, including `date.interval`, and the `date.msToHours` transformer.
 - [2.0.5 — 2026-09-27](changelog-archive.md#205--2026-09-27) — feat: style namespace
 - [2.0.4 — 2026-09-27](changelog-archive.md#204--2026-09-27) — feat: text plugin
 - [2.0.3 — 2026-09-27](changelog-archive.md#203--2026-09-27) — refactor: plugin namespaces file separation
