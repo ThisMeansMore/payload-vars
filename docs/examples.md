@@ -6,67 +6,47 @@ title: Examples
 
 # Template examples
 
-<a id="example-values"></a>
-
-## One set of values for every example
-
-Every template below uses these same values. Only the template changes.
-
-```json
-{
-  "name": "Ada",
-  "email": "  Ada@Example.com  ",
-  "nickname": "",
-  "note": null,
-  "total": 19.95,
-  "discount": 0,
-  "paid": false,
-  "confirmed": true,
-  "tags": [
-    "new",
-    "",
-    null,
-    "sale"
-  ],
-  "scores": [
-    5,
-    0,
-    null,
-    8
-  ],
-  "emptyTags": [],
-  "unavailableTags": null
-}
-```
-
-Here, `""` means empty text, `null` means no value, and `[]` is an empty list. **missingNote** and **missingTags** are deliberately absent: no values were supplied for them.
-
-Compare each template on the left with its rendered payload on the right.
+Each example has its own input. Use `new PayloadTemplate(template).render(input)` to get the result. The examples use built-in operations, except for the final custom-function example.
 
 <a id="fill-in-details"></a>
 
-## Fill in the details
-
-Ordinary values replace the placeholders. Fixed text such as USD stays as it is.
+### Send an order confirmation
 
 <table>
 <thead>
-<tr><th>Template</th><th>Rendered payload</th></tr>
+<tr><th>Input JSON</th><th>Template</th><th>Result</th></tr>
 </thead>
 <tbody>
 <tr>
 <td valign="top"><pre><code>{
-  "name": "{{name:string}}",
-  "total": "{{total:number}}",
-  "paid": "{{paid:boolean}}",
-  "confirmed": "{{confirmed:boolean}}",
-  "currency": "USD"
-}</code></pre></td>
-<td valign="top"><pre><code>{
   "name": "Ada",
   "total": 19.95,
   "paid": false,
-  "confirmed": true,
+  "items": [
+    "Notebook"
+  ],
+  "quantities": [
+    2
+  ]
+}</code></pre></td>
+<td valign="top"><pre><code>{
+  "customer": "{{name:string}}",
+  "total": "{{total:number}}",
+  "paid": "{{paid:boolean}}",
+  "items": "{{items:string[]}}",
+  "quantities": "{{quantities:number[]}}",
+  "currency": "USD"
+}</code></pre></td>
+<td valign="top"><pre><code>{
+  "customer": "Ada",
+  "total": 19.95,
+  "paid": false,
+  "items": [
+    "Notebook"
+  ],
+  "quantities": [
+    2
+  ],
   "currency": "USD"
 }</code></pre></td>
 </tr>
@@ -75,35 +55,35 @@ Ordinary values replace the placeholders. Fixed text such as USD stays as it is.
 
 <a id="missing-values-as-null"></a>
 
-## ?? null: keep a place for missing values
+### Keep a place for a missing delivery note
 
-The note is null and missingNote was not supplied. Both appear as null. Empty text, zero, and false stay unchanged.
+`?? null` keeps empty text, zero, and false.
 
 <table>
 <thead>
-<tr><th>Template</th><th>Rendered payload</th></tr>
+<tr><th>Input JSON</th><th>Template</th><th>Result</th></tr>
 </thead>
 <tbody>
 <tr>
 <td valign="top"><pre><code>{
-  "name": "{{name:string ?? null}}",
-  "nickname": "{{nickname:string ?? null}}",
-  "note": "{{note:string ?? null}}",
-  "missingNote": "{{missingNote:string ?? null}}",
-  "total": "{{total:number ?? null}}",
-  "discount": "{{discount:number ?? null}}",
-  "paid": "{{paid:boolean ?? null}}",
-  "confirmed": "{{confirmed:boolean ?? null}}"
-}</code></pre></td>
-<td valign="top"><pre><code>{
-  "name": "Ada",
   "nickname": "",
-  "note": null,
-  "missingNote": null,
-  "total": 19.95,
   "discount": 0,
   "paid": false,
-  "confirmed": true
+  "note": null
+}</code></pre></td>
+<td valign="top"><pre><code>{
+  "nickname": "{{nickname:string ?? null}}",
+  "discount": "{{discount:number ?? null}}",
+  "paid": "{{paid:boolean ?? null}}",
+  "note": "{{note:string ?? null}}",
+  "instructions": "{{instructions:string ?? null}}"
+}</code></pre></td>
+<td valign="top"><pre><code>{
+  "nickname": "",
+  "discount": 0,
+  "paid": false,
+  "note": null,
+  "instructions": null
 }</code></pre></td>
 </tr>
 </tbody>
@@ -111,35 +91,28 @@ The note is null and missingNote was not supplied. Both appear as null. Empty te
 
 <a id="empty-values-as-null"></a>
 
-## || null: also replace empty text, zero, and false
-
-Only the rule changes. Nickname, discount, and paid now become null too. The name, total, and confirmed values stay unchanged.
+### Store unanswered form fields as null
 
 <table>
 <thead>
-<tr><th>Template</th><th>Rendered payload</th></tr>
+<tr><th>Input JSON</th><th>Template</th><th>Result</th></tr>
 </thead>
 <tbody>
 <tr>
 <td valign="top"><pre><code>{
-  "name": "{{name:string || null}}",
-  "nickname": "{{nickname:string || null}}",
-  "note": "{{note:string || null}}",
-  "missingNote": "{{missingNote:string || null}}",
-  "total": "{{total:number || null}}",
-  "discount": "{{discount:number || null}}",
-  "paid": "{{paid:boolean || null}}",
-  "confirmed": "{{confirmed:boolean || null}}"
+  "nickname": "",
+  "age": 0,
+  "subscribed": false
 }</code></pre></td>
 <td valign="top"><pre><code>{
-  "name": "Ada",
+  "nickname": "{{nickname:string || null}}",
+  "age": "{{age:number || null}}",
+  "subscribed": "{{subscribed:boolean || null}}"
+}</code></pre></td>
+<td valign="top"><pre><code>{
   "nickname": null,
-  "note": null,
-  "missingNote": null,
-  "total": 19.95,
-  "discount": null,
-  "paid": null,
-  "confirmed": true
+  "age": null,
+  "subscribed": null
 }</code></pre></td>
 </tr>
 </tbody>
@@ -147,33 +120,25 @@ Only the rule changes. Nickname, discount, and paid now become null too. The nam
 
 <a id="omit-missing-values"></a>
 
-## ?? omit: leave out missing values
-
-The note and missingNote fields disappear. Empty text, zero, and false are still included.
+### Leave out an optional delivery note
 
 <table>
 <thead>
-<tr><th>Template</th><th>Rendered payload</th></tr>
+<tr><th>Input JSON</th><th>Template</th><th>Result</th></tr>
 </thead>
 <tbody>
 <tr>
 <td valign="top"><pre><code>{
-  "name": "{{name:string ?? omit}}",
-  "nickname": "{{nickname:string ?? omit}}",
-  "note": "{{note:string ?? omit}}",
-  "missingNote": "{{missingNote:string ?? omit}}",
-  "total": "{{total:number ?? omit}}",
-  "discount": "{{discount:number ?? omit}}",
-  "paid": "{{paid:boolean ?? omit}}",
-  "confirmed": "{{confirmed:boolean ?? omit}}"
+  "name": "Ada",
+  "note": null
 }</code></pre></td>
 <td valign="top"><pre><code>{
-  "name": "Ada",
-  "nickname": "",
-  "total": 19.95,
-  "discount": 0,
-  "paid": false,
-  "confirmed": true
+  "name": "{{name:string}}",
+  "note": "{{note:string ?? omit}}",
+  "instructions": "{{instructions:string ?? omit}}"
+}</code></pre></td>
+<td valign="top"><pre><code>{
+  "name": "Ada"
 }</code></pre></td>
 </tr>
 </tbody>
@@ -181,63 +146,92 @@ The note and missingNote fields disappear. Empty text, zero, and false are still
 
 <a id="omit-empty-values"></a>
 
-## || omit: also leave out empty text, zero, and false
-
-The same values now produce a shorter payload. Only the name, total, and confirmed fields remain.
+### Leave blank profile fields out of an update
 
 <table>
 <thead>
-<tr><th>Template</th><th>Rendered payload</th></tr>
+<tr><th>Input JSON</th><th>Template</th><th>Result</th></tr>
 </thead>
 <tbody>
 <tr>
 <td valign="top"><pre><code>{
-  "name": "{{name:string || omit}}",
-  "nickname": "{{nickname:string || omit}}",
-  "note": "{{note:string || omit}}",
-  "missingNote": "{{missingNote:string || omit}}",
-  "total": "{{total:number || omit}}",
-  "discount": "{{discount:number || omit}}",
-  "paid": "{{paid:boolean || omit}}",
-  "confirmed": "{{confirmed:boolean || omit}}"
+  "name": "Ada",
+  "nickname": ""
 }</code></pre></td>
 <td valign="top"><pre><code>{
-  "name": "Ada",
-  "total": 19.95,
-  "confirmed": true
+  "name": "{{name:string}}",
+  "nickname": "{{nickname:string || omit}}"
 }</code></pre></td>
+<td valign="top"><pre><code>{
+  "name": "Ada"
+}</code></pre></td>
+</tr>
+</tbody>
+</table>
+
+### Require a stock count, even when it is zero
+
+A missing count fails; a supplied `0` is allowed.
+
+<table>
+<thead>
+<tr><th>Input JSON</th><th>Template</th><th>Result</th></tr>
+</thead>
+<tbody>
+<tr>
+<td valign="top"><pre><code>{}</code></pre></td>
+<td valign="top"><pre><code>{
+  "stock": "{{stock:number ?? throw}}"
+}</code></pre></td>
+<td valign="top"><pre><code>Throws FALLBACK_THROW</code></pre></td>
+</tr>
+</tbody>
+</table>
+
+### Require acceptance of the terms
+
+<table>
+<thead>
+<tr><th>Input JSON</th><th>Template</th><th>Result</th></tr>
+</thead>
+<tbody>
+<tr>
+<td valign="top"><pre><code>{
+  "accepted": false
+}</code></pre></td>
+<td valign="top"><pre><code>{
+  "accepted": "{{accepted:boolean || throw}}"
+}</code></pre></td>
+<td valign="top"><pre><code>Throws FALLBACK_THROW</code></pre></td>
 </tr>
 </tbody>
 </table>
 
 <a id="keep-list-positions"></a>
 
-## ?? null inside a list: keep all positions
-
-The null entries stay as null. Empty text and zero also stay, so both lists keep all four positions.
+### Keep missing daily readings in their original positions
 
 <table>
 <thead>
-<tr><th>Template</th><th>Rendered payload</th></tr>
+<tr><th>Input JSON</th><th>Template</th><th>Result</th></tr>
 </thead>
 <tbody>
 <tr>
 <td valign="top"><pre><code>{
-  "tags": "{{tags:string[ ?? null ]}}",
-  "scores": "{{scores:number[ ?? null ]}}"
+  "readings": [
+    12,
+    null,
+    0
+  ]
 }</code></pre></td>
 <td valign="top"><pre><code>{
-  "tags": [
-    "new",
-    "",
+  "readings": "{{readings:number[ ?? null ]}}"
+}</code></pre></td>
+<td valign="top"><pre><code>{
+  "readings": [
+    12,
     null,
-    "sale"
-  ],
-  "scores": [
-    5,
-    0,
-    null,
-    8
+    0
   ]
 }</code></pre></td>
 </tr>
@@ -246,32 +240,29 @@ The null entries stay as null. Empty text and zero also stay, so both lists keep
 
 <a id="empty-list-items-as-null"></a>
 
-## || null inside a list: replace empty text and zero
-
-The empty tag and the zero score become null. The lists still keep all four positions.
+### Mark blank survey answers as unanswered
 
 <table>
 <thead>
-<tr><th>Template</th><th>Rendered payload</th></tr>
+<tr><th>Input JSON</th><th>Template</th><th>Result</th></tr>
 </thead>
 <tbody>
 <tr>
 <td valign="top"><pre><code>{
-  "tags": "{{tags:string[ || null ]}}",
-  "scores": "{{scores:number[ || null ]}}"
+  "answers": [
+    "Yes",
+    "",
+    null
+  ]
 }</code></pre></td>
 <td valign="top"><pre><code>{
-  "tags": [
-    "new",
+  "answers": "{{answers:string[ || null ]}}"
+}</code></pre></td>
+<td valign="top"><pre><code>{
+  "answers": [
+    "Yes",
     null,
-    null,
-    "sale"
-  ],
-  "scores": [
-    5,
-    null,
-    null,
-    8
+    null
   ]
 }</code></pre></td>
 </tr>
@@ -280,30 +271,28 @@ The empty tag and the zero score become null. The lists still keep all four posi
 
 <a id="remove-null-list-items"></a>
 
-## ?? omit inside a list: remove null entries
-
-The null entries disappear. Empty text and zero remain in their original order.
+### Remove missing readings but keep zero readings
 
 <table>
 <thead>
-<tr><th>Template</th><th>Rendered payload</th></tr>
+<tr><th>Input JSON</th><th>Template</th><th>Result</th></tr>
 </thead>
 <tbody>
 <tr>
 <td valign="top"><pre><code>{
-  "tags": "{{tags:string[ ?? omit ]}}",
-  "scores": "{{scores:number[ ?? omit ]}}"
+  "readings": [
+    12,
+    null,
+    0
+  ]
 }</code></pre></td>
 <td valign="top"><pre><code>{
-  "tags": [
-    "new",
-    "",
-    "sale"
-  ],
-  "scores": [
-    5,
-    0,
-    8
+  "readings": "{{readings:number[ ?? omit ]}}"
+}</code></pre></td>
+<td valign="top"><pre><code>{
+  "readings": [
+    12,
+    0
   ]
 }</code></pre></td>
 </tr>
@@ -312,58 +301,113 @@ The null entries disappear. Empty text and zero remain in their original order.
 
 <a id="remove-empty-list-items"></a>
 
-## || omit inside a list: also remove empty text and zero
-
-Only the filled-in tags and nonzero scores remain.
+### Remove blank product tags
 
 <table>
 <thead>
-<tr><th>Template</th><th>Rendered payload</th></tr>
+<tr><th>Input JSON</th><th>Template</th><th>Result</th></tr>
 </thead>
 <tbody>
 <tr>
 <td valign="top"><pre><code>{
-  "tags": "{{tags:string[ || omit ]}}",
-  "scores": "{{scores:number[ || omit ]}}"
+  "tags": [
+    "new",
+    "",
+    null,
+    "sale"
+  ]
+}</code></pre></td>
+<td valign="top"><pre><code>{
+  "tags": "{{tags:string[ || omit ]}}"
 }</code></pre></td>
 <td valign="top"><pre><code>{
   "tags": [
     "new",
     "sale"
-  ],
-  "scores": [
-    5,
-    8
   ]
 }</code></pre></td>
 </tr>
 </tbody>
 </table>
 
-<a id="missing-and-empty-lists"></a>
-
-## Handle a missing list as well as its items
-
-The rule inside the brackets cleans the supplied tags. The rule after the brackets leaves out unavailableTags and missingTags. An empty list stays an empty list, even with || omit.
+### Require a reading for every day
 
 <table>
 <thead>
-<tr><th>Template</th><th>Rendered payload</th></tr>
+<tr><th>Input JSON</th><th>Template</th><th>Result</th></tr>
 </thead>
 <tbody>
 <tr>
 <td valign="top"><pre><code>{
-  "tags": "{{tags:string[ || omit ] ?? omit}}",
-  "unavailableTags": "{{unavailableTags:string[ || omit ] ?? omit}}",
-  "missingTags": "{{missingTags:string[ || omit ] ?? omit}}",
-  "emptyTags": "{{emptyTags:string[] || omit}}"
+  "readings": [
+    12,
+    null,
+    0
+  ]
 }</code></pre></td>
+<td valign="top"><pre><code>{
+  "readings": "{{readings:number[ ?? throw ]}}"
+}</code></pre></td>
+<td valign="top"><pre><code>Throws FALLBACK_THROW</code></pre></td>
+</tr>
+</tbody>
+</table>
+
+### Reject a guest list with a blank name
+
+<table>
+<thead>
+<tr><th>Input JSON</th><th>Template</th><th>Result</th></tr>
+</thead>
+<tbody>
+<tr>
+<td valign="top"><pre><code>{
+  "guests": [
+    "Ada",
+    ""
+  ]
+}</code></pre></td>
+<td valign="top"><pre><code>{
+  "guests": "{{guests:string[ || throw ]}}"
+}</code></pre></td>
+<td valign="top"><pre><code>Throws FALLBACK_THROW</code></pre></td>
+</tr>
+</tbody>
+</table>
+
+<a id="missing-and-empty-lists"></a>
+
+### Accept optional tag lists and clean their contents
+
+An empty list stays `[]`, even with `|| omit`.
+
+<table>
+<thead>
+<tr><th>Input JSON</th><th>Template</th><th>Result</th></tr>
+</thead>
+<tbody>
+<tr>
 <td valign="top"><pre><code>{
   "tags": [
     "new",
-    "sale"
+    "",
+    null
   ],
-  "emptyTags": []
+  "savedTags": [],
+  "suggestedTags": null
+}</code></pre></td>
+<td valign="top"><pre><code>{
+  "tags": "{{tags:string[ || omit ] ?? omit}}",
+  "savedTags": "{{savedTags:string[] || omit}}",
+  "suggestedTags": "{{suggestedTags:string[] ?? null}}",
+  "extraTags": "{{extraTags:string[] ?? omit}}"
+}</code></pre></td>
+<td valign="top"><pre><code>{
+  "tags": [
+    "new"
+  ],
+  "savedTags": [],
+  "suggestedTags": null
 }</code></pre></td>
 </tr>
 </tbody>
@@ -371,23 +415,24 @@ The rule inside the brackets cleans the supplied tags. The rule after the bracke
 
 <a id="reuse-values"></a>
 
-## Use the same value in several places
-
-The same name fills both locations. The missing note is left out of the delivery details.
+### Reuse the customer name for delivery
 
 <table>
 <thead>
-<tr><th>Template</th><th>Rendered payload</th></tr>
+<tr><th>Input JSON</th><th>Template</th><th>Result</th></tr>
 </thead>
 <tbody>
 <tr>
+<td valign="top"><pre><code>{
+  "name": "Ada"
+}</code></pre></td>
 <td valign="top"><pre><code>{
   "customer": {
     "name": "{{name:string}}"
   },
   "delivery": {
     "recipient": "{{name:string}}",
-    "note": "{{missingNote:string ?? omit}}"
+    "note": "{{note:string ?? omit}}"
   }
 }</code></pre></td>
 <td valign="top"><pre><code>{
@@ -404,19 +449,21 @@ The same name fills both locations. The missing note is left out of the delivery
 
 <a id="omit-list-entry"></a>
 
-## Leave out an item from a list
-
-The missing note disappears from this list. The name and total stay in order.
+### Build a packing slip without an optional note
 
 <table>
 <thead>
-<tr><th>Template</th><th>Rendered payload</th></tr>
+<tr><th>Input JSON</th><th>Template</th><th>Result</th></tr>
 </thead>
 <tbody>
 <tr>
+<td valign="top"><pre><code>{
+  "name": "Ada",
+  "total": 19.95
+}</code></pre></td>
 <td valign="top"><pre><code>[
   "{{name:string}}",
-  "{{missingNote:string ?? omit}}",
+  "{{note:string ?? omit}}",
   "{{total:number}}"
 ]</code></pre></td>
 <td valign="top"><pre><code>[
@@ -427,46 +474,40 @@ The missing note disappears from this list. The name and total stay in order.
 </tbody>
 </table>
 
+### Return just the cleaned customer name
+
+<table>
+<thead>
+<tr><th>Input JSON</th><th>Template</th><th>Result</th></tr>
+</thead>
+<tbody>
+<tr>
+<td valign="top"><pre><code>{
+  "name": "  Ada  "
+}</code></pre></td>
+<td valign="top"><pre><code>"{{name:string &gt; text.trim}}"</code></pre></td>
+<td valign="top"><pre><code>"Ada"</code></pre></td>
+</tr>
+</tbody>
+</table>
+
 <a id="plugin-chains"></a>
 
-## Chain plugins to clean and validate values
+### Clean an email address and extract its domain
 
-Use `>` for transformers and `!` for validators. Operations run left-to-right: each receives the previous operation's result. Validators leave the value unchanged, and transformers must preserve the declared type.
-
-The examples below use the same values from the top of this page. Register these custom transformers once; the email and collection operations are built in:
-
-```ts
-import { PayloadTemplate, type PayloadVarsPlugin } from 'payload-vars';
-
-const custom: PayloadVarsPlugin = {
-  name: 'custom',
-  transformers: {
-    trim: (value: string) => value.trim(),
-    uppercase: (value: string) => value.toUpperCase(),
-  },
-};
-
-// Use this configuration for each template below.
-const template = new PayloadTemplate({
-  domain: '{{email:string > custom.trim > email.domain}}',
-}, { plugins: [custom] });
-
-template.render({ email: '  Ada@Example.com  ' });
-// { domain: 'example.com' }
-```
-
-### Run two transformers in sequence
-
-First trim the surrounding spaces, then extract the lowercase email domain. The second transformer receives `Ada@Example.com`.
+`>` changes the value; `!` checks it. Read the steps from left to right.
 
 <table>
 <thead>
-<tr><th>Template</th><th>Rendered payload</th></tr>
+<tr><th>Input JSON</th><th>Template</th><th>Result</th></tr>
 </thead>
 <tbody>
 <tr>
 <td valign="top"><pre><code>{
-  "domain": "{{email:string &gt; custom.trim &gt; email.domain}}"
+  "email": "  Ada@Example.com  "
+}</code></pre></td>
+<td valign="top"><pre><code>{
+  "domain": "{{email:string &gt; text.trim ! email.email &gt; email.domain ! email.domain}}"
 }</code></pre></td>
 <td valign="top"><pre><code>{
   "domain": "example.com"
@@ -475,38 +516,43 @@ First trim the surrounding spaces, then extract the lowercase email domain. The 
 </tbody>
 </table>
 
-### Mix transformers and validators
-
-Trim the input, validate the email address, extract its domain, then validate that domain. Each validator checks the value at its position in the chain. A failed validator throws `VALIDATION_FAILED` and stops the chain.
+### Reject an invalid contact email
 
 <table>
 <thead>
-<tr><th>Template</th><th>Rendered payload</th></tr>
+<tr><th>Input JSON</th><th>Template</th><th>Result</th></tr>
 </thead>
 <tbody>
 <tr>
 <td valign="top"><pre><code>{
-  "domain": "{{email:string &gt; custom.trim ! email.email &gt; email.domain ! email.domain}}"
+  "email": "not-an-email"
 }</code></pre></td>
 <td valign="top"><pre><code>{
-  "domain": "example.com"
+  "email": "{{email:string ! email.email}}"
 }</code></pre></td>
+<td valign="top"><pre><code>Throws VALIDATION_FAILED</code></pre></td>
 </tr>
 </tbody>
 </table>
 
-### Chain member operations before checking the list
-
-The member fallback removes empty and null tags first. Each remaining tag is trimmed and uppercased, then `collection.unique` checks the transformed list for duplicates. Fallbacks are not rerun after transformation: a whitespace-only tag would become `""` and remain in the list.
+### Clean product tags before checking for duplicates
 
 <table>
 <thead>
-<tr><th>Template</th><th>Rendered payload</th></tr>
+<tr><th>Input JSON</th><th>Template</th><th>Result</th></tr>
 </thead>
 <tbody>
 <tr>
 <td valign="top"><pre><code>{
-  "tags": "{{tags:string[ &gt; custom.trim &gt; custom.uppercase || omit ] ! collection.unique}}"
+  "tags": [
+    " new ",
+    "",
+    null,
+    "sale"
+  ]
+}</code></pre></td>
+<td valign="top"><pre><code>{
+  "tags": "{{tags:string[ &gt; text.trim &gt; style.upperCase || omit ] ! collection.unique}}"
 }</code></pre></td>
 <td valign="top"><pre><code>{
   "tags": [
@@ -518,6 +564,266 @@ The member fallback removes empty and null tags first. Each remaining tag is tri
 </tbody>
 </table>
 
-See [Plugins](plugins.md) for configuration, built-in operations, and execution order.
+### Normalize delivery dates and keep free-text instructions
+
+`?` applies the next `>` only when the check passes; other values stay unchanged.
+
+<table>
+<thead>
+<tr><th>Input JSON</th><th>Template</th><th>Result</th></tr>
+</thead>
+<tbody>
+<tr>
+<td valign="top"><pre><code>{
+  "delivery": [
+    "2026-10-01",
+    "Call first"
+  ]
+}</code></pre></td>
+<td valign="top"><pre><code>{
+  "delivery": "{{delivery:string[ ? date.dateonly &gt; date.isodatetime ]}}"
+}</code></pre></td>
+<td valign="top"><pre><code>{
+  "delivery": [
+    "2026-10-01T00:00:00.000Z",
+    "Call first"
+  ]
+}</code></pre></td>
+</tr>
+</tbody>
+</table>
+
+### Normalize a delivery date, or trim the delivery instructions
+
+`~` handles values that fail the check.
+
+<table>
+<thead>
+<tr><th>Input JSON</th><th>Template</th><th>Result</th></tr>
+</thead>
+<tbody>
+<tr>
+<td valign="top"><pre><code>{
+  "delivery": "  Call first  "
+}</code></pre></td>
+<td valign="top"><pre><code>{
+  "delivery": "{{delivery:string ? date.dateonly &gt; date.isodatetime ~ text.trim}}"
+}</code></pre></td>
+<td valign="top"><pre><code>{
+  "delivery": "Call first"
+}</code></pre></td>
+</tr>
+</tbody>
+</table>
+
+### Trim a name only when it needs cleaning
+
+<table>
+<thead>
+<tr><th>Input JSON</th><th>Template</th><th>Result</th></tr>
+</thead>
+<tbody>
+<tr>
+<td valign="top"><pre><code>{
+  "name": "  Ada  "
+}</code></pre></td>
+<td valign="top"><pre><code>{
+  "name": "{{name:string ? text.trim ~ text.trim}}"
+}</code></pre></td>
+<td valign="top"><pre><code>{
+  "name": "Ada"
+}</code></pre></td>
+</tr>
+</tbody>
+</table>
+
+### Calculate a shift length from the original timestamps
+
+`$.start` and `$.end` read the input JSON. No `hours` input is needed.
+
+<table>
+<thead>
+<tr><th>Input JSON</th><th>Template</th><th>Result</th></tr>
+</thead>
+<tbody>
+<tr>
+<td valign="top"><pre><code>{
+  "start": "2026-10-01T09:00:00Z",
+  "end": "2026-10-01T17:00:00Z"
+}</code></pre></td>
+<td valign="top"><pre><code>{
+  "hours": "{{hours:number = date.interval($.start,$.end) &gt; date.msToHours}}"
+}</code></pre></td>
+<td valign="top"><pre><code>{
+  "hours": 8
+}</code></pre></td>
+</tr>
+</tbody>
+</table>
+
+### Calculate a stay from dates already cleaned by the template
+
+Bare paths such as `stay.start` read the template’s finished values.
+
+<table>
+<thead>
+<tr><th>Input JSON</th><th>Template</th><th>Result</th></tr>
+</thead>
+<tbody>
+<tr>
+<td valign="top"><pre><code>{
+  "arrival": "2026-10-01",
+  "departure": "2026-10-03"
+}</code></pre></td>
+<td valign="top"><pre><code>{
+  "stay": {
+    "start": "{{arrival:string &gt; date.isodatetime}}",
+    "end": "{{departure:string &gt; date.isodatetime}}"
+  },
+  "hours": "{{hours:number = date.interval(stay.start,stay.end) &gt; date.msToHours}}"
+}</code></pre></td>
+<td valign="top"><pre><code>{
+  "stay": {
+    "start": "2026-10-01T00:00:00.000Z",
+    "end": "2026-10-03T00:00:00.000Z"
+  },
+  "hours": 48
+}</code></pre></td>
+</tr>
+</tbody>
+</table>
+
+### Use a cleaned start date with an original end timestamp
+
+`> core.omit` hides the helper field while keeping its value available to functions.
+
+<table>
+<thead>
+<tr><th>Input JSON</th><th>Template</th><th>Result</th></tr>
+</thead>
+<tbody>
+<tr>
+<td valign="top"><pre><code>{
+  "start": "2026-10-01",
+  "end": "2026-10-01T06:00:00Z"
+}</code></pre></td>
+<td valign="top"><pre><code>{
+  "start": "{{start:string &gt; date.isodatetime &gt; core.omit}}",
+  "hours": "{{hours:number = date.interval(start,$.end) &gt; date.msToHours}}"
+}</code></pre></td>
+<td valign="top"><pre><code>{
+  "hours": 6
+}</code></pre></td>
+</tr>
+</tbody>
+</table>
+
+### Calculate time between two scheduled stops
+
+<table>
+<thead>
+<tr><th>Input JSON</th><th>Template</th><th>Result</th></tr>
+</thead>
+<tbody>
+<tr>
+<td valign="top"><pre><code>{
+  "first": "2026-10-01T09:00:00Z",
+  "last": "2026-10-01T12:00:00Z"
+}</code></pre></td>
+<td valign="top"><pre><code>{
+  "stops": [
+    "{{first:string}}",
+    "{{last:string}}"
+  ],
+  "hours": "{{hours:number = date.interval(stops[0],stops[1]) &gt; date.msToHours}}"
+}</code></pre></td>
+<td valign="top"><pre><code>{
+  "stops": [
+    "2026-10-01T09:00:00Z",
+    "2026-10-01T12:00:00Z"
+  ],
+  "hours": 3
+}</code></pre></td>
+</tr>
+</tbody>
+</table>
+
+### Leave a zero-length appointment duration unset
+
+A function result can use a fallback too.
+
+<table>
+<thead>
+<tr><th>Input JSON</th><th>Template</th><th>Result</th></tr>
+</thead>
+<tbody>
+<tr>
+<td valign="top"><pre><code>{
+  "start": "2026-10-01T09:00:00Z",
+  "end": "2026-10-01T09:00:00Z"
+}</code></pre></td>
+<td valign="top"><pre><code>{
+  "hours": "{{hours:number = date.interval($.start,$.end) &gt; date.msToHours || null}}"
+}</code></pre></td>
+<td valign="top"><pre><code>{
+  "hours": null
+}</code></pre></td>
+</tr>
+</tbody>
+</table>
+
+### Register functions for a product import
+
+For the final example, register two small functions and use `new PayloadTemplate(template, { plugins: [catalog] }).render(input)`.
+
+```ts
+import { PayloadTemplate, type PayloadVarsPlugin } from 'payload-vars';
+
+const catalog = {
+  name: 'catalog',
+  functions: {
+    splitTags: {
+      argumentTypes: ['string'],
+      resultType: 'string[]',
+      execute: (text: string) => text.split(',').map(tag => tag.trim()).filter(Boolean),
+    },
+    count: {
+      argumentTypes: ['string[]'],
+      resultType: 'number',
+      execute: (tags: readonly string[]) => tags.length,
+    },
+  },
+} as const satisfies PayloadVarsPlugin;
+```
+
+### Turn imported tags into a list and count them
+
+The first function returns a list. The second uses that function’s result.
+
+<table>
+<thead>
+<tr><th>Input JSON</th><th>Template</th><th>Result</th></tr>
+</thead>
+<tbody>
+<tr>
+<td valign="top"><pre><code>{
+  "tags": "new, sale"
+}</code></pre></td>
+<td valign="top"><pre><code>{
+  "tags": "{{tags:string[] = catalog.splitTags($.tags)}}",
+  "tagCount": "{{tagCount:number = catalog.count(tags)}}"
+}</code></pre></td>
+<td valign="top"><pre><code>{
+  "tags": [
+    "new",
+    "sale"
+  ],
+  "tagCount": 2
+}</code></pre></td>
+</tr>
+</tbody>
+</table>
+
+See [Syntax](syntax.md) for the full rules and the [plugin guide](plugins/guide.md#derived-functions) for more about custom functions.
 
 <!-- {% endraw %} -->
