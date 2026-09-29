@@ -18,7 +18,10 @@ Each example has its own input. Use `new PayloadTemplate(template).render(input)
 </thead>
 <tbody>
 <tr>
-<td valign="top"><pre><code>{
+<td valign="top" markdown="block">
+
+```json
+{
   "name": "Ada",
   "total": 19.95,
   "paid": false,
@@ -28,16 +31,28 @@ Each example has its own input. Use `new PayloadTemplate(template).render(input)
   "quantities": [
     2
   ]
-}</code></pre></td>
-<td valign="top"><pre><code>{
+}
+```
+
+</td>
+<td valign="top" markdown="block">
+
+```json
+{
   "customer": "{{name:string}}",
   "total": "{{total:number}}",
   "paid": "{{paid:boolean}}",
   "items": "{{items:string[]}}",
   "quantities": "{{quantities:number[]}}",
   "currency": "USD"
-}</code></pre></td>
-<td valign="top"><pre><code>{
+}
+```
+
+</td>
+<td valign="top" markdown="block">
+
+```json
+{
   "customer": "Ada",
   "total": 19.95,
   "paid": false,
@@ -48,7 +63,10 @@ Each example has its own input. Use `new PayloadTemplate(template).render(input)
     2
   ],
   "currency": "USD"
-}</code></pre></td>
+}
+```
+
+</td>
 </tr>
 </tbody>
 </table>
@@ -65,26 +83,44 @@ Each example has its own input. Use `new PayloadTemplate(template).render(input)
 </thead>
 <tbody>
 <tr>
-<td valign="top"><pre><code>{
+<td valign="top" markdown="block">
+
+```json
+{
   "nickname": "",
   "discount": 0,
   "paid": false,
   "note": null
-}</code></pre></td>
-<td valign="top"><pre><code>{
+}
+```
+
+</td>
+<td valign="top" markdown="block">
+
+```json
+{
   "nickname": "{{nickname:string ?? null}}",
   "discount": "{{discount:number ?? null}}",
   "paid": "{{paid:boolean ?? null}}",
   "note": "{{note:string ?? null}}",
   "instructions": "{{instructions:string ?? null}}"
-}</code></pre></td>
-<td valign="top"><pre><code>{
+}
+```
+
+</td>
+<td valign="top" markdown="block">
+
+```json
+{
   "nickname": "",
   "discount": 0,
   "paid": false,
   "note": null,
   "instructions": null
-}</code></pre></td>
+}
+```
+
+</td>
 </tr>
 </tbody>
 </table>
@@ -99,21 +135,39 @@ Each example has its own input. Use `new PayloadTemplate(template).render(input)
 </thead>
 <tbody>
 <tr>
-<td valign="top"><pre><code>{
+<td valign="top" markdown="block">
+
+```json
+{
   "nickname": "",
   "age": 0,
   "subscribed": false
-}</code></pre></td>
-<td valign="top"><pre><code>{
+}
+```
+
+</td>
+<td valign="top" markdown="block">
+
+```json
+{
   "nickname": "{{nickname:string || null}}",
   "age": "{{age:number || null}}",
   "subscribed": "{{subscribed:boolean || null}}"
-}</code></pre></td>
-<td valign="top"><pre><code>{
+}
+```
+
+</td>
+<td valign="top" markdown="block">
+
+```json
+{
   "nickname": null,
   "age": null,
   "subscribed": null
-}</code></pre></td>
+}
+```
+
+</td>
 </tr>
 </tbody>
 </table>
@@ -128,18 +182,36 @@ Each example has its own input. Use `new PayloadTemplate(template).render(input)
 </thead>
 <tbody>
 <tr>
-<td valign="top"><pre><code>{
+<td valign="top" markdown="block">
+
+```json
+{
   "name": "Ada",
   "note": null
-}</code></pre></td>
-<td valign="top"><pre><code>{
+}
+```
+
+</td>
+<td valign="top" markdown="block">
+
+```json
+{
   "name": "{{name:string}}",
   "note": "{{note:string ?? omit}}",
   "instructions": "{{instructions:string ?? omit}}"
-}</code></pre></td>
-<td valign="top"><pre><code>{
+}
+```
+
+</td>
+<td valign="top" markdown="block">
+
+```json
+{
   "name": "Ada"
-}</code></pre></td>
+}
+```
+
+</td>
 </tr>
 </tbody>
 </table>
@@ -154,17 +226,35 @@ Each example has its own input. Use `new PayloadTemplate(template).render(input)
 </thead>
 <tbody>
 <tr>
-<td valign="top"><pre><code>{
+<td valign="top" markdown="block">
+
+```json
+{
   "name": "Ada",
   "nickname": ""
-}</code></pre></td>
-<td valign="top"><pre><code>{
+}
+```
+
+</td>
+<td valign="top" markdown="block">
+
+```json
+{
   "name": "{{name:string}}",
   "nickname": "{{nickname:string || omit}}"
-}</code></pre></td>
-<td valign="top"><pre><code>{
+}
+```
+
+</td>
+<td valign="top" markdown="block">
+
+```json
+{
   "name": "Ada"
-}</code></pre></td>
+}
+```
+
+</td>
 </tr>
 </tbody>
 </table>
@@ -179,10 +269,22 @@ A missing count fails; a supplied `0` is allowed.
 </thead>
 <tbody>
 <tr>
-<td valign="top"><pre><code>{}</code></pre></td>
-<td valign="top"><pre><code>{
+<td valign="top" markdown="block">
+
+```json
+{}
+```
+
+</td>
+<td valign="top" markdown="block">
+
+```json
+{
   "stock": "{{stock:number ?? throw}}"
-}</code></pre></td>
+}
+```
+
+</td>
 <td valign="top"><pre><code>Throws FALLBACK_THROW</code></pre></td>
 </tr>
 </tbody>
@@ -196,12 +298,24 @@ A missing count fails; a supplied `0` is allowed.
 </thead>
 <tbody>
 <tr>
-<td valign="top"><pre><code>{
+<td valign="top" markdown="block">
+
+```json
+{
   "accepted": false
-}</code></pre></td>
-<td valign="top"><pre><code>{
+}
+```
+
+</td>
+<td valign="top" markdown="block">
+
+```json
+{
   "accepted": "{{accepted:boolean || throw}}"
-}</code></pre></td>
+}
+```
+
+</td>
 <td valign="top"><pre><code>Throws FALLBACK_THROW</code></pre></td>
 </tr>
 </tbody>
@@ -217,23 +331,41 @@ A missing count fails; a supplied `0` is allowed.
 </thead>
 <tbody>
 <tr>
-<td valign="top"><pre><code>{
+<td valign="top" markdown="block">
+
+```json
+{
   "readings": [
     12,
     null,
     0
   ]
-}</code></pre></td>
-<td valign="top"><pre><code>{
+}
+```
+
+</td>
+<td valign="top" markdown="block">
+
+```json
+{
   "readings": "{{readings:number[ ?? null ]}}"
-}</code></pre></td>
-<td valign="top"><pre><code>{
+}
+```
+
+</td>
+<td valign="top" markdown="block">
+
+```json
+{
   "readings": [
     12,
     null,
     0
   ]
-}</code></pre></td>
+}
+```
+
+</td>
 </tr>
 </tbody>
 </table>
@@ -248,23 +380,41 @@ A missing count fails; a supplied `0` is allowed.
 </thead>
 <tbody>
 <tr>
-<td valign="top"><pre><code>{
+<td valign="top" markdown="block">
+
+```json
+{
   "answers": [
     "Yes",
     "",
     null
   ]
-}</code></pre></td>
-<td valign="top"><pre><code>{
+}
+```
+
+</td>
+<td valign="top" markdown="block">
+
+```json
+{
   "answers": "{{answers:string[ || null ]}}"
-}</code></pre></td>
-<td valign="top"><pre><code>{
+}
+```
+
+</td>
+<td valign="top" markdown="block">
+
+```json
+{
   "answers": [
     "Yes",
     null,
     null
   ]
-}</code></pre></td>
+}
+```
+
+</td>
 </tr>
 </tbody>
 </table>
@@ -279,22 +429,40 @@ A missing count fails; a supplied `0` is allowed.
 </thead>
 <tbody>
 <tr>
-<td valign="top"><pre><code>{
+<td valign="top" markdown="block">
+
+```json
+{
   "readings": [
     12,
     null,
     0
   ]
-}</code></pre></td>
-<td valign="top"><pre><code>{
+}
+```
+
+</td>
+<td valign="top" markdown="block">
+
+```json
+{
   "readings": "{{readings:number[ ?? omit ]}}"
-}</code></pre></td>
-<td valign="top"><pre><code>{
+}
+```
+
+</td>
+<td valign="top" markdown="block">
+
+```json
+{
   "readings": [
     12,
     0
   ]
-}</code></pre></td>
+}
+```
+
+</td>
 </tr>
 </tbody>
 </table>
@@ -309,23 +477,41 @@ A missing count fails; a supplied `0` is allowed.
 </thead>
 <tbody>
 <tr>
-<td valign="top"><pre><code>{
+<td valign="top" markdown="block">
+
+```json
+{
   "tags": [
     "new",
     "",
     null,
     "sale"
   ]
-}</code></pre></td>
-<td valign="top"><pre><code>{
+}
+```
+
+</td>
+<td valign="top" markdown="block">
+
+```json
+{
   "tags": "{{tags:string[ || omit ]}}"
-}</code></pre></td>
-<td valign="top"><pre><code>{
+}
+```
+
+</td>
+<td valign="top" markdown="block">
+
+```json
+{
   "tags": [
     "new",
     "sale"
   ]
-}</code></pre></td>
+}
+```
+
+</td>
 </tr>
 </tbody>
 </table>
@@ -338,16 +524,28 @@ A missing count fails; a supplied `0` is allowed.
 </thead>
 <tbody>
 <tr>
-<td valign="top"><pre><code>{
+<td valign="top" markdown="block">
+
+```json
+{
   "readings": [
     12,
     null,
     0
   ]
-}</code></pre></td>
-<td valign="top"><pre><code>{
+}
+```
+
+</td>
+<td valign="top" markdown="block">
+
+```json
+{
   "readings": "{{readings:number[ ?? throw ]}}"
-}</code></pre></td>
+}
+```
+
+</td>
 <td valign="top"><pre><code>Throws FALLBACK_THROW</code></pre></td>
 </tr>
 </tbody>
@@ -361,15 +559,27 @@ A missing count fails; a supplied `0` is allowed.
 </thead>
 <tbody>
 <tr>
-<td valign="top"><pre><code>{
+<td valign="top" markdown="block">
+
+```json
+{
   "guests": [
     "Ada",
     ""
   ]
-}</code></pre></td>
-<td valign="top"><pre><code>{
+}
+```
+
+</td>
+<td valign="top" markdown="block">
+
+```json
+{
   "guests": "{{guests:string[ || throw ]}}"
-}</code></pre></td>
+}
+```
+
+</td>
 <td valign="top"><pre><code>Throws FALLBACK_THROW</code></pre></td>
 </tr>
 </tbody>
@@ -387,7 +597,10 @@ An empty list stays `[]`, even with `|| omit`.
 </thead>
 <tbody>
 <tr>
-<td valign="top"><pre><code>{
+<td valign="top" markdown="block">
+
+```json
+{
   "tags": [
     "new",
     "",
@@ -395,20 +608,35 @@ An empty list stays `[]`, even with `|| omit`.
   ],
   "savedTags": [],
   "suggestedTags": null
-}</code></pre></td>
-<td valign="top"><pre><code>{
+}
+```
+
+</td>
+<td valign="top" markdown="block">
+
+```json
+{
   "tags": "{{tags:string[ || omit ] ?? omit}}",
   "savedTags": "{{savedTags:string[] || omit}}",
   "suggestedTags": "{{suggestedTags:string[] ?? null}}",
   "extraTags": "{{extraTags:string[] ?? omit}}"
-}</code></pre></td>
-<td valign="top"><pre><code>{
+}
+```
+
+</td>
+<td valign="top" markdown="block">
+
+```json
+{
   "tags": [
     "new"
   ],
   "savedTags": [],
   "suggestedTags": null
-}</code></pre></td>
+}
+```
+
+</td>
 </tr>
 </tbody>
 </table>
@@ -423,10 +651,19 @@ An empty list stays `[]`, even with `|| omit`.
 </thead>
 <tbody>
 <tr>
-<td valign="top"><pre><code>{
+<td valign="top" markdown="block">
+
+```json
+{
   "name": "Ada"
-}</code></pre></td>
-<td valign="top"><pre><code>{
+}
+```
+
+</td>
+<td valign="top" markdown="block">
+
+```json
+{
   "customer": {
     "name": "{{name:string}}"
   },
@@ -434,15 +671,24 @@ An empty list stays `[]`, even with `|| omit`.
     "recipient": "{{name:string}}",
     "note": "{{note:string ?? omit}}"
   }
-}</code></pre></td>
-<td valign="top"><pre><code>{
+}
+```
+
+</td>
+<td valign="top" markdown="block">
+
+```json
+{
   "customer": {
     "name": "Ada"
   },
   "delivery": {
     "recipient": "Ada"
   }
-}</code></pre></td>
+}
+```
+
+</td>
 </tr>
 </tbody>
 </table>
@@ -457,19 +703,37 @@ An empty list stays `[]`, even with `|| omit`.
 </thead>
 <tbody>
 <tr>
-<td valign="top"><pre><code>{
+<td valign="top" markdown="block">
+
+```json
+{
   "name": "Ada",
   "total": 19.95
-}</code></pre></td>
-<td valign="top"><pre><code>[
+}
+```
+
+</td>
+<td valign="top" markdown="block">
+
+```json
+[
   "{{name:string}}",
   "{{note:string ?? omit}}",
   "{{total:number}}"
-]</code></pre></td>
-<td valign="top"><pre><code>[
+]
+```
+
+</td>
+<td valign="top" markdown="block">
+
+```json
+[
   "Ada",
   19.95
-]</code></pre></td>
+]
+```
+
+</td>
 </tr>
 </tbody>
 </table>
@@ -482,11 +746,29 @@ An empty list stays `[]`, even with `|| omit`.
 </thead>
 <tbody>
 <tr>
-<td valign="top"><pre><code>{
+<td valign="top" markdown="block">
+
+```json
+{
   "name": "  Ada  "
-}</code></pre></td>
-<td valign="top"><pre><code>"{{name:string &gt; text.trim}}"</code></pre></td>
-<td valign="top"><pre><code>"Ada"</code></pre></td>
+}
+```
+
+</td>
+<td valign="top" markdown="block">
+
+```json
+"{{name:string > text.trim}}"
+```
+
+</td>
+<td valign="top" markdown="block">
+
+```json
+"Ada"
+```
+
+</td>
 </tr>
 </tbody>
 </table>
@@ -503,15 +785,33 @@ An empty list stays `[]`, even with `|| omit`.
 </thead>
 <tbody>
 <tr>
-<td valign="top"><pre><code>{
+<td valign="top" markdown="block">
+
+```json
+{
   "email": "  Ada@Example.com  "
-}</code></pre></td>
-<td valign="top"><pre><code>{
-  "domain": "{{email:string &gt; text.trim ! email.email &gt; email.domain ! email.domain}}"
-}</code></pre></td>
-<td valign="top"><pre><code>{
+}
+```
+
+</td>
+<td valign="top" markdown="block">
+
+```json
+{
+  "domain": "{{email:string > text.trim ! email.email > email.domain ! email.domain}}"
+}
+```
+
+</td>
+<td valign="top" markdown="block">
+
+```json
+{
   "domain": "example.com"
-}</code></pre></td>
+}
+```
+
+</td>
 </tr>
 </tbody>
 </table>
@@ -524,12 +824,24 @@ An empty list stays `[]`, even with `|| omit`.
 </thead>
 <tbody>
 <tr>
-<td valign="top"><pre><code>{
+<td valign="top" markdown="block">
+
+```json
+{
   "email": "not-an-email"
-}</code></pre></td>
-<td valign="top"><pre><code>{
+}
+```
+
+</td>
+<td valign="top" markdown="block">
+
+```json
+{
   "email": "{{email:string ! email.email}}"
-}</code></pre></td>
+}
+```
+
+</td>
 <td valign="top"><pre><code>Throws VALIDATION_FAILED</code></pre></td>
 </tr>
 </tbody>
@@ -543,23 +855,41 @@ An empty list stays `[]`, even with `|| omit`.
 </thead>
 <tbody>
 <tr>
-<td valign="top"><pre><code>{
+<td valign="top" markdown="block">
+
+```json
+{
   "tags": [
     " new ",
     "",
     null,
     "sale"
   ]
-}</code></pre></td>
-<td valign="top"><pre><code>{
-  "tags": "{{tags:string[ &gt; text.trim &gt; style.upperCase || omit ] ! collection.unique}}"
-}</code></pre></td>
-<td valign="top"><pre><code>{
+}
+```
+
+</td>
+<td valign="top" markdown="block">
+
+```json
+{
+  "tags": "{{tags:string[ > text.trim > style.upperCase || omit ] ! collection.unique}}"
+}
+```
+
+</td>
+<td valign="top" markdown="block">
+
+```json
+{
   "tags": [
     "NEW",
     "SALE"
   ]
-}</code></pre></td>
+}
+```
+
+</td>
 </tr>
 </tbody>
 </table>
@@ -574,21 +904,39 @@ An empty list stays `[]`, even with `|| omit`.
 </thead>
 <tbody>
 <tr>
-<td valign="top"><pre><code>{
+<td valign="top" markdown="block">
+
+```json
+{
   "delivery": [
     "2026-10-01",
     "Call first"
   ]
-}</code></pre></td>
-<td valign="top"><pre><code>{
-  "delivery": "{{delivery:string[ ? date.dateonly &gt; date.isodatetime ]}}"
-}</code></pre></td>
-<td valign="top"><pre><code>{
+}
+```
+
+</td>
+<td valign="top" markdown="block">
+
+```json
+{
+  "delivery": "{{delivery:string[ ? date.dateonly > date.isodatetime ]}}"
+}
+```
+
+</td>
+<td valign="top" markdown="block">
+
+```json
+{
   "delivery": [
     "2026-10-01T00:00:00.000Z",
     "Call first"
   ]
-}</code></pre></td>
+}
+```
+
+</td>
 </tr>
 </tbody>
 </table>
@@ -603,15 +951,33 @@ An empty list stays `[]`, even with `|| omit`.
 </thead>
 <tbody>
 <tr>
-<td valign="top"><pre><code>{
+<td valign="top" markdown="block">
+
+```json
+{
   "delivery": "  Call first  "
-}</code></pre></td>
-<td valign="top"><pre><code>{
-  "delivery": "{{delivery:string ? date.dateonly &gt; date.isodatetime ~ text.trim}}"
-}</code></pre></td>
-<td valign="top"><pre><code>{
+}
+```
+
+</td>
+<td valign="top" markdown="block">
+
+```json
+{
+  "delivery": "{{delivery:string ? date.dateonly > date.isodatetime ~ text.trim}}"
+}
+```
+
+</td>
+<td valign="top" markdown="block">
+
+```json
+{
   "delivery": "Call first"
-}</code></pre></td>
+}
+```
+
+</td>
 </tr>
 </tbody>
 </table>
@@ -624,15 +990,33 @@ An empty list stays `[]`, even with `|| omit`.
 </thead>
 <tbody>
 <tr>
-<td valign="top"><pre><code>{
+<td valign="top" markdown="block">
+
+```json
+{
   "name": "  Ada  "
-}</code></pre></td>
-<td valign="top"><pre><code>{
+}
+```
+
+</td>
+<td valign="top" markdown="block">
+
+```json
+{
   "name": "{{name:string ? text.trim ~ text.trim}}"
-}</code></pre></td>
-<td valign="top"><pre><code>{
+}
+```
+
+</td>
+<td valign="top" markdown="block">
+
+```json
+{
   "name": "Ada"
-}</code></pre></td>
+}
+```
+
+</td>
 </tr>
 </tbody>
 </table>
@@ -647,16 +1031,34 @@ An empty list stays `[]`, even with `|| omit`.
 </thead>
 <tbody>
 <tr>
-<td valign="top"><pre><code>{
+<td valign="top" markdown="block">
+
+```json
+{
   "start": "2026-10-01T09:00:00Z",
   "end": "2026-10-01T17:00:00Z"
-}</code></pre></td>
-<td valign="top"><pre><code>{
-  "hours": "{{hours:number = date.interval($.start,$.end) &gt; date.msToHours}}"
-}</code></pre></td>
-<td valign="top"><pre><code>{
+}
+```
+
+</td>
+<td valign="top" markdown="block">
+
+```json
+{
+  "hours": "{{hours:number = date.interval($.start,$.end) > date.msToHours}}"
+}
+```
+
+</td>
+<td valign="top" markdown="block">
+
+```json
+{
   "hours": 8
-}</code></pre></td>
+}
+```
+
+</td>
 </tr>
 </tbody>
 </table>
@@ -671,24 +1073,42 @@ Bare paths such as `stay.start` read the template’s finished values.
 </thead>
 <tbody>
 <tr>
-<td valign="top"><pre><code>{
+<td valign="top" markdown="block">
+
+```json
+{
   "arrival": "2026-10-01",
   "departure": "2026-10-03"
-}</code></pre></td>
-<td valign="top"><pre><code>{
+}
+```
+
+</td>
+<td valign="top" markdown="block">
+
+```json
+{
   "stay": {
-    "start": "{{arrival:string &gt; date.isodatetime}}",
-    "end": "{{departure:string &gt; date.isodatetime}}"
+    "start": "{{arrival:string > date.isodatetime}}",
+    "end": "{{departure:string > date.isodatetime}}"
   },
-  "hours": "{{hours:number = date.interval(stay.start,stay.end) &gt; date.msToHours}}"
-}</code></pre></td>
-<td valign="top"><pre><code>{
+  "hours": "{{hours:number = date.interval(stay.start,stay.end) > date.msToHours}}"
+}
+```
+
+</td>
+<td valign="top" markdown="block">
+
+```json
+{
   "stay": {
     "start": "2026-10-01T00:00:00.000Z",
     "end": "2026-10-03T00:00:00.000Z"
   },
   "hours": 48
-}</code></pre></td>
+}
+```
+
+</td>
 </tr>
 </tbody>
 </table>
@@ -703,17 +1123,35 @@ Bare paths such as `stay.start` read the template’s finished values.
 </thead>
 <tbody>
 <tr>
-<td valign="top"><pre><code>{
+<td valign="top" markdown="block">
+
+```json
+{
   "start": "2026-10-01",
   "end": "2026-10-01T06:00:00Z"
-}</code></pre></td>
-<td valign="top"><pre><code>{
-  "start": "{{start:string &gt; date.isodatetime &gt; core.omit}}",
-  "hours": "{{hours:number = date.interval(start,$.end) &gt; date.msToHours}}"
-}</code></pre></td>
-<td valign="top"><pre><code>{
+}
+```
+
+</td>
+<td valign="top" markdown="block">
+
+```json
+{
+  "start": "{{start:string > date.isodatetime > core.omit}}",
+  "hours": "{{hours:number = date.interval(start,$.end) > date.msToHours}}"
+}
+```
+
+</td>
+<td valign="top" markdown="block">
+
+```json
+{
   "hours": 6
-}</code></pre></td>
+}
+```
+
+</td>
 </tr>
 </tbody>
 </table>
@@ -726,24 +1164,42 @@ Bare paths such as `stay.start` read the template’s finished values.
 </thead>
 <tbody>
 <tr>
-<td valign="top"><pre><code>{
+<td valign="top" markdown="block">
+
+```json
+{
   "first": "2026-10-01T09:00:00Z",
   "last": "2026-10-01T12:00:00Z"
-}</code></pre></td>
-<td valign="top"><pre><code>{
+}
+```
+
+</td>
+<td valign="top" markdown="block">
+
+```json
+{
   "stops": [
     "{{first:string}}",
     "{{last:string}}"
   ],
-  "hours": "{{hours:number = date.interval(stops[0],stops[1]) &gt; date.msToHours}}"
-}</code></pre></td>
-<td valign="top"><pre><code>{
+  "hours": "{{hours:number = date.interval(stops[0],stops[1]) > date.msToHours}}"
+}
+```
+
+</td>
+<td valign="top" markdown="block">
+
+```json
+{
   "stops": [
     "2026-10-01T09:00:00Z",
     "2026-10-01T12:00:00Z"
   ],
   "hours": 3
-}</code></pre></td>
+}
+```
+
+</td>
 </tr>
 </tbody>
 </table>
@@ -758,16 +1214,34 @@ A function result can use a fallback too.
 </thead>
 <tbody>
 <tr>
-<td valign="top"><pre><code>{
+<td valign="top" markdown="block">
+
+```json
+{
   "start": "2026-10-01T09:00:00Z",
   "end": "2026-10-01T09:00:00Z"
-}</code></pre></td>
-<td valign="top"><pre><code>{
-  "hours": "{{hours:number = date.interval($.start,$.end) &gt; date.msToHours || null}}"
-}</code></pre></td>
-<td valign="top"><pre><code>{
+}
+```
+
+</td>
+<td valign="top" markdown="block">
+
+```json
+{
+  "hours": "{{hours:number = date.interval($.start,$.end) > date.msToHours || null}}"
+}
+```
+
+</td>
+<td valign="top" markdown="block">
+
+```json
+{
   "hours": null
-}</code></pre></td>
+}
+```
+
+</td>
 </tr>
 </tbody>
 </table>
@@ -806,20 +1280,38 @@ The first function returns a list. The second uses that function’s result.
 </thead>
 <tbody>
 <tr>
-<td valign="top"><pre><code>{
+<td valign="top" markdown="block">
+
+```json
+{
   "tags": "new, sale"
-}</code></pre></td>
-<td valign="top"><pre><code>{
+}
+```
+
+</td>
+<td valign="top" markdown="block">
+
+```json
+{
   "tags": "{{tags:string[] = catalog.splitTags($.tags)}}",
   "tagCount": "{{tagCount:number = catalog.count(tags)}}"
-}</code></pre></td>
-<td valign="top"><pre><code>{
+}
+```
+
+</td>
+<td valign="top" markdown="block">
+
+```json
+{
   "tags": [
     "new",
     "sale"
   ],
   "tagCount": 2
-}</code></pre></td>
+}
+```
+
+</td>
 </tr>
 </tbody>
 </table>

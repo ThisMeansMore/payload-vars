@@ -1,0 +1,23 @@
+---
+---
+
+@import "minima";
+
+// Give documentation and three-column examples room on wide screens.
+.wrapper {
+  box-sizing: border-box;
+  width: 80%;
+  max-width: none;
+}
+
+@media screen and (max-width: 800px) {
+  .wrapper {
+    width: 100%;
+  }
+}
+
+// Complete Minima's JSON palette for Rouge's keys, booleans, and nulls.
+.language-json .highlight {
+  .nl { color: #005cc5; }
+  .kc { color: #6f42c1; }
+}
