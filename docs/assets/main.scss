@@ -6,14 +6,16 @@
 // Give documentation and three-column examples room on wide screens.
 .wrapper {
   box-sizing: border-box;
-  width: 80%;
+  width: 100%;
   max-width: none;
+  padding-right: clamp(15px, 3vw, 60px);
+  padding-left: clamp(15px, 3vw, 60px);
 }
 
-@media screen and (max-width: 800px) {
-  .wrapper {
-    width: 100%;
-  }
+// Long template expressions must not expand tables beyond the viewport.
+.page-content table pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
 // Complete Minima's JSON palette for Rouge's keys, booleans, and nulls.
