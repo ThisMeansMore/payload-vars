@@ -6,6 +6,12 @@ The latest five releases are detailed below. Older releases have one-line summar
 
 ## Unreleased
 
+## 2.2.2 — 2026-09-29
+
+### Changes
+
+- style: improved example design
+
 ## 2.2.1 — 2026-09-29
 
 ### Changes
@@ -31,14 +37,9 @@ The latest five releases are detailed below. Older releases have one-line summar
 - Add terminal whole-value `> core.omit` to remove evaluated output properties and array entries.
 - Evaluate repeated source expressions independently, allowing different operations and fallbacks while rejecting incompatible base types. Extend variable inspection, input inference, highlighting, and structured errors for derived values.
 
-## 2.0.5 — 2026-09-27
-
-### Changes
-
-- feat: style namespace
-
 ## Older releases
 
+- [2.0.5 — 2026-09-27](CHANGELOG-ARCHIVE.md#205--2026-09-27) — feat: style namespace
 - [2.0.4 — 2026-09-27](CHANGELOG-ARCHIVE.md#204--2026-09-27) — feat: text plugin
 - [2.0.3 — 2026-09-27](CHANGELOG-ARCHIVE.md#203--2026-09-27) — refactor: plugin namespaces file separation
 - [2.0.2 — 2026-09-27](CHANGELOG-ARCHIVE.md#202--2026-09-27) — Rename `PayloadTemplate.compile()` to `PayloadTemplate.variables()`. The returned variable contracts and copy semantics are unchanged; compilation remains in the constructor.
