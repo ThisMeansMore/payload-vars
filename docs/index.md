@@ -7,7 +7,7 @@ title: Getting started
 
 # payload-vars
 
-Package version: v2.2.0
+Package version: v2.2.1
 
 **Imagine a DTO with validation and transformation rules, all expressed in plain, human-readable JSON.** Templates live in data, so you can store them, inspect their input contracts, and render them into payloads with runtime values.
 

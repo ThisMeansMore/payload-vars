@@ -11,6 +11,12 @@ Notable changes, starting with 1.0.0. Historical dates follow Git tags.
 
 The latest five releases are detailed below. Older releases have one-line summaries linking to their full notes in the [archive](changelog-archive.md).
 
+## 2.2.1 — 2026-09-29
+
+### Changes
+
+- docs: examples updated
+
 ## 2.2.0 — 2026-09-28
 
 - **Breaking:** bare function arguments now reference evaluated template properties. Prefix arguments with `$.` to retain original render-input semantics; mixed sources are supported.
@@ -36,14 +42,9 @@ The latest five releases are detailed below. Older releases have one-line summar
 
 - feat: style namespace
 
-## 2.0.4 — 2026-09-27
-
-### Changes
-
-- feat: text plugin
-
 ## Older releases
 
+- [2.0.4 — 2026-09-27](changelog-archive.md#204--2026-09-27) — feat: text plugin
 - [2.0.3 — 2026-09-27](changelog-archive.md#203--2026-09-27) — refactor: plugin namespaces file separation
 - [2.0.2 — 2026-09-27](changelog-archive.md#202--2026-09-27) — Rename `PayloadTemplate.compile()` to `PayloadTemplate.variables()`. The returned variable contracts and copy semantics are unchanged; compilation remains in the constructor.
 - [2.0.1 — 2026-09-27](changelog-archive.md#201--2026-09-27) — Correct the missed public API rename intended for 2.0.0: replace `PayloadTemplate.extractVariables()` with `PayloadTemplate.compile()`. The return type and behavior remain unchanged.

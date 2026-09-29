@@ -2,6 +2,12 @@
 
 Full notes for older releases. See the [changelog](CHANGELOG.md) for the latest five releases and a summary of this archive.
 
+## 2.0.4 — 2026-09-27
+
+### Changes
+
+- feat: text plugin
+
 ## 2.0.3 — 2026-09-27
 
 ### Changes
