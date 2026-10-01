@@ -1,6 +1,6 @@
 {
   "name": "payload-vars",
-  "version": "2.2.3",
+  "version": "2.2.4",
   "description": "Typed variables in JSON payload templates",
   "type": "module",
   "license": "MIT",

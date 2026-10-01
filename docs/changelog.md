@@ -11,6 +11,12 @@ Notable changes, starting with 1.0.0. Historical dates follow Git tags.
 
 The latest five releases are detailed below. Older releases have one-line summaries linking to their full notes in the [archive](changelog-archive.md).
 
+## 2.2.4 — 2026-10-01
+
+### Changes
+
+- style: better example page layout
+
 ## 2.2.3 — 2026-09-29
 
 ### Changes
@@ -36,14 +42,9 @@ The latest five releases are detailed below. Older releases have one-line summar
 - Keep evaluated values available through `core.omit`; report structured argument errors for fallback omission, null, and invalid argument types.
 - Update input inference, canonicalization, highlighting, and `variables()` dependency metadata. All variable contracts now expose occurrence paths.
 
-## 2.1.1 — 2026-09-28
-
-### Changes
-
-- docs: plugins sorted
-
 ## Older releases
 
+- [2.1.1 — 2026-09-28](changelog-archive.md#211--2026-09-28) — docs: plugins sorted
 - [2.1.0 — 2026-09-28](changelog-archive.md#210--2026-09-28) — Add typed synchronous plugin functions with original-input arguments, including `date.interval`, and the `date.msToHours` transformer.
 - [2.0.5 — 2026-09-27](changelog-archive.md#205--2026-09-27) — feat: style namespace
 - [2.0.4 — 2026-09-27](changelog-archive.md#204--2026-09-27) — feat: text plugin

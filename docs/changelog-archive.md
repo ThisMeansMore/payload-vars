@@ -9,6 +9,12 @@ title: Changelog archive
 
 Full notes for older releases. See the [changelog](changelog.md) for the latest five releases and a summary of this archive.
 
+## 2.1.1 — 2026-09-28
+
+### Changes
+
+- docs: plugins sorted
+
 ## 2.1.0 — 2026-09-28
 
 - Add typed synchronous plugin functions with original-input arguments, including `date.interval`, and the `date.msToHours` transformer.
