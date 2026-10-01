@@ -8,6 +8,19 @@ title: Plugins
 
 Plugins add named validators, transformers, and derived functions to JSON templates. Built-ins are always available, including with `plugins: []`. Each namespace has its own reference page below.
 
+## Plugin guide
+
+Shared rules and custom registration live in the [plugin guide](plugins/guide.md):
+
+- [Validators and transformers](plugins/guide.md#validators-and-transformers)
+- [Conditional validation](plugins/guide.md#conditional-validation)
+- [Execution order and array scopes](plugins/guide.md#execution-order-and-array-scopes)
+- [Derived functions](plugins/guide.md#derived-functions)
+- [Plugin configuration](plugins/guide.md#plugin-configuration)
+- [Writing a custom plugin](plugins/guide.md#writing-a-custom-plugin)
+- [Errors and TypeScript](plugins/guide.md#errors-and-typescript)
+- [Migrating from flat plugin names](plugins/guide.md#migrating-from-flat-plugin-names)
+
 ## Namespace reference
 
 | Namespace | Scope | Availability |
@@ -29,19 +42,6 @@ Plugins add named validators, transformers, and derived functions to JSON templa
 | [text](plugins/text.md) | Trimming and whitespace normalization | Available |
 | [time](plugins/time.md) | Times of day and durations | Reserved; no operations yet |
 | [url](plugins/url.md) | URLs and TLDs | Reserved; no operations yet |
-
-## Plugin guide
-
-Shared rules and custom registration live in the [plugin guide](plugins/guide.md):
-
-- [Validators and transformers](plugins/guide.md#validators-and-transformers)
-- [Conditional validation](plugins/guide.md#conditional-validation)
-- [Execution order and array scopes](plugins/guide.md#execution-order-and-array-scopes)
-- [Derived functions](plugins/guide.md#derived-functions)
-- [Plugin configuration](plugins/guide.md#plugin-configuration)
-- [Writing a custom plugin](plugins/guide.md#writing-a-custom-plugin)
-- [Errors and TypeScript](plugins/guide.md#errors-and-typescript)
-- [Migrating from flat plugin names](plugins/guide.md#migrating-from-flat-plugin-names)
 
 ## Reserved namespaces
 
