@@ -14,7 +14,7 @@ Each example has its own input. Use `new PayloadTemplate(template).render(input)
 
 <table>
 <thead>
-<tr><th>Input JSON</th><th>Template</th><th>Result</th></tr>
+<tr><th>Input JSON</th><th>Expected Result</th></tr>
 </thead>
 <tbody>
 <tr>
@@ -31,20 +31,6 @@ Each example has its own input. Use `new PayloadTemplate(template).render(input)
   "quantities": [
     2
   ]
-}
-```
-
-</td>
-<td valign="top" markdown="block">
-
-```json
-{
-  "customer": "{{name:string}}",
-  "total": "{{total:number}}",
-  "paid": "{{paid:boolean}}",
-  "items": "{{items:string[]}}",
-  "quantities": "{{quantities:number[]}}",
-  "currency": "USD"
 }
 ```
 
@@ -71,6 +57,19 @@ Each example has its own input. Use `new PayloadTemplate(template).render(input)
 </tbody>
 </table>
 
+Template to use:
+
+```json
+{
+  "customer": "{{name:string}}",
+  "total": "{{total:number}}",
+  "paid": "{{paid:boolean}}",
+  "items": "{{items:string[]}}",
+  "quantities": "{{quantities:number[]}}",
+  "currency": "USD"
+}
+```
+
 <a id="missing-values-as-null"></a>
 
 ### Keep a place for a missing delivery note
@@ -79,7 +78,7 @@ Each example has its own input. Use `new PayloadTemplate(template).render(input)
 
 <table>
 <thead>
-<tr><th>Input JSON</th><th>Template</th><th>Result</th></tr>
+<tr><th>Input JSON</th><th>Expected Result</th></tr>
 </thead>
 <tbody>
 <tr>
@@ -91,19 +90,6 @@ Each example has its own input. Use `new PayloadTemplate(template).render(input)
   "discount": 0,
   "paid": false,
   "note": null
-}
-```
-
-</td>
-<td valign="top" markdown="block">
-
-```json
-{
-  "nickname": "{{nickname:string ?? null}}",
-  "discount": "{{discount:number ?? null}}",
-  "paid": "{{paid:boolean ?? null}}",
-  "note": "{{note:string ?? null}}",
-  "instructions": "{{instructions:string ?? null}}"
 }
 ```
 
@@ -125,13 +111,25 @@ Each example has its own input. Use `new PayloadTemplate(template).render(input)
 </tbody>
 </table>
 
+Template to use:
+
+```json
+{
+  "nickname": "{{nickname:string ?? null}}",
+  "discount": "{{discount:number ?? null}}",
+  "paid": "{{paid:boolean ?? null}}",
+  "note": "{{note:string ?? null}}",
+  "instructions": "{{instructions:string ?? null}}"
+}
+```
+
 <a id="empty-values-as-null"></a>
 
 ### Store unanswered form fields as null
 
 <table>
 <thead>
-<tr><th>Input JSON</th><th>Template</th><th>Result</th></tr>
+<tr><th>Input JSON</th><th>Expected Result</th></tr>
 </thead>
 <tbody>
 <tr>
@@ -142,17 +140,6 @@ Each example has its own input. Use `new PayloadTemplate(template).render(input)
   "nickname": "",
   "age": 0,
   "subscribed": false
-}
-```
-
-</td>
-<td valign="top" markdown="block">
-
-```json
-{
-  "nickname": "{{nickname:string || null}}",
-  "age": "{{age:number || null}}",
-  "subscribed": "{{subscribed:boolean || null}}"
 }
 ```
 
@@ -172,13 +159,23 @@ Each example has its own input. Use `new PayloadTemplate(template).render(input)
 </tbody>
 </table>
 
+Template to use:
+
+```json
+{
+  "nickname": "{{nickname:string || null}}",
+  "age": "{{age:number || null}}",
+  "subscribed": "{{subscribed:boolean || null}}"
+}
+```
+
 <a id="omit-missing-values"></a>
 
 ### Leave out an optional delivery note
 
 <table>
 <thead>
-<tr><th>Input JSON</th><th>Template</th><th>Result</th></tr>
+<tr><th>Input JSON</th><th>Expected Result</th></tr>
 </thead>
 <tbody>
 <tr>
@@ -196,17 +193,6 @@ Each example has its own input. Use `new PayloadTemplate(template).render(input)
 
 ```json
 {
-  "name": "{{name:string}}",
-  "note": "{{note:string ?? omit}}",
-  "instructions": "{{instructions:string ?? omit}}"
-}
-```
-
-</td>
-<td valign="top" markdown="block">
-
-```json
-{
   "name": "Ada"
 }
 ```
@@ -216,13 +202,23 @@ Each example has its own input. Use `new PayloadTemplate(template).render(input)
 </tbody>
 </table>
 
+Template to use:
+
+```json
+{
+  "name": "{{name:string}}",
+  "note": "{{note:string ?? omit}}",
+  "instructions": "{{instructions:string ?? omit}}"
+}
+```
+
 <a id="omit-empty-values"></a>
 
 ### Leave blank profile fields out of an update
 
 <table>
 <thead>
-<tr><th>Input JSON</th><th>Template</th><th>Result</th></tr>
+<tr><th>Input JSON</th><th>Expected Result</th></tr>
 </thead>
 <tbody>
 <tr>
@@ -240,16 +236,6 @@ Each example has its own input. Use `new PayloadTemplate(template).render(input)
 
 ```json
 {
-  "name": "{{name:string}}",
-  "nickname": "{{nickname:string || omit}}"
-}
-```
-
-</td>
-<td valign="top" markdown="block">
-
-```json
-{
   "name": "Ada"
 }
 ```
@@ -259,13 +245,22 @@ Each example has its own input. Use `new PayloadTemplate(template).render(input)
 </tbody>
 </table>
 
+Template to use:
+
+```json
+{
+  "name": "{{name:string}}",
+  "nickname": "{{nickname:string || omit}}"
+}
+```
+
 ### Require a stock count, even when it is zero
 
 A missing count fails; a supplied `0` is allowed.
 
 <table>
 <thead>
-<tr><th>Input JSON</th><th>Template</th><th>Result</th></tr>
+<tr><th>Input JSON</th><th>Expected Result</th></tr>
 </thead>
 <tbody>
 <tr>
@@ -276,7 +271,12 @@ A missing count fails; a supplied `0` is allowed.
 ```
 
 </td>
-<td valign="top" markdown="block">
+<td valign="top"><pre><code>Throws FALLBACK_THROW</code></pre></td>
+</tr>
+</tbody>
+</table>
+
+Template to use:
 
 ```json
 {
@@ -284,17 +284,11 @@ A missing count fails; a supplied `0` is allowed.
 }
 ```
 
-</td>
-<td valign="top"><pre><code>Throws FALLBACK_THROW</code></pre></td>
-</tr>
-</tbody>
-</table>
-
 ### Require acceptance of the terms
 
 <table>
 <thead>
-<tr><th>Input JSON</th><th>Template</th><th>Result</th></tr>
+<tr><th>Input JSON</th><th>Expected Result</th></tr>
 </thead>
 <tbody>
 <tr>
@@ -307,7 +301,12 @@ A missing count fails; a supplied `0` is allowed.
 ```
 
 </td>
-<td valign="top" markdown="block">
+<td valign="top"><pre><code>Throws FALLBACK_THROW</code></pre></td>
+</tr>
+</tbody>
+</table>
+
+Template to use:
 
 ```json
 {
@@ -315,19 +314,13 @@ A missing count fails; a supplied `0` is allowed.
 }
 ```
 
-</td>
-<td valign="top"><pre><code>Throws FALLBACK_THROW</code></pre></td>
-</tr>
-</tbody>
-</table>
-
 <a id="keep-list-positions"></a>
 
 ### Keep missing daily readings in their original positions
 
 <table>
 <thead>
-<tr><th>Input JSON</th><th>Template</th><th>Result</th></tr>
+<tr><th>Input JSON</th><th>Expected Result</th></tr>
 </thead>
 <tbody>
 <tr>
@@ -345,6 +338,23 @@ A missing count fails; a supplied `0` is allowed.
 
 </td>
 <td valign="top" markdown="block">
+
+```json
+{
+  "readings": [
+    12,
+    null,
+    0
+  ]
+}
+```
+
+</td>
+</tr>
+</tbody>
+</table>
+
+Template to use:
 
 ```json
 {
@@ -352,31 +362,13 @@ A missing count fails; a supplied `0` is allowed.
 }
 ```
 
-</td>
-<td valign="top" markdown="block">
-
-```json
-{
-  "readings": [
-    12,
-    null,
-    0
-  ]
-}
-```
-
-</td>
-</tr>
-</tbody>
-</table>
-
 <a id="empty-list-items-as-null"></a>
 
 ### Mark blank survey answers as unanswered
 
 <table>
 <thead>
-<tr><th>Input JSON</th><th>Template</th><th>Result</th></tr>
+<tr><th>Input JSON</th><th>Expected Result</th></tr>
 </thead>
 <tbody>
 <tr>
@@ -394,6 +386,23 @@ A missing count fails; a supplied `0` is allowed.
 
 </td>
 <td valign="top" markdown="block">
+
+```json
+{
+  "answers": [
+    "Yes",
+    null,
+    null
+  ]
+}
+```
+
+</td>
+</tr>
+</tbody>
+</table>
+
+Template to use:
 
 ```json
 {
@@ -401,31 +410,13 @@ A missing count fails; a supplied `0` is allowed.
 }
 ```
 
-</td>
-<td valign="top" markdown="block">
-
-```json
-{
-  "answers": [
-    "Yes",
-    null,
-    null
-  ]
-}
-```
-
-</td>
-</tr>
-</tbody>
-</table>
-
 <a id="remove-null-list-items"></a>
 
 ### Remove missing readings but keep zero readings
 
 <table>
 <thead>
-<tr><th>Input JSON</th><th>Template</th><th>Result</th></tr>
+<tr><th>Input JSON</th><th>Expected Result</th></tr>
 </thead>
 <tbody>
 <tr>
@@ -446,15 +437,6 @@ A missing count fails; a supplied `0` is allowed.
 
 ```json
 {
-  "readings": "{{readings:number[ ?? omit ]}}"
-}
-```
-
-</td>
-<td valign="top" markdown="block">
-
-```json
-{
   "readings": [
     12,
     0
@@ -467,13 +449,21 @@ A missing count fails; a supplied `0` is allowed.
 </tbody>
 </table>
 
+Template to use:
+
+```json
+{
+  "readings": "{{readings:number[ ?? omit ]}}"
+}
+```
+
 <a id="remove-empty-list-items"></a>
 
 ### Remove blank product tags
 
 <table>
 <thead>
-<tr><th>Input JSON</th><th>Template</th><th>Result</th></tr>
+<tr><th>Input JSON</th><th>Expected Result</th></tr>
 </thead>
 <tbody>
 <tr>
@@ -495,15 +485,6 @@ A missing count fails; a supplied `0` is allowed.
 
 ```json
 {
-  "tags": "{{tags:string[ || omit ]}}"
-}
-```
-
-</td>
-<td valign="top" markdown="block">
-
-```json
-{
   "tags": [
     "new",
     "sale"
@@ -516,11 +497,19 @@ A missing count fails; a supplied `0` is allowed.
 </tbody>
 </table>
 
+Template to use:
+
+```json
+{
+  "tags": "{{tags:string[ || omit ]}}"
+}
+```
+
 ### Require a reading for every day
 
 <table>
 <thead>
-<tr><th>Input JSON</th><th>Template</th><th>Result</th></tr>
+<tr><th>Input JSON</th><th>Expected Result</th></tr>
 </thead>
 <tbody>
 <tr>
@@ -533,15 +522,6 @@ A missing count fails; a supplied `0` is allowed.
     null,
     0
   ]
-}
-```
-
-</td>
-<td valign="top" markdown="block">
-
-```json
-{
-  "readings": "{{readings:number[ ?? throw ]}}"
 }
 ```
 
@@ -551,11 +531,19 @@ A missing count fails; a supplied `0` is allowed.
 </tbody>
 </table>
 
+Template to use:
+
+```json
+{
+  "readings": "{{readings:number[ ?? throw ]}}"
+}
+```
+
 ### Reject a guest list with a blank name
 
 <table>
 <thead>
-<tr><th>Input JSON</th><th>Template</th><th>Result</th></tr>
+<tr><th>Input JSON</th><th>Expected Result</th></tr>
 </thead>
 <tbody>
 <tr>
@@ -571,19 +559,18 @@ A missing count fails; a supplied `0` is allowed.
 ```
 
 </td>
-<td valign="top" markdown="block">
+<td valign="top"><pre><code>Throws FALLBACK_THROW</code></pre></td>
+</tr>
+</tbody>
+</table>
+
+Template to use:
 
 ```json
 {
   "guests": "{{guests:string[ || throw ]}}"
 }
 ```
-
-</td>
-<td valign="top"><pre><code>Throws FALLBACK_THROW</code></pre></td>
-</tr>
-</tbody>
-</table>
 
 <a id="missing-and-empty-lists"></a>
 
@@ -593,7 +580,7 @@ An empty list stays `[]`, even with `|| omit`.
 
 <table>
 <thead>
-<tr><th>Input JSON</th><th>Template</th><th>Result</th></tr>
+<tr><th>Input JSON</th><th>Expected Result</th></tr>
 </thead>
 <tbody>
 <tr>
@@ -608,18 +595,6 @@ An empty list stays `[]`, even with `|| omit`.
   ],
   "savedTags": [],
   "suggestedTags": null
-}
-```
-
-</td>
-<td valign="top" markdown="block">
-
-```json
-{
-  "tags": "{{tags:string[ || omit ] ?? omit}}",
-  "savedTags": "{{savedTags:string[] || omit}}",
-  "suggestedTags": "{{suggestedTags:string[] ?? null}}",
-  "extraTags": "{{extraTags:string[] ?? omit}}"
 }
 ```
 
@@ -641,13 +616,24 @@ An empty list stays `[]`, even with `|| omit`.
 </tbody>
 </table>
 
+Template to use:
+
+```json
+{
+  "tags": "{{tags:string[ || omit ] ?? omit}}",
+  "savedTags": "{{savedTags:string[] || omit}}",
+  "suggestedTags": "{{suggestedTags:string[] ?? null}}",
+  "extraTags": "{{extraTags:string[] ?? omit}}"
+}
+```
+
 <a id="reuse-values"></a>
 
 ### Reuse the customer name for delivery
 
 <table>
 <thead>
-<tr><th>Input JSON</th><th>Template</th><th>Result</th></tr>
+<tr><th>Input JSON</th><th>Expected Result</th></tr>
 </thead>
 <tbody>
 <tr>
@@ -656,21 +642,6 @@ An empty list stays `[]`, even with `|| omit`.
 ```json
 {
   "name": "Ada"
-}
-```
-
-</td>
-<td valign="top" markdown="block">
-
-```json
-{
-  "customer": {
-    "name": "{{name:string}}"
-  },
-  "delivery": {
-    "recipient": "{{name:string}}",
-    "note": "{{note:string ?? omit}}"
-  }
 }
 ```
 
@@ -693,13 +664,27 @@ An empty list stays `[]`, even with `|| omit`.
 </tbody>
 </table>
 
+Template to use:
+
+```json
+{
+  "customer": {
+    "name": "{{name:string}}"
+  },
+  "delivery": {
+    "recipient": "{{name:string}}",
+    "note": "{{note:string ?? omit}}"
+  }
+}
+```
+
 <a id="omit-list-entry"></a>
 
 ### Build a packing slip without an optional note
 
 <table>
 <thead>
-<tr><th>Input JSON</th><th>Template</th><th>Result</th></tr>
+<tr><th>Input JSON</th><th>Expected Result</th></tr>
 </thead>
 <tbody>
 <tr>
@@ -717,17 +702,6 @@ An empty list stays `[]`, even with `|| omit`.
 
 ```json
 [
-  "{{name:string}}",
-  "{{note:string ?? omit}}",
-  "{{total:number}}"
-]
-```
-
-</td>
-<td valign="top" markdown="block">
-
-```json
-[
   "Ada",
   19.95
 ]
@@ -738,11 +712,21 @@ An empty list stays `[]`, even with `|| omit`.
 </tbody>
 </table>
 
+Template to use:
+
+```json
+[
+  "{{name:string}}",
+  "{{note:string ?? omit}}",
+  "{{total:number}}"
+]
+```
+
 ### Return just the cleaned customer name
 
 <table>
 <thead>
-<tr><th>Input JSON</th><th>Template</th><th>Result</th></tr>
+<tr><th>Input JSON</th><th>Expected Result</th></tr>
 </thead>
 <tbody>
 <tr>
@@ -758,13 +742,6 @@ An empty list stays `[]`, even with `|| omit`.
 <td valign="top" markdown="block">
 
 ```json
-"{{name:string > text.trim}}"
-```
-
-</td>
-<td valign="top" markdown="block">
-
-```json
 "Ada"
 ```
 
@@ -772,6 +749,12 @@ An empty list stays `[]`, even with `|| omit`.
 </tr>
 </tbody>
 </table>
+
+Template to use:
+
+```json
+"{{name:string > text.trim}}"
+```
 
 <a id="plugin-chains"></a>
 
@@ -781,7 +764,7 @@ An empty list stays `[]`, even with `|| omit`.
 
 <table>
 <thead>
-<tr><th>Input JSON</th><th>Template</th><th>Result</th></tr>
+<tr><th>Input JSON</th><th>Expected Result</th></tr>
 </thead>
 <tbody>
 <tr>
@@ -790,15 +773,6 @@ An empty list stays `[]`, even with `|| omit`.
 ```json
 {
   "email": "  Ada@Example.com  "
-}
-```
-
-</td>
-<td valign="top" markdown="block">
-
-```json
-{
-  "domain": "{{email:string > text.trim ! email.email > email.domain ! email.domain}}"
 }
 ```
 
@@ -816,11 +790,19 @@ An empty list stays `[]`, even with `|| omit`.
 </tbody>
 </table>
 
+Template to use:
+
+```json
+{
+  "domain": "{{email:string > text.trim ! email.email > email.domain ! email.domain}}"
+}
+```
+
 ### Reject an invalid contact email
 
 <table>
 <thead>
-<tr><th>Input JSON</th><th>Template</th><th>Result</th></tr>
+<tr><th>Input JSON</th><th>Expected Result</th></tr>
 </thead>
 <tbody>
 <tr>
@@ -833,7 +815,12 @@ An empty list stays `[]`, even with `|| omit`.
 ```
 
 </td>
-<td valign="top" markdown="block">
+<td valign="top"><pre><code>Throws VALIDATION_FAILED</code></pre></td>
+</tr>
+</tbody>
+</table>
+
+Template to use:
 
 ```json
 {
@@ -841,17 +828,11 @@ An empty list stays `[]`, even with `|| omit`.
 }
 ```
 
-</td>
-<td valign="top"><pre><code>Throws VALIDATION_FAILED</code></pre></td>
-</tr>
-</tbody>
-</table>
-
 ### Clean product tags before checking for duplicates
 
 <table>
 <thead>
-<tr><th>Input JSON</th><th>Template</th><th>Result</th></tr>
+<tr><th>Input JSON</th><th>Expected Result</th></tr>
 </thead>
 <tbody>
 <tr>
@@ -873,15 +854,6 @@ An empty list stays `[]`, even with `|| omit`.
 
 ```json
 {
-  "tags": "{{tags:string[ > text.trim > style.upperCase || omit ] ! collection.unique}}"
-}
-```
-
-</td>
-<td valign="top" markdown="block">
-
-```json
-{
   "tags": [
     "NEW",
     "SALE"
@@ -894,13 +866,21 @@ An empty list stays `[]`, even with `|| omit`.
 </tbody>
 </table>
 
+Template to use:
+
+```json
+{
+  "tags": "{{tags:string[ > text.trim > style.upperCase || omit ] ! collection.unique}}"
+}
+```
+
 ### Normalize delivery dates and keep free-text instructions
 
 `?` applies the next `>` only when the check passes; other values stay unchanged.
 
 <table>
 <thead>
-<tr><th>Input JSON</th><th>Template</th><th>Result</th></tr>
+<tr><th>Input JSON</th><th>Expected Result</th></tr>
 </thead>
 <tbody>
 <tr>
@@ -912,15 +892,6 @@ An empty list stays `[]`, even with `|| omit`.
     "2026-10-01",
     "Call first"
   ]
-}
-```
-
-</td>
-<td valign="top" markdown="block">
-
-```json
-{
-  "delivery": "{{delivery:string[ ? date.dateonly > date.isodatetime ]}}"
 }
 ```
 
@@ -941,13 +912,21 @@ An empty list stays `[]`, even with `|| omit`.
 </tbody>
 </table>
 
+Template to use:
+
+```json
+{
+  "delivery": "{{delivery:string[ ? date.dateonly > date.isodatetime ]}}"
+}
+```
+
 ### Normalize a delivery date, or trim the delivery instructions
 
 `~` handles values that fail the check.
 
 <table>
 <thead>
-<tr><th>Input JSON</th><th>Template</th><th>Result</th></tr>
+<tr><th>Input JSON</th><th>Expected Result</th></tr>
 </thead>
 <tbody>
 <tr>
@@ -956,15 +935,6 @@ An empty list stays `[]`, even with `|| omit`.
 ```json
 {
   "delivery": "  Call first  "
-}
-```
-
-</td>
-<td valign="top" markdown="block">
-
-```json
-{
-  "delivery": "{{delivery:string ? date.dateonly > date.isodatetime ~ text.trim}}"
 }
 ```
 
@@ -982,11 +952,19 @@ An empty list stays `[]`, even with `|| omit`.
 </tbody>
 </table>
 
+Template to use:
+
+```json
+{
+  "delivery": "{{delivery:string ? date.dateonly > date.isodatetime ~ text.trim}}"
+}
+```
+
 ### Trim a name only when it needs cleaning
 
 <table>
 <thead>
-<tr><th>Input JSON</th><th>Template</th><th>Result</th></tr>
+<tr><th>Input JSON</th><th>Expected Result</th></tr>
 </thead>
 <tbody>
 <tr>
@@ -995,15 +973,6 @@ An empty list stays `[]`, even with `|| omit`.
 ```json
 {
   "name": "  Ada  "
-}
-```
-
-</td>
-<td valign="top" markdown="block">
-
-```json
-{
-  "name": "{{name:string ? text.trim ~ text.trim}}"
 }
 ```
 
@@ -1021,13 +990,21 @@ An empty list stays `[]`, even with `|| omit`.
 </tbody>
 </table>
 
+Template to use:
+
+```json
+{
+  "name": "{{name:string ? text.trim ~ text.trim}}"
+}
+```
+
 ### Calculate a shift length from the original timestamps
 
 `$.start` and `$.end` read the input JSON. No `hours` input is needed.
 
 <table>
 <thead>
-<tr><th>Input JSON</th><th>Template</th><th>Result</th></tr>
+<tr><th>Input JSON</th><th>Expected Result</th></tr>
 </thead>
 <tbody>
 <tr>
@@ -1045,15 +1022,6 @@ An empty list stays `[]`, even with `|| omit`.
 
 ```json
 {
-  "hours": "{{hours:number = date.interval($.start,$.end) > date.msToHours}}"
-}
-```
-
-</td>
-<td valign="top" markdown="block">
-
-```json
-{
   "hours": 8
 }
 ```
@@ -1063,13 +1031,21 @@ An empty list stays `[]`, even with `|| omit`.
 </tbody>
 </table>
 
+Template to use:
+
+```json
+{
+  "hours": "{{hours:number = date.interval($.start,$.end) > date.msToHours}}"
+}
+```
+
 ### Calculate a stay from dates already cleaned by the template
 
 Bare paths such as `stay.start` read the template’s finished values.
 
 <table>
 <thead>
-<tr><th>Input JSON</th><th>Template</th><th>Result</th></tr>
+<tr><th>Input JSON</th><th>Expected Result</th></tr>
 </thead>
 <tbody>
 <tr>
@@ -1079,19 +1055,6 @@ Bare paths such as `stay.start` read the template’s finished values.
 {
   "arrival": "2026-10-01",
   "departure": "2026-10-03"
-}
-```
-
-</td>
-<td valign="top" markdown="block">
-
-```json
-{
-  "stay": {
-    "start": "{{arrival:string > date.isodatetime}}",
-    "end": "{{departure:string > date.isodatetime}}"
-  },
-  "hours": "{{hours:number = date.interval(stay.start,stay.end) > date.msToHours}}"
 }
 ```
 
@@ -1113,13 +1076,25 @@ Bare paths such as `stay.start` read the template’s finished values.
 </tbody>
 </table>
 
+Template to use:
+
+```json
+{
+  "stay": {
+    "start": "{{arrival:string > date.isodatetime}}",
+    "end": "{{departure:string > date.isodatetime}}"
+  },
+  "hours": "{{hours:number = date.interval(stay.start,stay.end) > date.msToHours}}"
+}
+```
+
 ### Use a cleaned start date with an original end timestamp
 
 `> core.omit` hides the helper field while keeping its value available to functions.
 
 <table>
 <thead>
-<tr><th>Input JSON</th><th>Template</th><th>Result</th></tr>
+<tr><th>Input JSON</th><th>Expected Result</th></tr>
 </thead>
 <tbody>
 <tr>
@@ -1137,16 +1112,6 @@ Bare paths such as `stay.start` read the template’s finished values.
 
 ```json
 {
-  "start": "{{start:string > date.isodatetime > core.omit}}",
-  "hours": "{{hours:number = date.interval(start,$.end) > date.msToHours}}"
-}
-```
-
-</td>
-<td valign="top" markdown="block">
-
-```json
-{
   "hours": 6
 }
 ```
@@ -1156,11 +1121,20 @@ Bare paths such as `stay.start` read the template’s finished values.
 </tbody>
 </table>
 
+Template to use:
+
+```json
+{
+  "start": "{{start:string > date.isodatetime > core.omit}}",
+  "hours": "{{hours:number = date.interval(start,$.end) > date.msToHours}}"
+}
+```
+
 ### Calculate time between two scheduled stops
 
 <table>
 <thead>
-<tr><th>Input JSON</th><th>Template</th><th>Result</th></tr>
+<tr><th>Input JSON</th><th>Expected Result</th></tr>
 </thead>
 <tbody>
 <tr>
@@ -1170,19 +1144,6 @@ Bare paths such as `stay.start` read the template’s finished values.
 {
   "first": "2026-10-01T09:00:00Z",
   "last": "2026-10-01T12:00:00Z"
-}
-```
-
-</td>
-<td valign="top" markdown="block">
-
-```json
-{
-  "stops": [
-    "{{first:string}}",
-    "{{last:string}}"
-  ],
-  "hours": "{{hours:number = date.interval(stops[0],stops[1]) > date.msToHours}}"
 }
 ```
 
@@ -1204,13 +1165,25 @@ Bare paths such as `stay.start` read the template’s finished values.
 </tbody>
 </table>
 
+Template to use:
+
+```json
+{
+  "stops": [
+    "{{first:string}}",
+    "{{last:string}}"
+  ],
+  "hours": "{{hours:number = date.interval(stops[0],stops[1]) > date.msToHours}}"
+}
+```
+
 ### Leave a zero-length appointment duration unset
 
 A function result can use a fallback too.
 
 <table>
 <thead>
-<tr><th>Input JSON</th><th>Template</th><th>Result</th></tr>
+<tr><th>Input JSON</th><th>Expected Result</th></tr>
 </thead>
 <tbody>
 <tr>
@@ -1228,15 +1201,6 @@ A function result can use a fallback too.
 
 ```json
 {
-  "hours": "{{hours:number = date.interval($.start,$.end) > date.msToHours || null}}"
-}
-```
-
-</td>
-<td valign="top" markdown="block">
-
-```json
-{
   "hours": null
 }
 ```
@@ -1245,6 +1209,14 @@ A function result can use a fallback too.
 </tr>
 </tbody>
 </table>
+
+Template to use:
+
+```json
+{
+  "hours": "{{hours:number = date.interval($.start,$.end) > date.msToHours || null}}"
+}
+```
 
 ### Register functions for a product import
 
@@ -1276,7 +1248,7 @@ The first function returns a list. The second uses that function’s result.
 
 <table>
 <thead>
-<tr><th>Input JSON</th><th>Template</th><th>Result</th></tr>
+<tr><th>Input JSON</th><th>Expected Result</th></tr>
 </thead>
 <tbody>
 <tr>
@@ -1285,16 +1257,6 @@ The first function returns a list. The second uses that function’s result.
 ```json
 {
   "tags": "new, sale"
-}
-```
-
-</td>
-<td valign="top" markdown="block">
-
-```json
-{
-  "tags": "{{tags:string[] = catalog.splitTags($.tags)}}",
-  "tagCount": "{{tagCount:number = catalog.count(tags)}}"
 }
 ```
 
@@ -1315,6 +1277,15 @@ The first function returns a list. The second uses that function’s result.
 </tr>
 </tbody>
 </table>
+
+Template to use:
+
+```json
+{
+  "tags": "{{tags:string[] = catalog.splitTags($.tags)}}",
+  "tagCount": "{{tagCount:number = catalog.count(tags)}}"
+}
+```
 
 See [Syntax](syntax.md) for the full rules and the [plugin guide](plugins/guide.md#derived-functions) for more about custom functions.
 
