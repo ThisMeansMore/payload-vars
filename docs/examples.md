@@ -6,7 +6,19 @@ title: Examples
 
 # Template examples
 
-Each example has its own input. Use `new PayloadTemplate(template).render(input)` to get the result. The examples use built-in operations, except for the final custom-function example.
+Each example shows the input, the expected result, and the template to use. Comments in the results explain what the template does; they are not part of the output.
+
+| Symbol | Meaning |
+| --- | --- |
+| ✅ | Value preserved |
+| ♻️ | Input value reused |
+| ➕ | Value added |
+| ✨ | Value transformed |
+| 🧹 | Field or list item omitted |
+| 🛟 | Fallback to null |
+| 🔢 | Value calculated |
+| 🔍 | Value validated |
+| 🛑 | Error stops processing |
 
 <a id="fill-in-details"></a>
 
@@ -37,18 +49,18 @@ Each example has its own input. Use `new PayloadTemplate(template).render(input)
 </td>
 <td valign="top" markdown="block">
 
-```json
+```jsonc
 {
-  "customer": "Ada",
+  "customer": "Ada", // ♻️ Input name reused as customer
   "total": 19.95,
-  "paid": false,
+  "paid": false, // ✅ Boolean preserved
   "items": [
     "Notebook"
   ],
   "quantities": [
     2
   ],
-  "currency": "USD"
+  "currency": "USD" // ➕ Fixed currency added
 }
 ```
 
@@ -96,13 +108,13 @@ Template to use:
 </td>
 <td valign="top" markdown="block">
 
-```json
+```jsonc
 {
-  "nickname": "",
-  "discount": 0,
-  "paid": false,
+  "nickname": "", // ✅ Empty text kept
+  "discount": 0, // ✅ Zero kept
+  "paid": false, // ✅ False kept
   "note": null,
-  "instructions": null
+  "instructions": null // 🛟 Missing value becomes null
 }
 ```
 
@@ -146,11 +158,11 @@ Template to use:
 </td>
 <td valign="top" markdown="block">
 
-```json
+```jsonc
 {
-  "nickname": null,
-  "age": null,
-  "subscribed": null
+  "nickname": null, // 🛟 Empty text becomes null
+  "age": null, // 🛟 Zero becomes null
+  "subscribed": null // 🛟 False becomes null
 }
 ```
 
@@ -191,8 +203,8 @@ Template to use:
 </td>
 <td valign="top" markdown="block">
 
-```json
-{
+```jsonc
+{ // 🧹 note and instructions omitted
   "name": "Ada"
 }
 ```
@@ -234,8 +246,8 @@ Template to use:
 </td>
 <td valign="top" markdown="block">
 
-```json
-{
+```jsonc
+{ // 🧹 Blank nickname omitted
   "name": "Ada"
 }
 ```
@@ -271,7 +283,7 @@ A missing count fails; a supplied `0` is allowed.
 ```
 
 </td>
-<td valign="top"><pre><code>Throws FALLBACK_THROW</code></pre></td>
+<td valign="top"><pre><code>🛑 Throws FALLBACK_THROW</code></pre></td>
 </tr>
 </tbody>
 </table>
@@ -301,7 +313,7 @@ Template to use:
 ```
 
 </td>
-<td valign="top"><pre><code>Throws FALLBACK_THROW</code></pre></td>
+<td valign="top"><pre><code>🛑 Throws FALLBACK_THROW</code></pre></td>
 </tr>
 </tbody>
 </table>
@@ -339,12 +351,12 @@ Template to use:
 </td>
 <td valign="top" markdown="block">
 
-```json
+```jsonc
 {
   "readings": [
     12,
-    null,
-    0
+    null, // ✅ Null kept in its original position
+    0 // ✅ Zero kept
   ]
 }
 ```
@@ -387,12 +399,12 @@ Template to use:
 </td>
 <td valign="top" markdown="block">
 
-```json
+```jsonc
 {
   "answers": [
     "Yes",
-    null,
-    null
+    null, // 🛟 Blank answer becomes null
+    null // ✅ Null kept in its original position
   ]
 }
 ```
@@ -435,11 +447,11 @@ Template to use:
 </td>
 <td valign="top" markdown="block">
 
-```json
+```jsonc
 {
-  "readings": [
+  "readings": [ // 🧹 Missing reading removed
     12,
-    0
+    0 // ✅ Zero kept
   ]
 }
 ```
@@ -483,9 +495,9 @@ Template to use:
 </td>
 <td valign="top" markdown="block">
 
-```json
+```jsonc
 {
-  "tags": [
+  "tags": [ // 🧹 Blank and null tags removed
     "new",
     "sale"
   ]
@@ -526,7 +538,7 @@ Template to use:
 ```
 
 </td>
-<td valign="top"><pre><code>Throws FALLBACK_THROW</code></pre></td>
+<td valign="top"><pre><code>🛑 Throws FALLBACK_THROW</code></pre></td>
 </tr>
 </tbody>
 </table>
@@ -559,7 +571,7 @@ Template to use:
 ```
 
 </td>
-<td valign="top"><pre><code>Throws FALLBACK_THROW</code></pre></td>
+<td valign="top"><pre><code>🛑 Throws FALLBACK_THROW</code></pre></td>
 </tr>
 </tbody>
 </table>
@@ -601,13 +613,13 @@ An empty list stays `[]`, even with `|| omit`.
 </td>
 <td valign="top" markdown="block">
 
-```json
-{
-  "tags": [
+```jsonc
+{ // 🧹 Missing extraTags omitted
+  "tags": [ // 🧹 Blank and null tags removed
     "new"
   ],
-  "savedTags": [],
-  "suggestedTags": null
+  "savedTags": [], // ✅ Empty list kept
+  "suggestedTags": null // ✅ Null list kept
 }
 ```
 
@@ -648,13 +660,13 @@ Template to use:
 </td>
 <td valign="top" markdown="block">
 
-```json
+```jsonc
 {
   "customer": {
-    "name": "Ada"
+    "name": "Ada" // ♻️ Input name reused
   },
-  "delivery": {
-    "recipient": "Ada"
+  "delivery": { // 🧹 Missing note omitted
+    "recipient": "Ada" // ♻️ Name reused for delivery
   }
 }
 ```
@@ -700,8 +712,8 @@ Template to use:
 </td>
 <td valign="top" markdown="block">
 
-```json
-[
+```jsonc
+[ // 🧹 Missing note removed from the list
   "Ada",
   19.95
 ]
@@ -741,8 +753,8 @@ Template to use:
 </td>
 <td valign="top" markdown="block">
 
-```json
-"Ada"
+```jsonc
+"Ada" // ✨ Surrounding whitespace trimmed
 ```
 
 </td>
@@ -779,9 +791,9 @@ Template to use:
 </td>
 <td valign="top" markdown="block">
 
-```json
+```jsonc
 {
-  "domain": "example.com"
+  "domain": "example.com" // ✨ Domain extracted; 🔍 domain validated
 }
 ```
 
@@ -815,7 +827,7 @@ Template to use:
 ```
 
 </td>
-<td valign="top"><pre><code>Throws VALIDATION_FAILED</code></pre></td>
+<td valign="top"><pre><code>🛑 Throws VALIDATION_FAILED</code></pre></td>
 </tr>
 </tbody>
 </table>
@@ -852,11 +864,11 @@ Template to use:
 </td>
 <td valign="top" markdown="block">
 
-```json
+```jsonc
 {
-  "tags": [
-    "NEW",
-    "SALE"
+  "tags": [ // 🧹 Blank tags removed; 🔍 uniqueness checked
+    "NEW", // ✨ Trimmed and uppercased
+    "SALE" // ✨ Uppercased
   ]
 }
 ```
@@ -898,11 +910,11 @@ Template to use:
 </td>
 <td valign="top" markdown="block">
 
-```json
+```jsonc
 {
   "delivery": [
-    "2026-10-01T00:00:00.000Z",
-    "Call first"
+    "2026-10-01T00:00:00.000Z", // ✨ Date normalized
+    "Call first" // ✅ Non-date text unchanged
   ]
 }
 ```
@@ -941,9 +953,9 @@ Template to use:
 </td>
 <td valign="top" markdown="block">
 
-```json
+```jsonc
 {
-  "delivery": "Call first"
+  "delivery": "Call first" // ✨ Alternate branch trims non-date text
 }
 ```
 
@@ -979,9 +991,9 @@ Template to use:
 </td>
 <td valign="top" markdown="block">
 
-```json
+```jsonc
 {
-  "name": "Ada"
+  "name": "Ada" // ✨ Trimmed after the check fails
 }
 ```
 
@@ -1020,9 +1032,9 @@ Template to use:
 </td>
 <td valign="top" markdown="block">
 
-```json
+```jsonc
 {
-  "hours": 8
+  "hours": 8 // 🔢 Calculated from input timestamps
 }
 ```
 
@@ -1061,13 +1073,13 @@ Bare paths such as `stay.start` read the template’s finished values.
 </td>
 <td valign="top" markdown="block">
 
-```json
+```jsonc
 {
   "stay": {
-    "start": "2026-10-01T00:00:00.000Z",
-    "end": "2026-10-03T00:00:00.000Z"
+    "start": "2026-10-01T00:00:00.000Z", // ✨ Date normalized
+    "end": "2026-10-03T00:00:00.000Z" // ✨ Date normalized
   },
-  "hours": 48
+  "hours": 48 // 🔢 Calculated from cleaned template dates
 }
 ```
 
@@ -1110,9 +1122,9 @@ Template to use:
 </td>
 <td valign="top" markdown="block">
 
-```json
-{
-  "hours": 6
+```jsonc
+{ // 🧹 Helper start field omitted
+  "hours": 6 // 🔢 Calculated from cleaned start and original end
 }
 ```
 
@@ -1150,13 +1162,13 @@ Template to use:
 </td>
 <td valign="top" markdown="block">
 
-```json
+```jsonc
 {
   "stops": [
     "2026-10-01T09:00:00Z",
     "2026-10-01T12:00:00Z"
   ],
-  "hours": 3
+  "hours": 3 // 🔢 Calculated from the two stops
 }
 ```
 
@@ -1199,9 +1211,9 @@ A function result can use a fallback too.
 </td>
 <td valign="top" markdown="block">
 
-```json
+```jsonc
 {
-  "hours": null
+  "hours": null // 🛟 Zero-hour result becomes null
 }
 ```
 
@@ -1218,33 +1230,9 @@ Template to use:
 }
 ```
 
-### Register functions for a product import
-
-For the final example, register two small functions and use `new PayloadTemplate(template, { plugins: [catalog] }).render(input)`.
-
-```ts
-import { PayloadTemplate, type PayloadVarsPlugin } from 'payload-vars';
-
-const catalog = {
-  name: 'catalog',
-  functions: {
-    splitTags: {
-      argumentTypes: ['string'],
-      resultType: 'string[]',
-      execute: (text: string) => text.split(',').map(tag => tag.trim()).filter(Boolean),
-    },
-    count: {
-      argumentTypes: ['string[]'],
-      resultType: 'number',
-      execute: (tags: readonly string[]) => tags.length,
-    },
-  },
-} as const satisfies PayloadVarsPlugin;
-```
-
 ### Turn imported tags into a list and count them
 
-The first function returns a list. The second uses that function’s result.
+Split comma-separated tags into a list, then count them. This example requires the custom functions `catalog.splitTags` and `catalog.count` to be available in your application.
 
 <table>
 <thead>
@@ -1263,13 +1251,13 @@ The first function returns a list. The second uses that function’s result.
 </td>
 <td valign="top" markdown="block">
 
-```json
+```jsonc
 {
-  "tags": [
+  "tags": [ // ✨ Split and trimmed by a custom function
     "new",
     "sale"
   ],
-  "tagCount": 2
+  "tagCount": 2 // 🔢 Counted from the resulting list
 }
 ```
 
@@ -1287,6 +1275,6 @@ Template to use:
 }
 ```
 
-See [Syntax](syntax.md) for the full rules and the [plugin guide](plugins/guide.md#derived-functions) for more about custom functions.
+See [Syntax](syntax.md) for the full template rules.
 
 <!-- {% endraw %} -->
