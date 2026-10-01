@@ -11,6 +11,12 @@ Notable changes, starting with 1.0.0. Historical dates follow Git tags.
 
 The latest five releases are detailed below. Older releases have one-line summaries linking to their full notes in the [archive](changelog-archive.md).
 
+## 2.2.5 — 2026-10-01
+
+### Changes
+
+- style: emojis in examples
+
 ## 2.2.4 — 2026-10-01
 
 ### Changes
@@ -35,15 +41,9 @@ The latest five releases are detailed below. Older releases have one-line summar
 
 - docs: examples updated
 
-## 2.2.0 — 2026-09-28
-
-- **Breaking:** bare function arguments now reference evaluated template properties. Prefix arguments with `$.` to retain original render-input semantics; mixed sources are supported.
-- Resolve root-relative nested and array paths by dependency, cache each location once per render, support derived-property chains, and reject unknown references, incompatible types, and cycles at construction.
-- Keep evaluated values available through `core.omit`; report structured argument errors for fallback omission, null, and invalid argument types.
-- Update input inference, canonicalization, highlighting, and `variables()` dependency metadata. All variable contracts now expose occurrence paths.
-
 ## Older releases
 
+- [2.2.0 — 2026-09-28](changelog-archive.md#220--2026-09-28) — **Breaking:** bare function arguments now reference evaluated template properties. Prefix arguments with `$.` to retain original render-input semantics; mixed sources are supported.
 - [2.1.1 — 2026-09-28](changelog-archive.md#211--2026-09-28) — docs: plugins sorted
 - [2.1.0 — 2026-09-28](changelog-archive.md#210--2026-09-28) — Add typed synchronous plugin functions with original-input arguments, including `date.interval`, and the `date.msToHours` transformer.
 - [2.0.5 — 2026-09-27](changelog-archive.md#205--2026-09-27) — feat: style namespace
