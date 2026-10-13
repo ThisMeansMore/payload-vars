@@ -11,7 +11,7 @@ Notable changes, starting with 1.0.0. Historical dates follow Git tags.
 
 The latest five releases are detailed below. Older releases have one-line summaries linking to their full notes in the [archive](changelog-archive.md).
 
-## Unreleased
+## 2.3.0 — 2026-10-13
 
 ### Added
 
@@ -43,14 +43,9 @@ The latest five releases are detailed below. Older releases have one-line summar
 
 - style: better example page layout
 
-## 2.2.3 — 2026-09-29
-
-### Changes
-
-- style: page width another try
-
 ## Older releases
 
+- [2.2.3 — 2026-09-29](changelog-archive.md#223--2026-09-29) — style: page width another try
 - [2.2.2 — 2026-09-29](changelog-archive.md#222--2026-09-29) — style: improved example design
 - [2.2.1 — 2026-09-29](changelog-archive.md#221--2026-09-29) — docs: examples updated
 - [2.2.0 — 2026-09-28](changelog-archive.md#220--2026-09-28) — **Breaking:** bare function arguments now reference evaluated template properties. Prefix arguments with `$.` to retain original render-input semantics; mixed sources are supported.

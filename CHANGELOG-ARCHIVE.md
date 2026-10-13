@@ -2,6 +2,12 @@
 
 Full notes for older releases. See the [changelog](CHANGELOG.md) for the latest five releases and a summary of this archive.
 
+## 2.2.3 — 2026-09-29
+
+### Changes
+
+- style: page width another try
+
 ## 2.2.2 — 2026-09-29
 
 ### Changes
