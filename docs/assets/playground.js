@@ -1,7 +1,10 @@
 import { PayloadTemplate } from 'https://cdn.jsdelivr.net/npm/payload-vars@2/dist/index.js';
+import { highlightJson } from './playground-highlight.js';
 
 const byId = id => document.getElementById(id);
+const templateEditorShell = byId('template-editor');
 const templateEditor = byId('template-json');
+const templateHighlight = byId('template-highlight');
 const generatedForm = byId('generated-form');
 const generatedFields = byId('generated-fields');
 const renderedOutput = byId('rendered-json');
@@ -14,9 +17,20 @@ let compiled;
 let rawTemplate;
 let contracts = [];
 let payload = {};
+let expressionTokens = new Map();
 
 const formatJson = value => JSON.stringify(value, null, 2);
 const sameValue = (left, right) => JSON.stringify(left) === JSON.stringify(right);
+
+function highlightTemplate() {
+  templateHighlight.innerHTML = `${highlightJson(templateEditor.value, expressionTokens)}\n`;
+  syncTemplateScroll();
+}
+
+function syncTemplateScroll() {
+  templateHighlight.scrollTop = templateEditor.scrollTop;
+  templateHighlight.scrollLeft = templateEditor.scrollLeft;
+}
 
 function setStatus(message, state = '') {
   status.textContent = message;
@@ -191,6 +205,10 @@ function compileTemplate() {
   try {
     rawTemplate = JSON.parse(templateEditor.value);
     compiled = new PayloadTemplate(rawTemplate);
+    rawTemplate = compiled.toJSON();
+    templateEditor.value = formatJson(rawTemplate);
+    expressionTokens = new Map(compiled.tokenizePayloadExpression().map(item => [item.expression, item.tokens]));
+    highlightTemplate();
     contracts = compiled.variables();
     contractsOutput.textContent = formatJson(contracts);
     buildForm();
@@ -199,6 +217,8 @@ function compileTemplate() {
   } catch (error) {
     compiled = undefined;
     contracts = [];
+    expressionTokens = new Map();
+    highlightTemplate();
     generatedFields.replaceChildren();
     contractsOutput.textContent = '';
     renderedOutput.textContent = describeError(error);
@@ -225,5 +245,11 @@ generatedForm.addEventListener('submit', event => {
 });
 byId('compile-template').addEventListener('click', compileTemplate);
 byId('reset-example').addEventListener('click', resetExample);
+templateEditor.addEventListener('input', () => {
+  expressionTokens = new Map();
+  highlightTemplate();
+});
+templateEditor.addEventListener('scroll', syncTemplateScroll);
 
+templateEditorShell.classList.add('is-highlighted');
 resetExample();

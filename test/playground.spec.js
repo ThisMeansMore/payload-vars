@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { PayloadTemplate } from '../dist/index.js';
+import { highlightJson } from '../docs/assets/playground-highlight.js';
 
 const read = path => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
 
@@ -15,7 +16,15 @@ test('playground example compiles, renders, and is linked from the project home'
   };
   const template = new PayloadTemplate(extract('example-template'));
   const rendered = template.render(extract('example-payload'));
+  const highlighted = template.tokenizePayloadExpression();
   assert.equal(template.variables().length, 5);
+  assert.equal(highlighted.length, 5);
+  assert.ok(highlighted.flatMap(item => item.tokens).some(token => token.kind === 'interaction'));
+  const tokenMap = new Map(highlighted.map(item => [item.expression, item.tokens]));
+  const highlightedJson = highlightJson(JSON.stringify(template.toJSON(), null, 2), tokenMap);
+  assert.match(highlightedJson, /class="json-key">"Plan"/);
+  assert.match(highlightedJson, /class="token-variable">plan/);
+  assert.match(highlightedJson, /class="token-interaction">choice/);
   assert.equal(rendered.sections[0].content.Plan, 'Growth');
   assert.deepEqual(rendered.sections[1].content.Extensions, ['Reporting', 'Audit log']);
 
@@ -24,12 +33,15 @@ test('playground example compiles, renders, and is linked from the project home'
   assert.doesNotMatch(read('docs/index.md'), /Open the playground.*Read the documentation/);
   assert.match(page, /assets\/playground\.js/);
   assert.match(page, /assets\/playground\.css/);
+  assert.match(page, /id="template-highlight"/);
   assert.match(page, /<form id="generated-form">[\s\S]*<button type="submit">Validate and render<\/button>/);
   assert.equal((page.match(/playground__panel(?: |")/g) ?? []).length, 3);
   assert.doesNotMatch(page, /id="payload-json"/);
   const browserModule = read('docs/assets/playground.js');
   assert.match(browserModule, /generatedForm\.addEventListener\('submit'/);
   assert.match(browserModule, /compiled\.render\(payload\)/);
+  assert.match(browserModule, /compiled\.tokenizePayloadExpression\(\)/);
+  assert.match(browserModule, /import \{ highlightJson \} from '\.\/playground-highlight\.js'/);
 });
 
 test('playground browser module is syntactically valid', () => {

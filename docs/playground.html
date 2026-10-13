@@ -30,7 +30,10 @@ permalink: /playground.html
         <span>Editable</span>
       </div>
       <label class="visually-hidden" for="template-json">Template JSON</label>
-      <textarea id="template-json" spellcheck="false" autocomplete="off"></textarea>
+      <div id="template-editor" class="playground__code-editor">
+        <pre id="template-highlight" aria-hidden="true"></pre>
+        <textarea id="template-json" spellcheck="false" autocomplete="off" wrap="off"></textarea>
+      </div>
     </section>
 
     <section class="playground__panel" aria-labelledby="form-heading">
