@@ -1,7 +1,10 @@
 import { PayloadTemplate } from 'https://cdn.jsdelivr.net/npm/payload-vars@2/dist/index.js';
+import { highlightJson } from './playground-highlight.js';
 
 const byId = id => document.getElementById(id);
+const templateEditorShell = byId('template-editor');
 const templateEditor = byId('template-json');
+const templateHighlight = byId('template-highlight');
 const generatedForm = byId('generated-form');
 const generatedFields = byId('generated-fields');
 const renderedOutput = byId('rendered-json');
@@ -14,9 +17,20 @@ let compiled;
 let rawTemplate;
 let contracts = [];
 let payload = {};
+let expressionTokens = new Map();
 
 const formatJson = value => JSON.stringify(value, null, 2);
 const sameValue = (left, right) => JSON.stringify(left) === JSON.stringify(right);
+
+function highlightTemplate() {
+  templateHighlight.innerHTML = `${highlightJson(templateEditor.value, expressionTokens)}\n`;
+  syncTemplateScroll();
+}
+
+function syncTemplateScroll() {
+  templateHighlight.scrollTop = templateEditor.scrollTop;
+  templateHighlight.scrollLeft = templateEditor.scrollLeft;
+}
 
 function setStatus(message, state = '') {
   status.textContent = message;
@@ -73,19 +87,31 @@ function createField(contract, currentValue) {
   const field = document.createElement('div');
   field.className = 'playground__field';
   field.dataset.contract = contract.name;
+  const labelText = pathLabel(contract.paths[0], contract.name);
+  const required = isRequired(contract);
   const label = document.createElement('span');
   label.className = 'playground__field-label';
-  label.textContent = pathLabel(contract.paths[0], contract.name);
+  label.id = `label-${inputId(contract.name, 0)}`;
+  label.textContent = labelText;
+  if (required) {
+    const marker = document.createElement('span');
+    marker.className = 'playground__required';
+    marker.setAttribute('aria-hidden', 'true');
+    marker.textContent = '*';
+    label.append(marker);
+  }
   const meta = document.createElement('span');
   meta.className = 'playground__meta';
-  meta.textContent = `${contract.type} · ${isRequired(contract) ? 'required' : 'optional'}${contract.interaction ? ` · @ ${contract.interaction}` : ''}`;
+  meta.textContent = `${contract.type} · ${required ? 'required' : 'optional'}${contract.interaction ? ` · @ ${contract.interaction}` : ''}`;
   field.append(label, meta);
 
   const isArray = contract.type.endsWith('[]');
   if (contract.allowedValues?.length && (isArray || contract.interaction === 'choice' || contract.interaction === 'rating.stars')) {
     const options = document.createElement('div');
     options.className = `playground__options${contract.interaction === 'rating.stars' ? ' playground__rating' : ''}`;
-    if (!isArray && !isRequired(contract)) options.append(optionControl(contract, undefined, 0, currentValue, 'radio', true));
+    options.setAttribute('role', isArray ? 'group' : 'radiogroup');
+    options.setAttribute('aria-labelledby', label.id);
+    if (!isArray && !required) options.append(optionControl(contract, undefined, 0, currentValue, 'radio', true));
     contract.allowedValues.forEach((value, index) => options.append(optionControl(
       contract, value, index + 1, currentValue, isArray ? 'checkbox' : 'radio',
     )));
@@ -116,12 +142,12 @@ function createField(contract, currentValue) {
   }
   control.id = inputId(contract.name, 0);
   control.dataset.variable = contract.name;
-  control.required = isRequired(contract);
+  control.required = required;
   label.setAttribute('role', 'presentation');
   const accessibleLabel = document.createElement('label');
   accessibleLabel.className = 'visually-hidden';
   accessibleLabel.htmlFor = control.id;
-  accessibleLabel.textContent = label.textContent;
+  accessibleLabel.textContent = `${labelText}${required ? ' (required)' : ''}`;
   field.append(accessibleLabel, control);
   return field;
 }
@@ -191,6 +217,10 @@ function compileTemplate() {
   try {
     rawTemplate = JSON.parse(templateEditor.value);
     compiled = new PayloadTemplate(rawTemplate);
+    rawTemplate = compiled.toJSON();
+    templateEditor.value = formatJson(rawTemplate);
+    expressionTokens = new Map(compiled.tokenizePayloadExpression().map(item => [item.expression, item.tokens]));
+    highlightTemplate();
     contracts = compiled.variables();
     contractsOutput.textContent = formatJson(contracts);
     buildForm();
@@ -199,6 +229,8 @@ function compileTemplate() {
   } catch (error) {
     compiled = undefined;
     contracts = [];
+    expressionTokens = new Map();
+    highlightTemplate();
     generatedFields.replaceChildren();
     contractsOutput.textContent = '';
     renderedOutput.textContent = describeError(error);
@@ -225,5 +257,11 @@ generatedForm.addEventListener('submit', event => {
 });
 byId('compile-template').addEventListener('click', compileTemplate);
 byId('reset-example').addEventListener('click', resetExample);
+templateEditor.addEventListener('input', () => {
+  expressionTokens = new Map();
+  highlightTemplate();
+});
+templateEditor.addEventListener('scroll', syncTemplateScroll);
 
+templateEditorShell.classList.add('is-highlighted');
 resetExample();

@@ -30,7 +30,10 @@ permalink: /playground.html
         <span>Editable</span>
       </div>
       <label class="visually-hidden" for="template-json">Template JSON</label>
-      <textarea id="template-json" spellcheck="false" autocomplete="off"></textarea>
+      <div id="template-editor" class="playground__code-editor">
+        <pre id="template-highlight" aria-hidden="true"></pre>
+        <textarea id="template-json" spellcheck="false" autocomplete="off" wrap="off"></textarea>
+      </div>
     </section>
 
     <section class="playground__panel" aria-labelledby="form-heading">
@@ -42,7 +45,7 @@ permalink: /playground.html
         <span>Consumer UI</span>
       </div>
       <p class="playground__note">This demo owns a tiny interaction dictionary. payload-vars only supplies contracts.</p>
-      <form id="generated-form">
+      <form id="generated-form" novalidate>
         <div id="generated-fields"></div>
         <button type="submit">Validate and render</button>
       </form>
