@@ -87,19 +87,31 @@ function createField(contract, currentValue) {
   const field = document.createElement('div');
   field.className = 'playground__field';
   field.dataset.contract = contract.name;
+  const labelText = pathLabel(contract.paths[0], contract.name);
+  const required = isRequired(contract);
   const label = document.createElement('span');
   label.className = 'playground__field-label';
-  label.textContent = pathLabel(contract.paths[0], contract.name);
+  label.id = `label-${inputId(contract.name, 0)}`;
+  label.textContent = labelText;
+  if (required) {
+    const marker = document.createElement('span');
+    marker.className = 'playground__required';
+    marker.setAttribute('aria-hidden', 'true');
+    marker.textContent = '*';
+    label.append(marker);
+  }
   const meta = document.createElement('span');
   meta.className = 'playground__meta';
-  meta.textContent = `${contract.type} · ${isRequired(contract) ? 'required' : 'optional'}${contract.interaction ? ` · @ ${contract.interaction}` : ''}`;
+  meta.textContent = `${contract.type} · ${required ? 'required' : 'optional'}${contract.interaction ? ` · @ ${contract.interaction}` : ''}`;
   field.append(label, meta);
 
   const isArray = contract.type.endsWith('[]');
   if (contract.allowedValues?.length && (isArray || contract.interaction === 'choice' || contract.interaction === 'rating.stars')) {
     const options = document.createElement('div');
     options.className = `playground__options${contract.interaction === 'rating.stars' ? ' playground__rating' : ''}`;
-    if (!isArray && !isRequired(contract)) options.append(optionControl(contract, undefined, 0, currentValue, 'radio', true));
+    options.setAttribute('role', isArray ? 'group' : 'radiogroup');
+    options.setAttribute('aria-labelledby', label.id);
+    if (!isArray && !required) options.append(optionControl(contract, undefined, 0, currentValue, 'radio', true));
     contract.allowedValues.forEach((value, index) => options.append(optionControl(
       contract, value, index + 1, currentValue, isArray ? 'checkbox' : 'radio',
     )));
@@ -130,12 +142,12 @@ function createField(contract, currentValue) {
   }
   control.id = inputId(contract.name, 0);
   control.dataset.variable = contract.name;
-  control.required = isRequired(contract);
+  control.required = required;
   label.setAttribute('role', 'presentation');
   const accessibleLabel = document.createElement('label');
   accessibleLabel.className = 'visually-hidden';
   accessibleLabel.htmlFor = control.id;
-  accessibleLabel.textContent = label.textContent;
+  accessibleLabel.textContent = `${labelText}${required ? ' (required)' : ''}`;
   field.append(accessibleLabel, control);
   return field;
 }
