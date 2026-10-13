@@ -17,7 +17,7 @@ export function syncDocs({ check = false } = {}) {
   const body = adjustLinks(read('README.md'))
     .replace(/^# payload-vars\r?$/m, () => `# payload-vars\n\nPackage version: v${version}`)
     .replace(/^\[Documentation\]\(https:\/\/thismeansmore\.github\.io\/payload-vars\/\)\r?\n\r?\n/m, '');
-  // Keep the authoring placeholder in CHANGELOG.md, but omit it on Pages when empty.
+  // A feature branch may have Unreleased notes; prepared releases replace that section.
   const changelog = stripReviewMarkers(read('CHANGELOG.md'))
     .replace(/^## Unreleased[ \t]*\r?\n(?:[ \t]*\r?\n)*(?=## |$(?![\s\S]))/gm, '');
   const pages = [
