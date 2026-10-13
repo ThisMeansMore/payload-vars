@@ -55,6 +55,30 @@ variable.allowedValues; // ['black', 'white', 'green']
 
 Rendering first applies the whole-value fallback, then checks the base type and allowed domain, then runs value operations. Array members are checked individually and report their original input position through `valuePath`. A value outside the domain raises `VALUE_NOT_ALLOWED`; runtime values are not copied into the error.
 
+## Interaction hints
+
+Use a final `@ interaction` suffix to expose an opaque UI/UX hint through the variable contract:
+
+```text
+{{comment:string ?? omit @ text.multiline}}
+{{period:string in [ monthly, annual ] @ choice}}
+{{extensions:string[ reporting, audit log ] || throw @ choice}}
+{{rating:number in [ 1, 2, 3, 4, 5 ] ?? omit @ rating.stars}}
+```
+
+`variables()` returns the name unchanged as `interaction?: string`. `toJSON()` and `declaration` preserve the canonical ` @ name` suffix. The annotation must be last and match `[a-z]+(?:\.[a-z]+)?`: a lowercase category with one optional lowercase style.
+
+The name is consumer-defined. Payload-vars has no built-in interaction dictionary and does not check the hint against the declared type, static domain, plugin registry, or derived state. It has no effect on validation, transformation, fallbacks, TypeScript input inference, or `render()`.
+
+Recommended conventions are intentionally non-binding:
+
+- use a broad category such as `text`, `choice`, `date`, or `rating`;
+- add a style only when it distinguishes presentations, such as `text.multiline`;
+- prefer semantic names over framework or component names;
+- document the vocabulary shared by template authors and the consuming application.
+
+Static domains remain independent. `allowedValues` may supply fixed options, or a consumer may use its own dynamic source. A typical form flow is: construct the data-agnostic template, call `variables()`, interpret `interaction` and `paths` using consumer-owned layout data, collect an ordinary payload, then call `render(payload)` for validation and transformation. No separate UI rendering API is involved.
+
 ## Fallback expressions
 
 Fallbacks run before type validation. `??` matches `null`, `undefined`, and missing variables. `||` matches all JavaScript falsy values, including `""`, `0`, `false`, and `NaN`; for a whole array it also matches `[]`. This type-aware empty-array rule makes `string[black, white] || throw` a required, non-empty constrained array. A falsy non-array input still triggers an array's `||` fallback before array validation.
@@ -121,7 +145,7 @@ A conditional group is `? validator [> transformer] [~ transformer]`. Both trans
 {{values:string[ ? date.dateonly > date.isodatetime ?? omit ] ?? null}}
 ```
 
-The second example requires a registered `custom.trim` transformer. Operation names and plugin behavior are unchanged. All operations, including both branches, are resolved during construction. The old `@` operator is rejected with `LEGACY_VALIDATION_SYNTAX`; replace it with `!` to preserve its behavior.
+The second example requires a registered `custom.trim` transformer. Operation names and plugin behavior are unchanged. All operations, including both branches, are resolved during construction. `@` is reserved for the final interaction hint; throwing validation uses `!`.
 
 See [Plugins](plugins.md) for the built-in operations, configuration, and custom validator and transformer examples.
 
@@ -146,6 +170,7 @@ Whitespace between tokens is insignificant, including spaces, tabs, and newlines
 | `string [   ?? omit ]??throw` | `string[ ?? omit ] ?? throw` |
 | `string in[black,white]` | `string in [ black, white ]` |
 | `string[black,white]??omit` | `string[ black, white ] ?? omit` |
+| `string??omit@text.multiline` | `string ?? omit @ text.multiline` |
 
 `toJSON()` returns a template with canonical placeholders. Extraction exposes the complete canonical placeholder as `declaration`. It does not mutate template strings. Identical canonical declarations remain deduplicated by `variables()`. Distinct expressions for the same source name retain their own declarations and paths. Incompatible base types raise `VARIABLE_TYPE_CONFLICT`.
 

@@ -91,6 +91,20 @@ allowedValues.render({ color: 1, rating: 2, enabled: true });
 // @ts-expect-error The array still requires string members.
 allowedValues.render({ color: 'black', colors: [1], rating: 2, enabled: true });
 
+const interactions = new PayloadTemplate({
+  required: '{{required:string@text.singleline}}',
+  optional: '{{optional:string ?? omit @ text.multiline}}',
+  choices: '{{choices:number[1, 2, 3] || throw @ custom.picker}}',
+});
+interactions.render({ required: 'value', choices: [1] });
+interactions.render({ required: 'value', optional: 'details', choices: [2, 3] });
+// @ts-expect-error Interaction metadata does not relax the declared input type.
+interactions.render({ required: 1, choices: [1] });
+// @ts-expect-error Interaction metadata does not make a required input optional.
+interactions.render({ choices: [1] });
+const interactionContract: string | undefined = interactions.variables()[0]?.interaction;
+void interactionContract;
+
 const whitespace = new PayloadTemplate({
   values: '{{ \tx \n: string \r[\t??\nomit\r] \n??\tthrow \n}}',
   again: '{{x:string[??omit]??throw}}',

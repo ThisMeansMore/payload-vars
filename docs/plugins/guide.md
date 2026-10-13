@@ -47,7 +47,7 @@ Operation order matters: each operation receives the preceding operation's resul
 
 `? validator [> transformer] [~ transformer]` selects at most one transformation. Without `~`, a failed check keeps the value unchanged. Both branches receive the tested value, preserve its declared type, and use the same plugins as ordinary transformations. Exceptions from callbacks still throw. Fallbacks run before these operations. See [conditional syntax](../syntax.md#validators-and-transformers).
 
-Replace the old `@` operator with `!` for the same throwing behavior. Old expressions now fail during compilation with `LEGACY_VALIDATION_SYNTAX` and migration guidance.
+Throwing validation uses `!`. The `@` symbol is now reserved for the final consumer-defined interaction hint, so a historical expression such as `string @ custom.valid` must become `string ! custom.valid` to keep its validation behavior.
 
 ## Execution order and array scopes
 

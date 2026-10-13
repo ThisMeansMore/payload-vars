@@ -21,6 +21,7 @@ const scalarAllowedPattern = new RegExp(String.raw`^(${typeSource})\s+in\s*\[\s*
 const arrayAllowedPattern = new RegExp(String.raw`^(string|number)\s*\[\s*([\s\S]+)\s*\]\s*${scopeSource}$`);
 const placeholderPattern = new RegExp(String.raw`^\{\{\s*(${variableNameSource})\s*:\s*([^{}:]*?)\s*\}\}$`);
 const supportedTypePattern = new RegExp(String.raw`^(${typeSource})\b`);
+const interactionNamePattern = /^[a-z]+(?:\.[a-z]+)?$/;
 
 export function childPath(path: string, key: string): string {
   return identifierPattern.test(key) ? `${path}.${key}` : `${path}[${JSON.stringify(key)}]`;
@@ -107,6 +108,31 @@ function findTopLevelEquals(source: string): number {
   return -1;
 }
 
+function extractInteraction(source: string): { expression: string; interaction?: string } {
+  let quote: '"' | "'" | undefined;
+  let escaped = false;
+  let brackets = 0;
+  const markers: number[] = [];
+  for (let index = 0; index < source.length; index++) {
+    const character = source[index]!;
+    if (escaped) { escaped = false; continue; }
+    if (quote && character === '\\') { escaped = true; continue; }
+    if (character === '"' || character === "'") {
+      if (!quote) quote = character;
+      else if (quote === character) quote = undefined;
+    } else if (!quote && character === '[') brackets++;
+    else if (!quote && character === ']') brackets--;
+    else if (!quote && character === '@' && brackets === 0) markers.push(index);
+  }
+  if (!markers.length) return { expression: source };
+  if (markers.length !== 1) return { expression: source, interaction: '' };
+  const index = markers[0]!;
+  const expression = source.slice(0, index).trim();
+  const interaction = source.slice(index + 1).trim();
+  if (!expression || !interactionNamePattern.test(interaction)) return { expression: source, interaction: '' };
+  return { expression, interaction };
+}
+
 function isDerivedPrefix(source: string): boolean {
   if (new RegExp(String.raw`^(?:${typeSource})\s*(?:\[\s*\])?$`).test(source)) return true;
   const scalar = new RegExp(String.raw`^(${typeSource})\s+in\s*\[\s*([\s\S]*?)\s*\]$`).exec(source);
@@ -122,7 +148,12 @@ export function parsePlaceholder(value: string, path: string): Declaration | und
     throw new PayloadTemplateError({ code: 'INVALID_PLACEHOLDER', path, placeholder: value });
   }
   const name = match[1]!;
-  let expression = match[2]!;
+  const annotated = extractInteraction(match[2]!);
+  if (annotated.interaction === '') {
+    throw new PayloadTemplateError({ code: 'INVALID_INTERACTION_SYNTAX', path, variableName: name, placeholder: value });
+  }
+  let expression = annotated.expression;
+  const interaction = annotated.interaction;
   let derived: { name: string; arguments: string[] } | undefined;
   const equals = findTopLevelEquals(expression);
   if (equals !== -1) {
@@ -135,9 +166,6 @@ export function parsePlaceholder(value: string, path: string): Declaration | und
     }
     derived = { name: call[1]!, arguments: args };
     expression = prefix + call[3]!;
-  }
-  if (expression.includes('@')) {
-    throw new PayloadTemplateError({ code: 'LEGACY_VALIDATION_SYNTAX', path, variableName: name, placeholder: value });
   }
   const scalarAllowed = scalarAllowedPattern.exec(expression);
   const arrayAllowedCandidate = scalarAllowed ? undefined : arrayAllowedPattern.exec(expression);
@@ -177,12 +205,14 @@ export function parsePlaceholder(value: string, path: string): Declaration | und
   const whole = format(valueOperations, valueFallback);
   const domain = allowedValues?.map(formatAllowedValue).join(', ');
   const canonical = parsed[1] + (allowedValues ? (array ? `[ ${domain} ]` : ` in [ ${domain} ]`)
-    : array ? member ? `[ ${member} ]` : '[]' : '') + (derived ? ` = ${derived.name}(${derived.arguments.join(',')})` : '') + (whole ? ` ${whole}` : '');
+    : array ? member ? `[ ${member} ]` : '[]' : '') + (derived ? ` = ${derived.name}(${derived.arguments.join(',')})` : '')
+    + (whole ? ` ${whole}` : '') + (interaction ? ` @ ${interaction}` : '');
   return {
     ...(memberOperations.length ? { memberOperations } : {}),
     ...(valueOperations.length ? { valueOperations } : {}),
     ...(derived ? { function: derived, derived: true as const } : {}),
     name, type: (parsed[1] + (array ? '[]' : '')) as BaseType,
+    ...(interaction ? { interaction } : {}),
     ...(allowedValues ? { allowedValues } : {}),
     ...(memberFallback ? { memberFallback } : {}), ...(valueFallback ? { valueFallback } : {}),
     declaration: `{{${name}:${canonical}}}`, paths: [path],

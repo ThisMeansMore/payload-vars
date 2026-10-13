@@ -19,3 +19,5 @@ for (const expression of expressions) {
 new PayloadTemplate(null).tokenizePayloadExpression('{{x:string}}');
 // @ts-expect-error Token kinds are a closed union.
 const invalid: PayloadExpressionTokenKind = 'json';
+const interaction: PayloadExpressionTokenKind = 'interaction';
+void interaction;
