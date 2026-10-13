@@ -4,6 +4,8 @@ Notable changes, starting with 1.0.0. Historical dates follow Git tags.
 
 The latest five releases are detailed below. Older releases have one-line summaries linking to their full notes in the [archive](CHANGELOG-ARCHIVE.md).
 
+## Unreleased
+
 ### Added
 
 - Static allowed-value domains for required scalars (`string in [black, white]`) and constrained arrays (`string[black, white]`), including runtime validation, extracted `allowedValues`, highlighting tokens, TypeScript support, and documentation.
