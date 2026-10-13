@@ -11,6 +11,13 @@ Notable changes, starting with 1.0.0. Historical dates follow Git tags.
 
 The latest five releases are detailed below. Older releases have one-line summaries linking to their full notes in the [archive](changelog-archive.md).
 
+## Unreleased
+
+### Documentation
+
+- Added a form-oriented static-values example covering mandatory and optional single and multiple values.
+- Changed releases to use a guarded release branch and PR before tag-only publication from `main`, with actionable GitHub, npm login, registry, and Pages recovery checks.
+
 ## 2.2.6 — 2026-10-13
 
 ### Added

@@ -82,6 +82,67 @@ Template to use:
 }
 ```
 
+<a id="static-values"></a>
+
+### Restrict form fields to static values
+
+Use `in [...]` for one value and `[...]` after the type for multiple values. A field is mandatory unless `?? omit` makes it optional. For multiple values, `|| throw` also rejects an empty array.
+
+Static values are comma-separated and are not limited to strings. The rating below accepts only one to five stars. Numbers also work for multiple values (`number[1, 2, 3]`), and boolean static values work for one value (`boolean in [true, false]`).
+
+<table>
+<thead>
+<tr><th>Input JSON</th><th>Expected Result</th></tr>
+</thead>
+<tbody>
+<tr>
+<td valign="top" markdown="block">
+
+```json
+{
+  "requiredColor": "black",
+  "optionalColor": "green",
+  "rating": 5,
+  "requiredColors": [
+    "black",
+    "white"
+  ]
+}
+```
+
+</td>
+<td valign="top" markdown="block">
+
+```jsonc
+{
+  "requiredColor": "black", // 🔍 Mandatory single value accepted
+  "optionalColor": "green", // 🔍 Optional single value accepted
+  "rating": 5, // 🔍 Rating is between one and five stars
+  "requiredColors": [ // 🔍 Mandatory non-empty list accepted
+    "black",
+    "white"
+  ]
+  // 🧹 optionalColors omitted when missing
+}
+```
+
+</td>
+</tr>
+</tbody>
+</table>
+
+Template to use:
+
+```json
+{
+  "requiredColor": "{{requiredColor:string in [black, white, green]}}",
+  "optionalColor": "{{optionalColor:string in [black, white, green] ?? omit}}",
+  "rating": "{{rating:number in [1, 2, 3, 4, 5]}}",
+  "requiredColors": "{{requiredColors:string[black, white, green] || throw}}",
+  "optionalColors": "{{optionalColors:string[black, white, green] ?? omit}}"
+}
+```
+
 <a id="missing-values-as-null"></a>
 
 ### Keep a place for a missing delivery note

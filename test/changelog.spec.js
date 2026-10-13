@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { compactChangelog, sections } from '../scripts/lib/release.mjs';
 
 test('changelog retains five full releases and archives all older details without duplication', () => {
@@ -27,4 +28,11 @@ test('short changelogs and their existing archives remain unchanged', () => {
   const changelog = '# Changelog\n\n## Unreleased\n\n## 1.0.0 — 2026-09-25\n\n- Initial release.\n';
   const archive = '# Changelog archive\n';
   assert.deepEqual(compactChangelog(changelog, archive), { changelog, archive });
+});
+
+test('the source changelog never keeps an empty Unreleased placeholder', () => {
+  const pending = sections(readFileSync(new URL('../CHANGELOG.md', import.meta.url), 'utf8'))
+    .filter(entry => entry.title === 'Unreleased');
+  assert.ok(pending.length <= 1);
+  if (pending.length) assert.ok(pending[0].body.trim(), 'Unreleased must contain actual pending notes');
 });

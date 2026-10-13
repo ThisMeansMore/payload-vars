@@ -359,6 +359,6 @@ Templates must be parsed JSON trees. Raw JSON parsing, partial interpolation, ob
 
 ### Contributing and releasing
 
-Follow the [contribution guide](https://github.com/ThisMeansMore/payload-vars/blob/main/CONTRIBUTING.md) for the two-command release workflow and changelog review. Release orchestration lives in `scripts/prepare-version.mjs` and `scripts/publish-version.mjs`; shared release and docs helpers live in `scripts/lib/`.
+Follow the [contribution guide](https://github.com/ThisMeansMore/payload-vars/blob/main/CONTRIBUTING.md) for the release-branch PR workflow and mandatory changelog review. Preparation runs only on the exact `release/vX.Y.Z` branch; publication runs only after that PR is merged into clean, synchronized `main` and never commits or pushes `main`. Release orchestration lives in `scripts/prepare-version.mjs` and `scripts/publish-version.mjs`; shared release and docs helpers live in `scripts/lib/`.
 
 <!-- {% endraw %} -->

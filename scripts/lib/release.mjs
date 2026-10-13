@@ -1,6 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { readFileSync, writeFileSync } from 'node:fs';
-import { stripReviewMarkers } from './docs.mjs';
+import { readFileSync } from 'node:fs';
 
 export const releaseFiles = ['package.json', 'package-lock.json', 'CHANGELOG.md', 'CHANGELOG-ARCHIVE.md',
   'docs/index.md', 'docs/changelog.md', 'docs/changelog-archive.md'];
@@ -12,11 +11,66 @@ export const readJson = path => JSON.parse(readFileSync(path, 'utf8'));
 export { syncDocs } from './docs.mjs';
 
 export function assertMain() {
-  if (git('branch', '--show-current') !== 'main') throw new Error('Releases require the main branch. Merge and switch to main first.');
+  if (git('branch', '--show-current') !== 'main') {
+    throw new Error('Publication runs only on main after the release PR is merged. Switch with `git switch main`, then run `git pull --ff-only`.');
+  }
 }
 
 export function assertClean() {
-  if (git('status', '--porcelain', '--untracked-files=all')) throw new Error('Releases require a clean working tree. Commit your changes first.');
+  if (git('status', '--porcelain', '--untracked-files=all')) {
+    throw new Error('The working tree must be clean. Commit feature work through its PR; on a release branch, preserve or revert unfinished edits before retrying. Never commit directly to main.');
+  }
+}
+
+export function assertReleaseBranch(version) {
+  const expected = `release/v${version}`;
+  const branch = git('branch', '--show-current');
+  if (branch !== expected) {
+    throw new Error(`Version ${version} must be prepared on ${expected}, not ${branch || 'a detached HEAD'}. From updated main run \`git switch -c ${expected}\`, then rerun preparation.`);
+  }
+}
+
+export function checkGitHubSettings() {
+  const origin = git('remote', 'get-url', 'origin');
+  const repository = githubJson(
+    ['repo', 'view', origin, '--json', 'nameWithOwner,viewerPermission'],
+    'GitHub CLI could not inspect the origin repository. Run `gh auth login`, confirm repository access, then retry.',
+  );
+  if (repository.viewerPermission !== 'ADMIN') {
+    throw new Error(`GitHub CLI lacks admin access to ${repository.nameWithOwner}. Run \`gh auth login\` with the repository owner account, then retry.`);
+  }
+  const endpoint = `repos/${repository.nameWithOwner}`;
+  const protection = githubJson(
+    ['api', `${endpoint}/branches/main/protection`],
+    'GitHub CLI could not inspect main protection. Confirm `gh auth status` has repository administration access, then retry.',
+  );
+  if (!protection.required_pull_request_reviews) {
+    throw new Error('GitHub main must require pull requests. Enable “Require a pull request before merging” in branch protection, then retry.');
+  }
+  if (protection.required_pull_request_reviews.required_approving_review_count !== 0) {
+    throw new Error('GitHub main currently requires approving reviews. For this single-maintainer repository set required approvals to 0, then retry.');
+  }
+  if (!protection.enforce_admins?.enabled) {
+    throw new Error('GitHub main still allows administrator bypass. Enable “Do not allow bypassing the above settings” so every main change, including releases, goes through a PR.');
+  }
+  const pages = `${endpoint}/pages`;
+  const site = githubJson(
+    ['api', pages],
+    'GitHub CLI could not inspect Pages. Confirm Pages is enabled and `gh auth status` can access the repository, then retry.',
+  );
+  if (site.build_type !== 'legacy' || site.source?.branch !== 'main' || site.source?.path !== '/docs') {
+    throw new Error('GitHub Pages must deploy from main /docs. Correct Pages settings, then retry before preparing or publishing a release.');
+  }
+  return { endpoint, pages };
+}
+
+export function githubJson(args, message) {
+  try { return JSON.parse(run('gh', args)); }
+  catch (cause) {
+    const error = new Error(message);
+    error.stderr = cause.stderr;
+    throw error;
+  }
 }
 
 export function assertReleaseFiles() {
@@ -32,7 +86,7 @@ export function assertVersions() {
   const pkg = readJson('package.json');
   const lock = readJson('package-lock.json');
   if (pkg.version !== lock.version || pkg.version !== lock.packages?.['']?.version) {
-    throw new Error('package.json and package-lock.json versions do not match.');
+    throw new Error('package.json and package-lock.json versions do not match. Restore or correct both files on the current feature/release branch, commit that fix through its PR, then retry.');
   }
   return pkg;
 }
@@ -91,12 +145,12 @@ export function assertReviewed(version) {
   const changelog = readFileSync('CHANGELOG.md', 'utf8');
   const entries = sections(changelog);
   const pending = entries.filter(entry => entry.title === 'Unreleased');
-  if (pending.length !== 1 || pending[0].body.replace(/<!--[\s\S]*?-->/g, '').trim()) {
-    throw new Error('CHANGELOG.md must have one empty Unreleased section. Run npm run prepare-version -- patch (or minor/major) before review.');
+  if (pending.length) {
+    throw new Error('The prepared changelog must not contain an Unreleased section. Prepare the version on its release branch so those notes move into the numbered release.');
   }
   const releases = entries.filter(entry => entry.title.split(' — ')[0] === version);
   if (releases.length !== 1 || !/^\d{4}-\d{2}-\d{2}$/.test(releases[0].title.split(' — ')[1] ?? '') || /<!--\s*requires-review\s*-->/.test(changelog) || !releases[0].body.replace(/<!--[\s\S]*?-->/g, '').trim()) {
-    throw new Error(`Review the notes for ${version} in CHANGELOG.md, then remove <!-- requires-review --> from that section. Run npm run publish-version when ready.`);
+    throw new Error(`Review the ${version} notes on the release branch and remove <!-- requires-review -->. Commit them, merge the release PR, switch to updated main, then publish.`);
   }
 }
 
@@ -107,17 +161,11 @@ export function tagCommit(version) {
 }
 
 export function assertTag(version) {
-  if (tagCommit(version) !== git('rev-parse', 'HEAD')) throw new Error(`Git tag v${version} must point to the release commit. Use npm run publish-version.`);
+  if (tagCommit(version) !== git('rev-parse', 'HEAD')) throw new Error(`Git tag v${version} must point to this merged release commit. Run npm run publish-version; do not create or move the tag manually.`);
 }
 
 export function report(error) {
   console.error(`Release blocked: ${error.message}`);
   if (error.stderr) console.error(String(error.stderr).trim());
   process.exitCode = 1;
-}
-
-// Remove legacy approval markers from older entries; the new review gate is never removed automatically.
-export function finalizeChangelog(version) {
-  assertReviewed(version);
-  writeFileSync('CHANGELOG.md', stripReviewMarkers(readFileSync('CHANGELOG.md', 'utf8')));
 }
