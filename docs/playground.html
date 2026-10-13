@@ -42,8 +42,10 @@ permalink: /playground.html
         <span>Consumer UI</span>
       </div>
       <p class="playground__note">This demo owns a tiny interaction dictionary. payload-vars only supplies contracts.</p>
-      <form id="generated-form"></form>
-      <button id="render-payload" type="button">Render form values</button>
+      <form id="generated-form">
+        <div id="generated-fields"></div>
+        <button type="submit">Validate and render</button>
+      </form>
     </section>
 
     <section class="playground__panel playground__panel--code" aria-labelledby="rendered-heading">
@@ -54,7 +56,7 @@ permalink: /playground.html
         </div>
         <span>template.render()</span>
       </div>
-      <p class="playground__note">The form values are passed directly to the package. Validation and transformation errors appear here too.</p>
+      <p class="playground__note">Submitting the form passes its values directly to the package. Validation and transformation errors appear here too.</p>
       <pre id="rendered-json" tabindex="0"></pre>
     </section>
   </div>
