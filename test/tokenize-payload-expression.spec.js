@@ -39,6 +39,12 @@ describe('syntax highlighting', () => {
       ['punctuation', '['], ['value', 'black'], ['punctuation', ','], ['value', 'white'],
       ['punctuation', ']'], ['operator', '??'], ['action', 'omit'], ['delimiter', '}}'],
     ]);
+    assert.deepEqual(significant('{{rating:number in [ 1, 2, 3 ] ?? omit @ rating.stars}}'), [
+      ['delimiter', '{{'], ['variable', 'rating'], ['punctuation', ':'], ['type', 'number'],
+      ['keyword', 'in'], ['punctuation', '['], ['value', '1'], ['punctuation', ','], ['value', '2'],
+      ['punctuation', ','], ['value', '3'], ['punctuation', ']'], ['operator', '??'], ['action', 'omit'],
+      ['operator', '@'], ['interaction', 'rating.stars'], ['delimiter', '}}'],
+    ]);
     for (const [name, type, operator, action, fallback] of [
       ['products', 'string', '??', 'omit', 'throw'], ['amounts', 'number', '||', 'null', 'omit'],
     ]) {
@@ -167,9 +173,9 @@ describe('syntax highlighting', () => {
     assert.deepEqual(tokens.filter(t => t.kind === 'validator').map(t => t.text), ['date.dateonly', 'collection.unique']);
     assert.equal(tokens.filter(t => t.kind === 'transformer').length, 4);
     for (let end = 0; end <= expression.length; end++) coverage(expression.slice(0, end));
-    for (const invalid of ['{{x:string @ date.dateonly}}', '{{x:string ~ date.isodatetime}}',
+    for (const invalid of ['{{x:string @ Date.picker}}', '{{x:string ~ date.isodatetime}}',
       '{{x:string ! date.dateonly ~ date.isodatetime}}', '{{x:string[?date.dateonly]~date.isodatetime}}']) {
-      assert.ok(coverage(invalid).some(t => ['@', '~'].includes(t.text) && t.kind === 'unknown'));
+      assert.ok(coverage(invalid).some(t => t.kind === 'unknown'));
     }
   });
 

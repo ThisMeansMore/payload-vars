@@ -2,8 +2,8 @@ import type { PayloadTemplateIssue } from './payload-template.types.js';
 
 export class PayloadTemplateError extends Error {
   constructor(public readonly issue: PayloadTemplateIssue) {
-    super(issue.code === 'LEGACY_VALIDATION_SYNTAX'
-      ? 'The @ validation operator is no longer supported. Use ! for throwing validation or ? for conditional validation.'
+    super(issue.code === 'INVALID_INTERACTION_SYNTAX'
+      ? 'Invalid interaction: place one @ name suffix at the end, using lowercase category or category.style syntax.'
       : issue.code === 'INVALID_ALLOWED_VALUES_SYNTAX'
         ? 'Invalid allowed values: use a non-empty comma-separated list whose values match the declared type.'
       : issue.code === 'INVALID_FALLBACK_SYNTAX'

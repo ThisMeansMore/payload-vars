@@ -120,6 +120,22 @@ template.render({ requiredColor: 'black', requiredColors: [] }); // throws FALLB
 
 `type in [a, b]` constrains a scalar to an enum-like set of literals. `type[a, b]` constrains every array member to that set. An outer `?? omit` makes the value optional; `|| throw` requires a non-empty array. Consumers can inspect the same literals through `allowedValues` from `variables()`.
 
+### Interaction hints
+
+Add a final `@ name` suffix when a consumer should treat a variable as interactive:
+
+```js
+const form = new PayloadTemplate({
+  comment: '{{comment:string ?? omit @ text.multiline}}',
+  period: '{{period:string in [monthly, annual] @ choice}}',
+});
+
+form.variables();
+// Contracts include interaction: 'text.multiline' and interaction: 'choice'.
+```
+
+Interaction names are opaque consumer metadata, not a payload-vars component catalogue. They match lowercase `category` or `category.style` syntax. The hint never changes types, requiredness, allowed values, plugins, or `render()` behavior; consumers define and document their own vocabulary.
+
 Placeholders occupy an entire string. Types are `string`, `number`, `boolean`, `string[]`, and `number[]`. Use `??` for nullish fallback or `||` for falsy fallback, with actions `null`, `omit`, or `throw`. Invalid templates throw `PayloadTemplateError`; inputs are never mutated.
 
 TypeScript infers `render()` inputs from literal templates. Use `as const` on separately declared templates to preserve their literal types; see [TypeScript input inference](development.md#typescript-input-inference).

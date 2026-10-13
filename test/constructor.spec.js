@@ -105,17 +105,6 @@ describe('template construction', () => {
     assert.throws(() => new PayloadTemplate('{{x:string[ ? date.dateonly ] ~ date.isodatetime}}'), issue('INVALID_FALLBACK_SYNTAX'));
   });
 
-  test('rejects legacy @ with migration guidance and the original path', () => {
-    for (const expression of ['string @ date.dateonly', 'string[@date.dateonly>date.isodatetime]']) {
-      assert.throws(() => new PayloadTemplate({ nested: [`{{x:${expression}}}`] }), error => {
-        assert.equal(error.issue.code, 'LEGACY_VALIDATION_SYNTAX');
-        assert.equal(error.issue.path, '$.nested[0]');
-        assert.match(error.message, /@.*no longer supported.*!.*\?/);
-        return true;
-      });
-    }
-  });
-
   test('resolves both conditional branches during compilation', () => {
     for (const tail of ['? missing.check', '? date.dateonly > missing.change', '? date.dateonly ~ missing.change',
       '? date.dateonly > date.isodatetime ~ missing.change']) {

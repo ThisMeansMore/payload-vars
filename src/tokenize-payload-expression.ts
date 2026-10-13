@@ -10,7 +10,7 @@ const operatorPattern = new RegExp(`^(${operatorSource})$`);
 type Position = 'function' | 'call' | 'argument' | 'argumentEnd' | 'outside' | 'variable' | 'colon' | 'type' | 'tail'
   | 'memberValidator' | 'memberTransformer' | 'valueValidator' | 'valueTransformer'
   | 'member' | 'memberAction' | 'memberEnd' | 'arrayEnd' | 'valueAction' | 'end'
-  | 'allowedOpen' | 'allowedValue' | 'allowedSeparator';
+  | 'allowedOpen' | 'allowedValue' | 'allowedSeparator' | 'interaction';
 
 export function tokenizePayloadExpression(expression: string): PayloadExpressionToken[] {
   const tokens: PayloadExpressionToken[] = [];
@@ -32,6 +32,10 @@ export function tokenizePayloadExpression(expression: string): PayloadExpression
     } else if (position !== 'outside') {
       if (position === 'tail' && text === 'in') {
         kind = 'keyword'; position = 'allowedOpen';
+      } else if (text === '@' && (position === 'tail' || position === 'arrayEnd' || position === 'end')) {
+        kind = 'operator'; position = 'interaction';
+      } else if (position === 'interaction' && /^[a-z]+(?:\.[a-z]+)?$/.test(text)) {
+        kind = 'interaction'; position = 'end';
       } else if (text === '=' && (position === 'tail' || position === 'arrayEnd')) {
         kind = 'operator'; position = 'function';
       } else if (position === 'function' && operationPattern.test(text)) {

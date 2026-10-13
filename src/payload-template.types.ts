@@ -23,6 +23,8 @@ export interface ParsedVariableExpression {
   valueFallback?: FallbackExpression;
   /** Closed set accepted for a scalar value or for each array member. */
   allowedValues?: AllowedValue[];
+  /** Opaque consumer-defined hint for collecting or presenting this variable. */
+  interaction?: string;
 }
 export interface PayloadVariable extends ParsedVariableExpression {
   /** Complete canonical placeholder, including its name and fallback expressions. */
@@ -53,7 +55,7 @@ export type PayloadTemplateIssue =
   | (RuntimeIssue & { code: 'INVALID_FUNCTION_ARGUMENT' | 'INVALID_FUNCTION_RESULT'; operation: string; argumentName?: string; argumentIndex?: number; source?: 'input' | 'property'; referencePath?: string; reason?: 'omitted' | 'null' | 'invalid-type' })
   | { code: 'INVALID_PLACEHOLDER'; path: string; placeholder: string }
   | { code: 'UNSUPPORTED_TYPE'; path: string; variableName: string; declaredType: string }
-  | { code: 'INVALID_FALLBACK_SYNTAX' | 'INVALID_ALLOWED_VALUES_SYNTAX' | 'LEGACY_VALIDATION_SYNTAX'; path: string; variableName: string; placeholder: string }
+  | { code: 'INVALID_FALLBACK_SYNTAX' | 'INVALID_ALLOWED_VALUES_SYNTAX' | 'INVALID_INTERACTION_SYNTAX'; path: string; variableName: string; placeholder: string }
   | (RuntimeIssue & { code: 'MISSING_VARIABLE' })
   | (RuntimeIssue & { code: 'INVALID_VARIABLE_TYPE'; actualType: string; valuePath?: string })
   | (RuntimeIssue & { code: 'VALUE_NOT_ALLOWED'; valuePath?: string })
@@ -63,7 +65,7 @@ export type PayloadTemplateIssue =
 export type PayloadExpressionTokenKind =
   | 'delimiter' | 'variable' | 'punctuation' | 'type'
   | 'validator' | 'transformer' | 'function' | 'operator' | 'action'
-  | 'keyword' | 'value' | 'whitespace' | 'unknown';
+  | 'interaction' | 'keyword' | 'value' | 'whitespace' | 'unknown';
 
 export interface PayloadExpressionToken {
   kind: PayloadExpressionTokenKind;

@@ -78,7 +78,7 @@ template.variables();
 // }]
 ```
 
-`BaseType` contains only the five supported base types. `PayloadVariableType` aliases `BaseType`. `AllowedValue` is `string | number | boolean`. `ParsedVariableExpression` contains `name`, `type`, optional `allowedValues`, optional `memberFallback`, and optional `valueFallback`. `PayloadVariable` adds the canonical `declaration` string. Optional `memberOperations` and `valueOperations` contain ordered `PayloadOperation` objects (`{ kind: 'validator' | 'transformer', name: string, operator?: '?' | '~' }`). The optional `operator` marks conditional validators (`?`) and alternative transformers (`~`); it is absent for `!` and `>`. Absent domains, fallbacks, and empty operation lists are omitted from extracted objects. Returned `allowedValues` arrays are independent copies.
+`BaseType` contains only the five supported base types. `PayloadVariableType` aliases `BaseType`. `AllowedValue` is `string | number | boolean`. `ParsedVariableExpression` contains `name`, `type`, optional `allowedValues`, optional opaque `interaction`, optional `memberFallback`, and optional `valueFallback`. `PayloadVariable` adds the canonical `declaration` string. Optional `memberOperations` and `valueOperations` contain ordered `PayloadOperation` objects (`{ kind: 'validator' | 'transformer', name: string, operator?: '?' | '~' }`). The optional `operator` marks conditional validators (`?`) and alternative transformers (`~`); it is absent for `!` and `>`. Absent domains, interactions, fallbacks, and empty operation lists are omitted from extracted objects. Returned `allowedValues` arrays are independent copies.
 
 ### Rendering
 
@@ -103,7 +103,7 @@ template.render({ products: ['C'] });            // { products: ['C'] }
 | --- | --- |
 | `INVALID_PLACEHOLDER` | `path`, `placeholder` |
 | `UNSUPPORTED_TYPE` | `path`, `variableName`, `declaredType` |
-| `INVALID_FALLBACK_SYNTAX`, `INVALID_ALLOWED_VALUES_SYNTAX`, `LEGACY_VALIDATION_SYNTAX` | `path`, `variableName`, `placeholder` |
+| `INVALID_FALLBACK_SYNTAX`, `INVALID_ALLOWED_VALUES_SYNTAX`, `INVALID_INTERACTION_SYNTAX` | `path`, `variableName`, `placeholder` |
 | `VARIABLE_TYPE_CONFLICT` | `variableName`, `expectedType`, `conflictingType`, `path` |
 | `INVALID_FUNCTION_ARGUMENTS`, `FUNCTION_RESULT_TYPE_MISMATCH`, `INVALID_OMIT_OPERATION` | `path`, `variableName`, `operation` |
 | `UNKNOWN_FUNCTION_REFERENCE`, `FUNCTION_ARGUMENT_TYPE_MISMATCH` | `path`, `variableName`, `operation`, `argumentName`, `argumentIndex`, `referencePath`; type mismatches also include `expectedType`, `actualType` |
@@ -150,7 +150,7 @@ Each result contains a JSON `path`, the normalized `expression` including mustac
 
 Each token has `kind`, exact normalized `text`, and `start` (inclusive) and `end` (exclusive) UTF-16 offsets relative to that entry's expression, not the serialized JSON. Concatenating its token texts reproduces the normalized expression. `TokenizedPayloadExpression`, `PayloadExpressionToken`, and `PayloadExpressionTokenKind` are exported types.
 
-Kinds are `delimiter`, `variable`, `punctuation`, `type`, `operator`, `action`, `validator`, `transformer`, `function`, `keyword`, `value`, `whitespace`, and `unknown`. The allowed-values `in` token is a `keyword`, and domain entries are `value` tokens. Keywords are classified by position: `string` is a variable in `{{string:boolean}}`. Constructor validation rejects incomplete or invalid expressions before tokenization; original whitespace is not retained. Tokenization does not change validation, rendering, or the stored payload, and does not tokenize surrounding JSON.
+Kinds are `delimiter`, `variable`, `punctuation`, `type`, `operator`, `action`, `validator`, `transformer`, `function`, `interaction`, `keyword`, `value`, `whitespace`, and `unknown`. The allowed-values `in` token is a `keyword`, domain entries are `value` tokens, and the name after the final `@` is an `interaction` token. Keywords are classified by position: `string` is a variable in `{{string:boolean}}`. Constructor validation rejects incomplete or invalid expressions before tokenization; original whitespace is not retained. Tokenization does not change validation, rendering, or the stored payload, and does not tokenize surrounding JSON.
 
 The consumer chooses styling, for example with arbitrary CSS classes:
 
@@ -161,7 +161,7 @@ const template = new PayloadTemplate({ products: '{{products:string[??omit]??thr
 const classes: Record<PayloadExpressionTokenKind, string> = {
   delimiter: 'muted', variable: 'blue', punctuation: 'muted', type: 'purple',
   operator: 'orange', action: 'green', validator: 'blue', transformer: 'purple', function: 'purple',
-  keyword: 'orange', value: 'green', whitespace: 'plain', unknown: 'underlined',
+  interaction: 'blue', keyword: 'orange', value: 'green', whitespace: 'plain', unknown: 'underlined',
 };
 for (const { path, tokens } of template.tokenizePayloadExpression()) {
   const container = document.createElement('pre');

@@ -10,10 +10,11 @@ type Trim<S extends string> = S extends `${Whitespace}${infer Rest}` ? Trim<Rest
   : S extends `${infer Rest}${Whitespace}` ? Trim<Rest> : S;
 type Action = 'null' | 'omit' | 'throw';
 type Fallback = { operator: '??' | '||'; action: Action };
-type ParseAction<S extends string, Operator extends '??' | '||'> = Trim<S> extends infer A extends Action
+type Interactionless<S extends string> = S extends `${infer Value}@${string}` ? Trim<Value> : Trim<S>;
+type ParseActionWithInteraction<S extends string, Operator extends '??' | '||'> = Interactionless<S> extends infer A extends Action
   ? { operator: Operator; action: A } : never;
-type ParseFallback<S extends string> = Trim<S> extends `??${infer Rest}` ? ParseAction<Rest, '??'>
-  : Trim<S> extends `||${infer Rest}` ? ParseAction<Rest, '||'> : never;
+type ParseFallback<S extends string> = Trim<S> extends `??${infer Rest}` ? ParseActionWithInteraction<Rest, '??'>
+  : Trim<S> extends `||${infer Rest}` ? ParseActionWithInteraction<Rest, '||'> : never;
 type Primitive<S extends string> = S extends 'string' ? string : S extends 'number' ? number
   : S extends 'boolean' ? boolean : never;
 type Nullish = null | undefined;
@@ -26,7 +27,7 @@ type Expression = { input: unknown; optional: boolean };
 type ScopeFallback<S extends string> = S extends `${string}??${infer Rest}` ? `??${Rest}`
   : S extends `${string}||${infer Rest}` ? `||${Rest}` : '';
 type Base<S extends string, Acc extends string = ''> = S extends `${infer Head}${infer Tail}`
-  ? Head extends Whitespace | '=' | '!' | '~' | '>' | '?' | '|' ? Acc : Base<Tail, `${Acc}${Head}`> : Acc;
+  ? Head extends Whitespace | '=' | '!' | '~' | '>' | '?' | '|' | '@' ? Acc : Base<Tail, `${Acc}${Head}`> : Acc;
 type ApplyFallback<Value, S extends string> = Trim<S> extends '' ? { input: Value; optional: false }
   : ParseFallback<S> extends infer F extends Fallback
     ? { input: WithFallback<Value, F>; optional: F['action'] extends 'throw' ? false : true }

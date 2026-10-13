@@ -143,6 +143,76 @@ Template to use:
 }
 ```
 
+<a id="interaction-hints"></a>
+
+### Describe a consumer-owned form
+
+Add a final `@ name` suffix when a UI consumer should collect or present a variable in a particular way. The name is opaque to payload-vars: consumers define their own vocabulary. A lowercase category and optional style—such as `choice`, `date.picker`, or `text.multiline`—is a useful convention.
+
+```json
+{
+  "title": "Approval request",
+  "sections": [
+    {
+      "title": "Request details",
+      "content": {
+        "Plan": "{{plan:string}}",
+        "Description": "{{description:string ?? omit @ text.multiline}}",
+        "Billing period": "{{period:string in [monthly, annual] @ choice}}",
+        "Extensions": "{{extensions:string[reporting, audit log, single sign-on] || throw @ choice}}",
+        "Needed from": "{{neededFrom:string @ date.picker}}",
+        "Rating": "{{rating:number in [1, 2, 3, 4, 5] ?? omit @ rating.stars}}"
+      }
+    }
+  ]
+}
+```
+
+The `sections` structure and labels belong to the consumer. Payload-vars only exposes paths and contracts. Before any payload exists, `variables()` provides values such as:
+
+```js
+{
+  name: 'extensions',
+  type: 'string[]',
+  allowedValues: ['reporting', 'audit log', 'single sign-on'],
+  valueFallback: { operator: '||', action: 'throw' },
+  interaction: 'choice',
+  paths: ['$.sections[0].content.Extensions']
+}
+```
+
+A GitHub-renderable sketch of one possible consumer UI:
+
+> **Plan**
+>
+> Business *(read-only)*
+>
+> **Description**
+>
+> `[Add reporting and audit-log extensions…]`
+>
+> **Billing period**
+>
+> ◉ Monthly
+>
+> ○ Annual
+>
+> **Extensions**
+>
+> - [x] Reporting
+> - [x] Audit log
+> - [ ] Single sign-on
+>
+> **Needed from**
+>
+> `2026-11-01`
+>
+> **Rating**
+>
+> ★ ★ ★ ★ ☆
+
+The consumer flow is: construct the template, call `variables()`, interpret `interaction` using the consumer's own dictionary, collect ordinary payload data, and call `render(payload)`. Interaction hints never change validation; static options still come from `allowedValues`, while a consumer may also source dynamic options itself.
+
 <a id="missing-values-as-null"></a>
 
 ### Keep a place for a missing delivery note
