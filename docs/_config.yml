@@ -6,6 +6,7 @@ theme: minima
 github_username: ThisMeansMore
 
 header_pages:
+  - playground.html
   - examples.md
   - syntax.md
   - plugins.md

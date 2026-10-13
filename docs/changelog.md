@@ -11,6 +11,12 @@ Notable changes, starting with 1.0.0. Historical dates follow Git tags.
 
 The latest five releases are detailed below. Older releases have one-line summaries linking to their full notes in the [archive](changelog-archive.md).
 
+## Unreleased
+
+### Documentation
+
+- Added a browser playground that turns editable template JSON into a consumer-owned form and renders its values with the published package.
+
 ## 2.3.0 — 2026-10-13
 
 ### Added

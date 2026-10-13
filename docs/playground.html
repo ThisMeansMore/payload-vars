@@ -1,0 +1,104 @@
+---
+layout: default
+title: Playground
+permalink: /playground.html
+---
+
+<link rel="stylesheet" href="assets/playground.css">
+
+{% raw %}
+<div class="playground">
+  <header class="playground__intro">
+    <p class="playground__eyebrow">payload-vars playground</p>
+    <h1>From JSON template to form to payload.</h1>
+    <p>Edit the template, inspect its variable contracts, collect values with a small consumer-owned form, and render the final JSON. Everything runs locally in your browser.</p>
+  </header>
+
+  <div class="playground__actions" aria-label="Playground actions">
+    <button id="compile-template" type="button">Generate form</button>
+    <button id="reset-example" class="button-secondary" type="button">Reset example</button>
+    <span id="playground-status" class="playground__status" role="status" aria-live="polite"></span>
+  </div>
+
+  <div class="playground__grid">
+    <section class="playground__panel playground__panel--code" aria-labelledby="template-heading">
+      <div class="playground__panel-heading">
+        <div>
+          <p class="playground__step">01</p>
+          <h2 id="template-heading">Template JSON</h2>
+        </div>
+        <span>Editable</span>
+      </div>
+      <label class="visually-hidden" for="template-json">Template JSON</label>
+      <textarea id="template-json" spellcheck="false" autocomplete="off"></textarea>
+    </section>
+
+    <section class="playground__panel" aria-labelledby="form-heading">
+      <div class="playground__panel-heading">
+        <div>
+          <p class="playground__step">02</p>
+          <h2 id="form-heading">Generated form</h2>
+        </div>
+        <span>Consumer UI</span>
+      </div>
+      <p class="playground__note">This demo owns a tiny interaction dictionary. payload-vars only supplies contracts.</p>
+      <form id="generated-form"></form>
+      <button id="render-payload" type="button">Render form values</button>
+    </section>
+
+    <section class="playground__panel playground__panel--code" aria-labelledby="rendered-heading">
+      <div class="playground__panel-heading">
+        <div>
+          <p class="playground__step">03</p>
+          <h2 id="rendered-heading">Rendered payload</h2>
+        </div>
+        <span>template.render()</span>
+      </div>
+      <p class="playground__note">The form values are passed directly to the package. Validation and transformation errors appear here too.</p>
+      <pre id="rendered-json" tabindex="0"></pre>
+    </section>
+  </div>
+
+  <details class="playground__contracts">
+    <summary>Variable contracts returned by <code>variables()</code></summary>
+    <pre id="variable-contracts" tabindex="0"></pre>
+  </details>
+
+  <p class="playground__footnote">The form is intentionally small and replaceable. Try changing an <code>@ interaction</code>, removing an optional value, or entering a value outside an allowed domain.</p>
+</div>
+
+<script id="example-template" type="application/json">
+{
+  "title": "Team request",
+  "sections": [
+    {
+      "title": "Basics",
+      "content": {
+        "Plan": "{{plan:string in [Starter, Growth, Enterprise] @ choice}}",
+        "Description": "{{description:string ?? omit @ text.multiline}}"
+      }
+    },
+    {
+      "title": "Preferences",
+      "content": {
+        "Extensions": "{{extensions:string[Reporting, Audit log, Single sign-on] || throw @ choice}}",
+        "Needed from": "{{neededFrom:string @ date.picker}}",
+        "Rating": "{{rating:number in [1, 2, 3, 4, 5] ?? omit @ rating.stars}}"
+      }
+    }
+  ]
+}
+</script>
+
+<script id="example-payload" type="application/json">
+{
+  "plan": "Growth",
+  "description": "A compact form generated from the template contract.",
+  "extensions": ["Reporting", "Audit log"],
+  "neededFrom": "2026-11-01",
+  "rating": 4
+}
+</script>
+
+<script type="module" src="assets/playground.js"></script>
+{% endraw %}

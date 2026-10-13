@@ -1,6 +1,6 @@
 # payload-vars
 
-[Documentation](https://thismeansmore.github.io/payload-vars/)
+[Open the playground](https://thismeansmore.github.io/payload-vars/playground.html) · [Read the documentation](https://thismeansmore.github.io/payload-vars/)
 
 **Imagine a DTO with validation and transformation rules, all expressed in plain, human-readable JSON.** Templates live in data, so you can store them, inspect their input contracts, and render them into payloads with runtime values.
 
