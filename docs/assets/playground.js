@@ -3,6 +3,7 @@ import { PayloadTemplate } from 'https://cdn.jsdelivr.net/npm/payload-vars@2/dis
 const byId = id => document.getElementById(id);
 const templateEditor = byId('template-json');
 const generatedForm = byId('generated-form');
+const generatedFields = byId('generated-fields');
 const renderedOutput = byId('rendered-json');
 const contractsOutput = byId('variable-contracts');
 const status = byId('playground-status');
@@ -126,7 +127,7 @@ function createField(contract, currentValue) {
 }
 
 function buildForm() {
-  generatedForm.replaceChildren();
+  generatedFields.replaceChildren();
   const groups = new Map();
   for (const contract of contracts.filter(item => !item.derived)) {
     const title = sectionTitle(contract.paths[0]);
@@ -139,7 +140,7 @@ function buildForm() {
     const legend = document.createElement('legend');
     legend.textContent = title;
     section.append(legend, ...fields.map(contract => createField(contract, payload[contract.name])));
-    generatedForm.append(section);
+    generatedFields.append(section);
   }
 }
 
@@ -178,9 +179,11 @@ function renderPayload() {
     const rendered = compiled.render(payload);
     renderedOutput.textContent = formatJson(rendered);
     renderedOutput.dataset.state = 'success';
+    return true;
   } catch (error) {
     renderedOutput.textContent = describeError(error);
     renderedOutput.dataset.state = 'error';
+    return false;
   }
 }
 
@@ -196,7 +199,7 @@ function compileTemplate() {
   } catch (error) {
     compiled = undefined;
     contracts = [];
-    generatedForm.replaceChildren();
+    generatedFields.replaceChildren();
     contractsOutput.textContent = '';
     renderedOutput.textContent = describeError(error);
     setStatus(describeError(error), 'error');
@@ -209,22 +212,18 @@ function resetExample() {
   compileTemplate();
 }
 
-generatedForm.addEventListener('input', () => {
+generatedForm.addEventListener('submit', event => {
+  event.preventDefault();
+  if (!compiled) {
+    setStatus('Generate a valid form first.', 'error');
+    return;
+  }
   collectForm();
-  renderPayload();
+  const rendered = renderPayload();
+  setStatus(rendered ? 'Form payload validated, transformed, and rendered.' : 'Form payload failed validation.',
+    rendered ? 'success' : 'error');
 });
 byId('compile-template').addEventListener('click', compileTemplate);
 byId('reset-example').addEventListener('click', resetExample);
-byId('render-payload').addEventListener('click', () => {
-  try {
-    if (!compiled) throw new Error('Generate a valid form first.');
-    collectForm();
-    renderPayload();
-    setStatus('Form values rendered by payload-vars.', 'success');
-  } catch (error) {
-    renderedOutput.textContent = describeError(error);
-    setStatus(describeError(error), 'error');
-  }
-});
 
 resetExample();
