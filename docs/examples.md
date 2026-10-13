@@ -588,7 +588,7 @@ Template to use:
 
 ### Accept optional tag lists and clean their contents
 
-An empty list stays `[]`, even with `|| omit`.
+Use `|| omit` when an explicitly empty list should be omitted. Use `?? omit` when an empty list should remain `[]` and only a missing or nullish list should be omitted.
 
 <table>
 <thead>
@@ -618,7 +618,7 @@ An empty list stays `[]`, even with `|| omit`.
   "tags": [ // 🧹 Blank and null tags removed
     "new"
   ],
-  "savedTags": [], // ✅ Empty list kept
+  // savedTags omitted because [] triggers || omit
   "suggestedTags": null // ✅ Null list kept
 }
 ```

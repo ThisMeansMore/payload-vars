@@ -44,7 +44,7 @@ export class PayloadTemplate<const T extends JsonTemplateValue = JsonTemplateVal
   /** Return independent variable contracts in first occurrence order. */
   variables(): PayloadVariable[] {
     const declarations = [...this.#contract.declarations.values()];
-    const result: PayloadVariable[] = declarations.map(({ name, type, declaration, paths, function: fn, memberFallback, valueFallback, memberOperations, valueOperations }) => ({
+    const result: PayloadVariable[] = declarations.map(({ name, type, declaration, paths, function: fn, memberFallback, valueFallback, memberOperations, valueOperations, allowedValues }) => ({
       name, type, declaration, paths: [...paths],
       ...(fn ? { derived: true as const, function: { name: fn.name, arguments: [...fn.arguments] } } : {}),
       ...(fn ? { dependencies: fn.arguments.map(reference => reference.startsWith('$.')
@@ -54,6 +54,7 @@ export class PayloadTemplate<const T extends JsonTemplateValue = JsonTemplateVal
       ...(valueOperations ? { valueOperations: valueOperations.map(op => ({ ...op })) } : {}),
       ...(memberFallback ? { memberFallback: { ...memberFallback } } : {}),
       ...(valueFallback ? { valueFallback: { ...valueFallback } } : {}),
+      ...(allowedValues ? { allowedValues: [...allowedValues] } : {}),
     }));
     for (const declaration of declarations) {
       if (!declaration.function) continue;

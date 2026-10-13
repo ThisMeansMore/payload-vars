@@ -8,6 +8,7 @@ export type JsonTemplateValue = JsonPrimitive | { readonly [key: string]: JsonTe
 
 export type BaseType = 'string' | 'number' | 'boolean' | 'string[]' | 'number[]';
 export type PayloadVariableType = BaseType;
+export type AllowedValue = string | number | boolean;
 export interface FallbackExpression {
   operator: '??' | '||';
   action: 'null' | 'omit' | 'throw';
@@ -20,6 +21,8 @@ export interface ParsedVariableExpression {
   valueOperations?: PayloadOperation[];
   memberFallback?: FallbackExpression;
   valueFallback?: FallbackExpression;
+  /** Closed set accepted for a scalar value or for each array member. */
+  allowedValues?: AllowedValue[];
 }
 export interface PayloadVariable extends ParsedVariableExpression {
   /** Complete canonical placeholder, including its name and fallback expressions. */
@@ -50,15 +53,17 @@ export type PayloadTemplateIssue =
   | (RuntimeIssue & { code: 'INVALID_FUNCTION_ARGUMENT' | 'INVALID_FUNCTION_RESULT'; operation: string; argumentName?: string; argumentIndex?: number; source?: 'input' | 'property'; referencePath?: string; reason?: 'omitted' | 'null' | 'invalid-type' })
   | { code: 'INVALID_PLACEHOLDER'; path: string; placeholder: string }
   | { code: 'UNSUPPORTED_TYPE'; path: string; variableName: string; declaredType: string }
-  | { code: 'INVALID_FALLBACK_SYNTAX' | 'LEGACY_VALIDATION_SYNTAX'; path: string; variableName: string; placeholder: string }
+  | { code: 'INVALID_FALLBACK_SYNTAX' | 'INVALID_ALLOWED_VALUES_SYNTAX' | 'LEGACY_VALIDATION_SYNTAX'; path: string; variableName: string; placeholder: string }
   | (RuntimeIssue & { code: 'MISSING_VARIABLE' })
   | (RuntimeIssue & { code: 'INVALID_VARIABLE_TYPE'; actualType: string; valuePath?: string })
+  | (RuntimeIssue & { code: 'VALUE_NOT_ALLOWED'; valuePath?: string })
   | (RuntimeIssue & { code: 'FALLBACK_THROW'; operator: FallbackExpression['operator']; valuePath?: string })
   | (RuntimeIssue & { code: 'CANNOT_OMIT_ROOT' });
 
 export type PayloadExpressionTokenKind =
   | 'delimiter' | 'variable' | 'punctuation' | 'type'
-  | 'validator' | 'transformer' | 'function' | 'operator' | 'action' | 'whitespace' | 'unknown';
+  | 'validator' | 'transformer' | 'function' | 'operator' | 'action'
+  | 'keyword' | 'value' | 'whitespace' | 'unknown';
 
 export interface PayloadExpressionToken {
   kind: PayloadExpressionTokenKind;

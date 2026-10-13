@@ -33,16 +33,23 @@ describe('rendering and fallbacks', () => {
     }
   });
 
-  test('whole-array fallbacks preserve empty arrays and validate truthy non-arrays', () => {
+  test('whole-array ?? preserves empty arrays while || treats them as empty', () => {
     for (const type of ['string[]', 'number[]']) for (const operator of operators) for (const action of actions) {
       const template = { x: `{{x:${type} ${operator} ${action}}}` };
-      assert.deepEqual(new PayloadTemplate(template).render({ x: [] }), { x: [] });
+      if (operator === '??') assert.deepEqual(new PayloadTemplate(template).render({ x: [] }), { x: [] });
+      else if (action === 'throw') expectIssue(() => new PayloadTemplate(template).render({ x: [] }),
+        { code: 'FALLBACK_THROW', operator: '||' });
+      else assert.deepEqual(new PayloadTemplate(template).render({ x: [] }), action === 'omit' ? {} : { x: null });
       for (const variables of [{}, { x: undefined }, { x: null }, ...(operator === '||' ? [{ x: false }, { x: 0 }, { x: '' }] : [])]) {
         if (action === 'throw') expectIssue(() => new PayloadTemplate(template).render(variables), { code: 'FALLBACK_THROW' });
         else assert.deepEqual(new PayloadTemplate(template).render(variables), action === 'omit' ? {} : { x: null });
       }
       expectIssue(() => new PayloadTemplate(template).render({ x: {} }), { code: 'INVALID_VARIABLE_TYPE' });
     }
+    expectIssue(() => new PayloadTemplate('{{x:string[] || omit}}').render({ x: [] }),
+      { code: 'CANNOT_OMIT_ROOT' });
+    expectIssue(() => new PayloadTemplate('{{x:string[ || omit ]}}').render({ x: [[]] }),
+      { code: 'INVALID_VARIABLE_TYPE', valuePath: '$[0]' });
   });
 
   test('member fallback matrix preserves order and processes sparse slots as undefined', () => {

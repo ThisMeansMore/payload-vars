@@ -18,6 +18,7 @@ API reference, TypeScript input inference, migration guidance, and repository wo
 import {
   PayloadTemplate,
   PayloadTemplateError,
+  type AllowedValue,
   type BaseType,
   type FallbackExpression,
   type ParsedVariableExpression,
@@ -77,7 +78,7 @@ template.variables();
 // }]
 ```
 
-`BaseType` contains only the five supported base types. `PayloadVariableType` aliases `BaseType`. `ParsedVariableExpression` contains `name`, `type`, optional `memberFallback`, and optional `valueFallback`. `PayloadVariable` adds the canonical `declaration` string. Optional `memberOperations` and `valueOperations` contain ordered `PayloadOperation` objects (`{ kind: 'validator' | 'transformer', name: string, operator?: '?' | '~' }`). The optional `operator` marks conditional validators (`?`) and alternative transformers (`~`); it is absent for `!` and `>`. Absent fallbacks and empty operation lists are omitted from extracted objects.
+`BaseType` contains only the five supported base types. `PayloadVariableType` aliases `BaseType`. `AllowedValue` is `string | number | boolean`. `ParsedVariableExpression` contains `name`, `type`, optional `allowedValues`, optional `memberFallback`, and optional `valueFallback`. `PayloadVariable` adds the canonical `declaration` string. Optional `memberOperations` and `valueOperations` contain ordered `PayloadOperation` objects (`{ kind: 'validator' | 'transformer', name: string, operator?: '?' | '~' }`). The optional `operator` marks conditional validators (`?`) and alternative transformers (`~`); it is absent for `!` and `>`. Absent domains, fallbacks, and empty operation lists are omitted from extracted objects. Returned `allowedValues` arrays are independent copies.
 
 ### Rendering
 
@@ -85,7 +86,7 @@ template.variables();
 
 Literal templates infer required variables and their input types. Dynamic templates accept `Readonly<Record<string, unknown>>`. See the [TypeScript guide](#typescript-input-inference) for fallback typing, readonly inputs, and limits.
 
-Fallback evaluation precedes validation for both whole values and array members. Rendering stops at the first error. Root omission is an error because the method returns a JSON value.
+Fallback evaluation precedes validation for both whole values and array members. For whole arrays only, `||` also matches an empty array. Rendering stops at the first error. Root omission is an error because the method returns a JSON value.
 
 Runtime values are supplied per call and never stored on the instance. Reuse the same instance for multiple payloads; a failed render does not affect subsequent calls.
 
@@ -102,7 +103,7 @@ template.render({ products: ['C'] });            // { products: ['C'] }
 | --- | --- |
 | `INVALID_PLACEHOLDER` | `path`, `placeholder` |
 | `UNSUPPORTED_TYPE` | `path`, `variableName`, `declaredType` |
-| `INVALID_FALLBACK_SYNTAX`, `LEGACY_VALIDATION_SYNTAX` | `path`, `variableName`, `placeholder` |
+| `INVALID_FALLBACK_SYNTAX`, `INVALID_ALLOWED_VALUES_SYNTAX`, `LEGACY_VALIDATION_SYNTAX` | `path`, `variableName`, `placeholder` |
 | `VARIABLE_TYPE_CONFLICT` | `variableName`, `expectedType`, `conflictingType`, `path` |
 | `INVALID_FUNCTION_ARGUMENTS`, `FUNCTION_RESULT_TYPE_MISMATCH`, `INVALID_OMIT_OPERATION` | `path`, `variableName`, `operation` |
 | `UNKNOWN_FUNCTION_REFERENCE`, `FUNCTION_ARGUMENT_TYPE_MISMATCH` | `path`, `variableName`, `operation`, `argumentName`, `argumentIndex`, `referencePath`; type mismatches also include `expectedType`, `actualType` |
@@ -117,6 +118,7 @@ template.render({ products: ['C'] });            // { products: ['C'] }
 | `INVALID_TRANSFORMER_RESULT` | Runtime details, `kind`, `operation`, optional `valuePath` |
 | `MISSING_VARIABLE` | Runtime details |
 | `INVALID_VARIABLE_TYPE` | Runtime details, `actualType`, optional `valuePath` |
+| `VALUE_NOT_ALLOWED` | Runtime details, optional `valuePath` |
 | `FALLBACK_THROW` | Runtime details, `operator`, optional `valuePath` |
 | `CANNOT_OMIT_ROOT` | Runtime details |
 
@@ -148,7 +150,7 @@ Each result contains a JSON `path`, the normalized `expression` including mustac
 
 Each token has `kind`, exact normalized `text`, and `start` (inclusive) and `end` (exclusive) UTF-16 offsets relative to that entry's expression, not the serialized JSON. Concatenating its token texts reproduces the normalized expression. `TokenizedPayloadExpression`, `PayloadExpressionToken`, and `PayloadExpressionTokenKind` are exported types.
 
-Kinds are `delimiter`, `variable`, `punctuation`, `type`, `operator`, `action`, `validator`, `transformer`, `function`, `whitespace`, and `unknown`. Keywords are classified by position: `string` is a variable in `{{string:boolean}}`. Constructor validation rejects incomplete or invalid expressions before tokenization; original whitespace is not retained. Tokenization does not change validation, rendering, or the stored payload, and does not tokenize surrounding JSON.
+Kinds are `delimiter`, `variable`, `punctuation`, `type`, `operator`, `action`, `validator`, `transformer`, `function`, `keyword`, `value`, `whitespace`, and `unknown`. The allowed-values `in` token is a `keyword`, and domain entries are `value` tokens. Keywords are classified by position: `string` is a variable in `{{string:boolean}}`. Constructor validation rejects incomplete or invalid expressions before tokenization; original whitespace is not retained. Tokenization does not change validation, rendering, or the stored payload, and does not tokenize surrounding JSON.
 
 The consumer chooses styling, for example with arbitrary CSS classes:
 
@@ -158,7 +160,8 @@ import { PayloadTemplate, type PayloadExpressionTokenKind } from 'payload-vars';
 const template = new PayloadTemplate({ products: '{{products:string[??omit]??throw}}' });
 const classes: Record<PayloadExpressionTokenKind, string> = {
   delimiter: 'muted', variable: 'blue', punctuation: 'muted', type: 'purple',
-  operator: 'orange', action: 'green', validator: 'blue', transformer: 'purple', function: 'purple', whitespace: 'plain', unknown: 'underlined',
+  operator: 'orange', action: 'green', validator: 'blue', transformer: 'purple', function: 'purple',
+  keyword: 'orange', value: 'green', whitespace: 'plain', unknown: 'underlined',
 };
 for (const { path, tokens } of template.tokenizePayloadExpression()) {
   const container = document.createElement('pre');
@@ -236,10 +239,11 @@ Literal templates infer original inputs from every ordinary placeholder and ever
 | `boolean \|\| throw` | Required `true` |
 | `string[ ?? omit ]` | Required `readonly (string \| null \| undefined)[]` |
 | `number[ \|\| null ] ?? omit` | Optional array whose members accept numbers and representable falsy values, or a nullish whole value |
+| `string[] \|\| throw` | Required array; an empty array throws at runtime |
 
 For `null` and `omit`, fallback inputs are added to the declared base type. `??` admits `null` and `undefined`; `||` also admits `''`, `0`, `false`, and `0n`. Whole-value fallbacks make the property optional. Member fallbacks affect members independently and do not make the whole array optional.
 
-`throw` describes a requirement to the caller: values must satisfy the base type and cannot be nullish or missing. For `boolean || throw`, TypeScript can also exclude `false`. Runtime validation continues to throw when JavaScript callers or external data violate these requirements.
+`throw` describes a requirement to the caller: values must satisfy the base type and cannot be nullish or missing. For `boolean || throw`, TypeScript can also exclude `false`. For a whole array, `|| throw` additionally rejects `[]` at runtime. TypeScript cannot generally prove that an array is non-empty, so runtime validation remains authoritative.
 
 ### Reusable input types
 
@@ -281,6 +285,7 @@ TypeScript inference supplements validation; it does not replace it:
 
 - `number` includes `NaN` and infinities. Runtime validation enforces finite numbers.
 - TypeScript cannot subtract `0` from `number` or `''` from `string`. Such values still compile for `|| throw` and fail at runtime.
+- TypeScript cannot generally exclude an empty array. `[]` may compile for a whole-array `|| throw` declaration and then raise `FALLBACK_THROW` at runtime.
 - `NaN` has no distinct literal type. A non-number `|| null` or `|| omit` declaration accepts it at runtime, but its inferred input excludes general numbers other than `0`.
 - Syntax errors and conflicting declarations are still reported by the constructor. The type layer does not promise compile-time syntax diagnostics.
 - `render()` and `toJSON()` still return `JsonValue`, and `variables()` returns `PayloadVariable[]`. Precise output inference is outside this input-inference feature.
@@ -331,7 +336,7 @@ Choose explicit fallback behavior:
 - Use `string[ ?? null ]` to allow nullish members as JSON `null`.
 - Use `?? omit` or `|| omit` to remove a value from its container.
 
-The old nullable behavior has no exact universal replacement: empty arrays now remain empty, and `||` follows JavaScript truthiness consistently. Normalize special business values before supplying variables if needed.
+The old nullable behavior has no exact universal replacement. `??` preserves empty arrays; a whole-array `||` treats `[]` as empty and applies its fallback action. Normalize other special business values before supplying variables if needed.
 
 Extracted variables now include a canonical `declaration` and optional structured fallbacks. The `type` field always contains a base type. Incompatible source base types use `VARIABLE_TYPE_CONFLICT`; differing operations and fallbacks are allowed. Use canonical declaration fields when displaying contracts. Runtime issues now also include `declaration`. See [API and errors](#errors).
 
