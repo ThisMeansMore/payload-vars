@@ -20,8 +20,11 @@ function actualType(value: unknown): string {
 
 // An explicit result distinguishes a fallback-produced null from a value still needing validation.
 function fallback(value: unknown, expression: FallbackExpression | undefined,
-  declaration: Declaration, valuePath?: string): { value: null | typeof OMIT } | undefined {
-  if (!expression || !(expression.operator === '??' ? value === null || value === undefined : !value)) return;
+  declaration: Declaration, valuePath?: string, wholeValue = false): { value: null | typeof OMIT } | undefined {
+  const emptyArray = wholeValue && declaration.type.endsWith('[]') && Array.isArray(value) && value.length === 0;
+  const matches = expression?.operator === '??' ? value === null || value === undefined
+    : expression?.operator === '||' && (!value || emptyArray);
+  if (!expression || !matches) return;
   if (expression.action === 'throw') {
     throw new PayloadTemplateError({ code: 'FALLBACK_THROW', ...details(declaration), operator: expression.operator,
       ...(valuePath === undefined ? {} : { valuePath }) });
@@ -30,7 +33,7 @@ function fallback(value: unknown, expression: FallbackExpression | undefined,
 }
 
 function validate(value: unknown, declaration: Declaration, plugins: PluginRegistries): RenderedValue {
-  const result = fallback(value, declaration.valueFallback, declaration);
+  const result = fallback(value, declaration.valueFallback, declaration, undefined, true);
   if (result) return result.value;
   const fail = (bad: unknown, valuePath?: string): never => {
     throw new PayloadTemplateError({ code: 'INVALID_VARIABLE_TYPE', ...details(declaration),
@@ -41,6 +44,11 @@ function validate(value: unknown, declaration: Declaration, plugins: PluginRegis
     if (type === 'number' && typeof item === 'number' && Number.isFinite(item)) return item;
     if (type === 'boolean' && typeof item === 'boolean') return item;
     return fail(item, path);
+  };
+  const allowed = (item: JsonValue, path?: string): JsonValue => {
+    if (!declaration.allowedValues || declaration.allowedValues.includes(item as never)) return item;
+    throw new PayloadTemplateError({ code: 'VALUE_NOT_ALLOWED', ...details(declaration),
+      ...(path === undefined ? {} : { valuePath: path }) });
   };
   const operations = (initial: JsonValue, ops: PayloadOperation[] | undefined, type: string, valuePath?: string): JsonValue => {
     let current = initial;
@@ -84,7 +92,7 @@ function validate(value: unknown, declaration: Declaration, plugins: PluginRegis
     }
     return current;
   };
-  if (!declaration.type.endsWith('[]')) return operations(primitive(value, declaration.type), declaration.valueOperations, declaration.type);
+  if (!declaration.type.endsWith('[]')) return operations(allowed(primitive(value, declaration.type)), declaration.valueOperations, declaration.type);
   if (!Array.isArray(value)) return fail(value);
   const output: JsonValue[] = [];
   for (let index = 0; index < value.length; index++) {
@@ -92,7 +100,7 @@ function validate(value: unknown, declaration: Declaration, plugins: PluginRegis
     const member = fallback(value[index], declaration.memberFallback, declaration, path);
     if (member) {
       if (member.value !== OMIT) output.push(member.value);
-    } else output.push(operations(primitive(value[index], declaration.type.slice(0, -2), path),
+    } else output.push(operations(allowed(primitive(value[index], declaration.type.slice(0, -2), path), path),
       declaration.memberOperations, declaration.type.slice(0, -2), path));
   }
   return operations(output, declaration.valueOperations, declaration.type);

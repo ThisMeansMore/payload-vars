@@ -18,11 +18,46 @@ The `PayloadTemplate` constructor accepts parsed JSON values. A placeholder occu
 | `string[]` | Arrays of strings |
 | `number[]` | Arrays of finite numbers |
 
-Values are never coerced. Without a fallback, missing variables fail with `MISSING_VARIABLE`; supplied `undefined`, `null`, and incompatible values fail type validation. Empty arrays remain empty. There are no separate nullable or optional types.
+Values are never coerced. Without a fallback, missing variables fail with `MISSING_VARIABLE`; supplied `undefined`, `null`, and incompatible values fail type validation. Empty arrays remain empty unless a whole-value `||` fallback handles them. There are no separate nullable or optional types.
+
+## Allowed values
+
+Use a comma-separated domain to restrict a scalar or every member of an array:
+
+```text
+{{color:string in [ black, white, green ]}}
+{{optionalColor:string in [ black, white, green ] ?? omit}}
+{{colors:string[ black, white, green ] || throw}}
+{{optionalColors:string[ black, white, green ] ?? omit}}
+{{rating:number in [ 1, 2, 3, 4, 5 ]}}
+{{ratings:number[ 1, 2, 3 ]}}
+{{enabled:boolean in [ true, false ]}}
+```
+
+`type in [a, b]` constrains a scalar to an enum-like literal domain and is required unless it has a whole-value fallback. `type[a, b]` declares an array and applies the same constraint to each member. The fallback outside the brackets controls the whole array: `?? omit` makes it optional, while `|| throw` requires at least one member.
+
+The domain must be non-empty, contain no duplicates, and match the declared base type. String values may be bare words or phrases. Quote empty strings and values containing commas with JSON double quotes or single quotes:
+
+```text
+{{department:string in [ Research, Research and Development, "Sales, Europe", '' ]}}
+```
+
+The canonical contract uses spaces after commas and exposes the parsed primitive literals as `allowedValues`. Consumers can obtain both the runtime type and finite domain before any payload exists:
+
+```js
+const [variable] = new PayloadTemplate(
+  '{{color:string in [black, white, green]}}',
+).variables();
+
+variable.type;          // 'string'
+variable.allowedValues; // ['black', 'white', 'green']
+```
+
+Rendering first applies the whole-value fallback, then checks the base type and allowed domain, then runs value operations. Array members are checked individually and report their original input position through `valuePath`. A value outside the domain raises `VALUE_NOT_ALLOWED`; runtime values are not copied into the error.
 
 ## Fallback expressions
 
-Fallbacks run before type validation. `??` matches `null`, `undefined`, and missing variables. `||` matches all JavaScript falsy values, including `""`, `0`, `false`, and `NaN`. Arrays, including `[]`, are truthy. A falsy non-array input also triggers an array's `||` fallback before array validation.
+Fallbacks run before type validation. `??` matches `null`, `undefined`, and missing variables. `||` matches all JavaScript falsy values, including `""`, `0`, `false`, and `NaN`; for a whole array it also matches `[]`. This type-aware empty-array rule makes `string[black, white] || throw` a required, non-empty constrained array. A falsy non-array input still triggers an array's `||` fallback before array validation.
 
 | Action | Result |
 | --- | --- |
@@ -38,9 +73,10 @@ Values that do not trigger a fallback must still pass strict base-type validatio
 {{amount:number || throw}}
 {{enabled:boolean ?? throw}}
 {{products:string[] ?? omit}}
+{{colors:string[ black, white ] || throw}}
 ```
 
-`string ?? throw` preserves `""`, `number ?? throw` preserves `0`, and `boolean ?? throw` preserves `false`. Using `|| throw` rejects each of those values.
+`string ?? throw` preserves `""`, `number ?? throw` preserves `0`, and `boolean ?? throw` preserves `false`. Using `|| throw` rejects each of those values and rejects an empty whole array. Member-level `||` retains ordinary falsy matching; it does not treat a nested array as a valid member.
 
 ## Array members
 
@@ -93,7 +129,7 @@ Plugin whitespace follows the existing canonical rules: `string[!date.dateonly>d
 
 ## Omission
 
-Omission removes an object property, a placeholder entry in a template array, or an individual member of a supplied array. Empty containers remain present. Intentional omission uses an internal symbol, never `undefined` or `null`.
+Omission removes an object property, a placeholder entry in a template array, or an individual member of a supplied array. Empty containers otherwise remain present; a whole-array `|| omit` intentionally removes an empty supplied array. Intentional omission uses an internal symbol, never `undefined` or `null`.
 
 A root placeholder has no containing structure. If its `omit` fallback triggers, rendering raises `CANNOT_OMIT_ROOT`; otherwise it renders normally. `render()` always returns a JSON value on success.
 
@@ -108,6 +144,8 @@ Whitespace between tokens is insignificant, including spaces, tabs, and newlines
 | `string [ ]` | `string[]` |
 | `string[?? omit]` | `string[ ?? omit ]` |
 | `string [   ?? omit ]??throw` | `string[ ?? omit ] ?? throw` |
+| `string in[black,white]` | `string in [ black, white ]` |
+| `string[black,white]??omit` | `string[ black, white ] ?? omit` |
 
 `toJSON()` returns a template with canonical placeholders. Extraction exposes the complete canonical placeholder as `declaration`. It does not mutate template strings. Identical canonical declarations remain deduplicated by `variables()`. Distinct expressions for the same source name retain their own declarations and paths. Incompatible base types raise `VARIABLE_TYPE_CONFLICT`.
 

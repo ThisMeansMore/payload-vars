@@ -92,6 +92,27 @@ const payload = template.render({
 
 `template.toJSON()` returns the normalized template; `render()` returns the payload with values filled in.
 
+### Allowed values
+
+Declare a closed set directly in the template when a value must come from a fixed domain:
+
+```js
+const template = new PayloadTemplate({
+  requiredColor: '{{requiredColor:string in [black, white, green]}}',
+  optionalColor: '{{optionalColor:string in [black, white, green] ?? omit}}',
+  requiredColors: '{{requiredColors:string[black, white, green] || throw}}',
+  optionalColors: '{{optionalColors:string[black, white, green] ?? omit}}',
+});
+
+template.variables();
+// The contracts include allowedValues: ['black', 'white', 'green'].
+
+template.render({ requiredColor: 'black', requiredColors: ['white', 'green'] }); // accepted
+template.render({ requiredColor: 'black', requiredColors: [] }); // throws FALLBACK_THROW
+```
+
+`type in [a, b]` constrains a scalar to an enum-like set of literals. `type[a, b]` constrains every array member to that set. An outer `?? omit` makes the value optional; `|| throw` requires a non-empty array. Consumers can inspect the same literals through `allowedValues` from `variables()`.
+
 Placeholders occupy an entire string. Types are `string`, `number`, `boolean`, `string[]`, and `number[]`. Use `??` for nullish fallback or `||` for falsy fallback, with actions `null`, `omit`, or `throw`. Invalid templates throw `PayloadTemplateError`; inputs are never mutated.
 
 TypeScript infers `render()` inputs from literal templates. Use `as const` on separately declared templates to preserve their literal types; see [TypeScript input inference](docs/development.md#typescript-input-inference).

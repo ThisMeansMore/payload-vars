@@ -80,6 +80,17 @@ new PayloadTemplate('{{x:number[||omit]??throw}}').render({ x: [1, null, false] 
 // @ts-expect-error Combined outer throw still requires the array.
 new PayloadTemplate('{{x:number[||omit]??throw}}').render({});
 
+const allowedValues = new PayloadTemplate({
+  color: '{{color:string in [black, white]}}', colors: '{{colors:string[black, white] ?? omit}}',
+  rating: '{{rating:number in [1, 2, 3]}}', enabled: '{{enabled:boolean in [true, false]}}',
+});
+allowedValues.render({ color: 'black', colors: ['white'], rating: 2, enabled: false });
+allowedValues.render({ color: 'custom', rating: 99, enabled: true }); // Runtime validation narrows the domain.
+// @ts-expect-error The scalar still requires a string.
+allowedValues.render({ color: 1, rating: 2, enabled: true });
+// @ts-expect-error The array still requires string members.
+allowedValues.render({ color: 'black', colors: [1], rating: 2, enabled: true });
+
 const whitespace = new PayloadTemplate({
   values: '{{ \tx \n: string \r[\t??\nomit\r] \n??\tthrow \n}}',
   again: '{{x:string[??omit]??throw}}',
@@ -132,6 +143,8 @@ new PayloadTemplate('{{x:boolean || null}}').render({ x: 'yes' });
 new PayloadTemplate('{{x:boolean}}').render({ x: null });
 // @ts-expect-error Whole-array || throw requires an actual array.
 new PayloadTemplate('{{x:string[] || throw}}').render({ x: false });
+// Empty arrays cannot be excluded statically and are rejected by || throw at runtime.
+new PayloadTemplate('{{x:string[] || throw}}').render({ x: [] });
 // @ts-expect-error Member || throw requires numbers, not falsy values of other types.
 new PayloadTemplate('{{x:number[ || throw ]}}').render({ x: [false] });
 

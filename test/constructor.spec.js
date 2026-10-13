@@ -29,7 +29,7 @@ describe('template construction', () => {
     }
     for (const expression of ['string?', 'string!', 'string_', 'string[]?', 'string?[]',
       'string ? null', 'string ??', 'string ?? undefined', 'string && throw', 'string[ ?? ]',
-      'string[ ?? omit', 'string[ omit ]', 'string[ ?? omit ] ??', 'string ?? null ?? throw',
+      'string[ ?? omit', 'string[ ?? omit ] ??', 'string ?? null ?? throw',
       'string[ ?? omit ][ ?? null ]', 'string | | null', 'string ?? n ull']) {
       assert.throws(() => new PayloadTemplate(`{{x:${expression}}}`), error => {
         assert.ok(error instanceof PayloadTemplateError);

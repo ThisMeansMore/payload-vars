@@ -9,7 +9,8 @@ const actionPattern = new RegExp(`^(${actionSource})$`);
 const operatorPattern = new RegExp(`^(${operatorSource})$`);
 type Position = 'function' | 'call' | 'argument' | 'argumentEnd' | 'outside' | 'variable' | 'colon' | 'type' | 'tail'
   | 'memberValidator' | 'memberTransformer' | 'valueValidator' | 'valueTransformer'
-  | 'member' | 'memberAction' | 'memberEnd' | 'arrayEnd' | 'valueAction' | 'end';
+  | 'member' | 'memberAction' | 'memberEnd' | 'arrayEnd' | 'valueAction' | 'end'
+  | 'allowedOpen' | 'allowedValue' | 'allowedSeparator';
 
 export function tokenizePayloadExpression(expression: string): PayloadExpressionToken[] {
   const tokens: PayloadExpressionToken[] = [];
@@ -17,7 +18,7 @@ export function tokenizePayloadExpression(expression: string): PayloadExpression
   let conditional: 'validator' | 'success' | undefined;
   // Whole word/operator runs avoid highlighting valid prefixes of invalid text.
   // The final alternative consumes any code point, including lone surrogates.
-  const pieces = /\s+|\{\{|\}\}|[A-Za-z0-9_$.]+(?:\[[0-9]+\](?:\.[A-Za-z0-9_]+)*)*|\[[0-9]+\](?:\.[A-Za-z0-9_]+|\[[0-9]+\])*|[?|]+|[^]/gu;
+  const pieces = /\s+|\{\{|\}\}|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?|[A-Za-z0-9_$.]+(?:\[[0-9]+\](?:\.[A-Za-z0-9_]+)*)*|\[[0-9]+\](?:\.[A-Za-z0-9_]+|\[[0-9]+\])*|[?|]+|[^]/gu;
   for (const match of expression.matchAll(pieces)) {
     const text = match[0];
     const start = match.index!;
@@ -29,7 +30,9 @@ export function tokenizePayloadExpression(expression: string): PayloadExpression
       position = text === '{{' ? 'variable' : 'outside';
       conditional = undefined;
     } else if (position !== 'outside') {
-      if (text === '=' && (position === 'tail' || position === 'arrayEnd')) {
+      if (position === 'tail' && text === 'in') {
+        kind = 'keyword'; position = 'allowedOpen';
+      } else if (text === '=' && (position === 'tail' || position === 'arrayEnd')) {
         kind = 'operator'; position = 'function';
       } else if (position === 'function' && operationPattern.test(text)) {
         kind = 'function'; position = 'call';
@@ -39,6 +42,8 @@ export function tokenizePayloadExpression(expression: string): PayloadExpression
         kind = 'variable'; position = 'argumentEnd';
       } else if (position === 'argumentEnd' && text === ',') {
         kind = 'punctuation'; position = 'argument';
+      } else if (position === 'allowedSeparator' && text === ',') {
+        kind = 'punctuation'; position = 'allowedValue';
       } else if ((position === 'argument' || position === 'argumentEnd') && text === ')') {
         kind = 'punctuation'; position = 'arrayEnd';
       } else if (text === ':' || text === '[' || text === ']') {
@@ -46,7 +51,8 @@ export function tokenizePayloadExpression(expression: string): PayloadExpression
         conditional = undefined;
         if (text === ':' && (position === 'colon' || position === 'variable')) position = 'type';
         else if (text === '[' && position === 'tail') position = 'member';
-        else if (text === ']' && (position === 'member' || position === 'memberAction' || position === 'memberEnd')) position = 'arrayEnd';
+        else if (text === '[' && position === 'allowedOpen') position = 'allowedValue';
+        else if (text === ']' && (position === 'member' || position === 'memberAction' || position === 'memberEnd' || position === 'allowedSeparator')) position = 'arrayEnd';
       } else if (position === 'variable' && variablePattern.test(text)) {
         kind = 'variable';
         position = 'colon';
@@ -70,6 +76,9 @@ export function tokenizePayloadExpression(expression: string): PayloadExpression
       } else if (actionPattern.test(text) && (position === 'memberAction' || position === 'valueAction')) {
         kind = 'action';
         position = position === 'memberAction' ? 'memberEnd' : 'end';
+      } else if (position === 'allowedValue' || position === 'member'
+        || (position === 'allowedSeparator' && text !== ']' && text !== ',')) {
+        kind = 'value'; position = 'allowedSeparator';
       }
     }
     tokens.push({ kind, text, start, end: start + text.length });

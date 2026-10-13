@@ -31,11 +31,17 @@ type ApplyFallback<Value, S extends string> = Trim<S> extends '' ? { input: Valu
   : ParseFallback<S> extends infer F extends Fallback
     ? { input: WithFallback<Value, F>; optional: F['action'] extends 'throw' ? false : true }
     : never;
-type Members<Value, S extends string> = ApplyFallback<Value, ScopeFallback<S>> extends infer E extends Expression ? E['input'] : never;
-type ParseExpression<S extends string> = S extends `${infer Base}[${infer Member}]${infer Whole}`
-  ? Trim<Base> extends 'string' | 'number'
-    ? ApplyFallback<ReadonlyArray<Members<Primitive<Trim<Base>>, Member>>, ScopeFallback<Whole>> : never
-  : ApplyFallback<Primitive<Base<Trim<S>>>, ScopeFallback<S>>;
+type Members<Value, S extends string> = Trim<S> extends '' ? Value
+  : Trim<S> extends `${'!' | '?' | '>'}${string}` | `${'??' | '||'}${string}`
+    ? ApplyFallback<Value, ScopeFallback<S>> extends infer E extends Expression ? E['input'] : never
+    : Value;
+type ParseExpression<S extends string> = S extends `${infer Scalar} in [${string}]${infer Whole}`
+  ? Trim<Scalar> extends 'string' | 'number' | 'boolean'
+    ? ApplyFallback<Primitive<Trim<Scalar>>, ScopeFallback<Whole>> : never
+  : S extends `${infer Base}[${infer Member}]${infer Whole}`
+    ? Trim<Base> extends 'string' | 'number'
+      ? ApplyFallback<ReadonlyArray<Members<Primitive<Trim<Base>>, Member>>, ScopeFallback<Whole>> : never
+    : ApplyFallback<Primitive<Base<Trim<S>>>, ScopeFallback<S>>;
 
 declare const dynamicTemplate: unique symbol;
 type Dynamic = typeof dynamicTemplate;

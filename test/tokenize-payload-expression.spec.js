@@ -28,6 +28,17 @@ describe('syntax highlighting', () => {
         ['delimiter', '{{'], ['variable', name], ['punctuation', ':'], ['type', type], ['delimiter', '}}'],
       ]);
     }
+    assert.deepEqual(significant('{{color:string in [ black, "off white", green ]}}'), [
+      ['delimiter', '{{'], ['variable', 'color'], ['punctuation', ':'], ['type', 'string'],
+      ['keyword', 'in'], ['punctuation', '['], ['value', 'black'], ['punctuation', ','],
+      ['value', '"off white"'], ['punctuation', ','], ['value', 'green'], ['punctuation', ']'],
+      ['delimiter', '}}'],
+    ]);
+    assert.deepEqual(significant('{{colors:string[ black, white ] ?? omit}}'), [
+      ['delimiter', '{{'], ['variable', 'colors'], ['punctuation', ':'], ['type', 'string'],
+      ['punctuation', '['], ['value', 'black'], ['punctuation', ','], ['value', 'white'],
+      ['punctuation', ']'], ['operator', '??'], ['action', 'omit'], ['delimiter', '}}'],
+    ]);
     for (const [name, type, operator, action, fallback] of [
       ['products', 'string', '??', 'omit', 'throw'], ['amounts', 'number', '||', 'null', 'omit'],
     ]) {
