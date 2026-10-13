@@ -1,10 +1,12 @@
 import { PayloadTemplate } from 'https://cdn.jsdelivr.net/npm/payload-vars@2/dist/index.js';
 import { highlightJson } from './playground-highlight.js';
+import { formatJson, parseJson } from './playground-json.js';
 
 const byId = id => document.getElementById(id);
 const templateEditorShell = byId('template-editor');
 const templateEditor = byId('template-json');
 const templateHighlight = byId('template-highlight');
+const templateError = byId('template-error');
 const generatedForm = byId('generated-form');
 const generatedFields = byId('generated-fields');
 const renderedOutput = byId('rendered-json');
@@ -18,8 +20,8 @@ let rawTemplate;
 let contracts = [];
 let payload = {};
 let expressionTokens = new Map();
+let jsonFeedbackTimer;
 
-const formatJson = value => JSON.stringify(value, null, 2);
 const sameValue = (left, right) => JSON.stringify(left) === JSON.stringify(right);
 
 function highlightTemplate() {
@@ -35,6 +37,28 @@ function syncTemplateScroll() {
 function setStatus(message, state = '') {
   status.textContent = message;
   status.dataset.state = state;
+}
+
+function setTemplateError(message = '') {
+  templateError.textContent = message;
+  templateEditor.setAttribute('aria-invalid', String(Boolean(message)));
+  if (message) templateEditorShell.dataset.state = 'error';
+  else delete templateEditorShell.dataset.state;
+}
+
+function readTemplateJson({ format = false } = {}) {
+  const result = parseJson(templateEditor.value);
+  if (!result.ok) {
+    const message = `Invalid JSON: ${result.message}`;
+    setTemplateError(message);
+    return { ...result, message };
+  }
+  if (format) {
+    templateEditor.value = formatJson(result.value);
+    highlightTemplate();
+  }
+  setTemplateError();
+  return result;
 }
 
 function describeError(error) {
@@ -214,8 +238,21 @@ function renderPayload() {
 }
 
 function compileTemplate() {
+  clearTimeout(jsonFeedbackTimer);
+  const parsed = readTemplateJson({ format: true });
+  if (!parsed.ok) {
+    compiled = undefined;
+    contracts = [];
+    expressionTokens = new Map();
+    generatedFields.replaceChildren();
+    contractsOutput.textContent = '';
+    renderedOutput.textContent = parsed.message;
+    renderedOutput.dataset.state = 'error';
+    setStatus(parsed.message, 'error');
+    return;
+  }
   try {
-    rawTemplate = JSON.parse(templateEditor.value);
+    rawTemplate = parsed.value;
     compiled = new PayloadTemplate(rawTemplate);
     rawTemplate = compiled.toJSON();
     templateEditor.value = formatJson(rawTemplate);
@@ -233,8 +270,11 @@ function compileTemplate() {
     highlightTemplate();
     generatedFields.replaceChildren();
     contractsOutput.textContent = '';
-    renderedOutput.textContent = describeError(error);
-    setStatus(describeError(error), 'error');
+    const message = `Invalid template: ${describeError(error)}`;
+    renderedOutput.textContent = message;
+    renderedOutput.dataset.state = 'error';
+    setTemplateError(message);
+    setStatus(message, 'error');
   }
 }
 
@@ -260,6 +300,12 @@ byId('reset-example').addEventListener('click', resetExample);
 templateEditor.addEventListener('input', () => {
   expressionTokens = new Map();
   highlightTemplate();
+  clearTimeout(jsonFeedbackTimer);
+  jsonFeedbackTimer = setTimeout(readTemplateJson, 350);
+});
+templateEditor.addEventListener('blur', () => {
+  clearTimeout(jsonFeedbackTimer);
+  readTemplateJson({ format: true });
 });
 templateEditor.addEventListener('scroll', syncTemplateScroll);
 
