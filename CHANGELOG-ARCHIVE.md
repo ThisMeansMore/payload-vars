@@ -2,6 +2,12 @@
 
 Full notes for older releases. See the [changelog](CHANGELOG.md) for the latest five releases and a summary of this archive.
 
+## 2.2.2 — 2026-09-29
+
+### Changes
+
+- style: improved example design
+
 ## 2.2.1 — 2026-09-29
 
 ### Changes
