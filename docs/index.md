@@ -218,6 +218,7 @@ Import from the package root so your runtime selects the appropriate entry point
 
 ## Guides
 
+- [Playground](playground.html): edit a template, generate a simple form, and render its payload.
 - [Changelog](changelog.md): version history and unreleased changes.
 - [Examples](examples.md): demo templates and resulting payloads side by side.
 - [Template syntax](syntax.md): types, fallbacks, array members, and omission.
