@@ -9,6 +9,12 @@ title: Changelog archive
 
 Full notes for older releases. See the [changelog](changelog.md) for the latest five releases and a summary of this archive.
 
+## 2.2.1 — 2026-09-29
+
+### Changes
+
+- docs: examples updated
+
 ## 2.2.0 — 2026-09-28
 
 - **Breaking:** bare function arguments now reference evaluated template properties. Prefix arguments with `$.` to retain original render-input semantics; mixed sources are supported.
