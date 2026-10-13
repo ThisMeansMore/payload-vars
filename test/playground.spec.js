@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { PayloadTemplate } from '../dist/index.js';
 import { highlightJson } from '../docs/assets/playground-highlight.js';
+import { formatJson, parseJson } from '../docs/assets/playground-json.js';
 
 const read = path => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
 
@@ -34,6 +35,8 @@ test('playground example compiles, renders, and is linked from the project home'
   assert.match(page, /assets\/playground\.js/);
   assert.match(page, /assets\/playground\.css/);
   assert.match(page, /id="template-highlight"/);
+  assert.match(page, /id="template-error"[\s\S]*role="alert"/);
+  assert.match(page, /aria-describedby="template-error" aria-invalid="false"/);
   assert.match(page, /<form id="generated-form" novalidate>[\s\S]*<button type="submit">Validate and render<\/button>/);
   assert.equal((page.match(/playground__panel(?: |")/g) ?? []).length, 3);
   assert.doesNotMatch(page, /id="payload-json"/);
@@ -42,8 +45,23 @@ test('playground example compiles, renders, and is linked from the project home'
   assert.match(browserModule, /compiled\.render\(payload\)/);
   assert.match(browserModule, /compiled\.tokenizePayloadExpression\(\)/);
   assert.match(browserModule, /import \{ highlightJson \} from '\.\/playground-highlight\.js'/);
+  assert.match(browserModule, /setTimeout\(readTemplateJson, 350\)/);
+  assert.match(browserModule, /templateEditor\.addEventListener\('blur'/);
+  assert.match(browserModule, /`Invalid JSON: \$\{result\.message\}`/);
+  assert.match(browserModule, /templateEditor\.setAttribute\('aria-invalid'/);
   assert.match(browserModule, /marker\.className = 'playground__required'/);
   assert.match(browserModule, /required \? ' \(required\)' : ''/);
+});
+
+test('playground JSON helpers format valid input and describe invalid input', () => {
+  const parsed = parseJson('{"title":"Example","enabled":true}');
+  assert.deepEqual(parsed, { ok: true, value: { title: 'Example', enabled: true } });
+  assert.equal(formatJson(parsed.value), '{\n  "title": "Example",\n  "enabled": true\n}');
+
+  const invalid = parseJson('{"title":}');
+  assert.equal(invalid.ok, false);
+  assert.equal(typeof invalid.message, 'string');
+  assert.ok(invalid.message.length > 0);
 });
 
 test('playground browser module is syntactically valid', () => {

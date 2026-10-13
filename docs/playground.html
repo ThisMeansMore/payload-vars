@@ -32,8 +32,10 @@ permalink: /playground.html
       <label class="visually-hidden" for="template-json">Template JSON</label>
       <div id="template-editor" class="playground__code-editor">
         <pre id="template-highlight" aria-hidden="true"></pre>
-        <textarea id="template-json" spellcheck="false" autocomplete="off" wrap="off"></textarea>
+        <textarea id="template-json" spellcheck="false" autocomplete="off" wrap="off"
+          aria-describedby="template-error" aria-invalid="false"></textarea>
       </div>
+      <p id="template-error" class="playground__editor-message" role="alert" aria-live="polite"></p>
     </section>
 
     <section class="playground__panel" aria-labelledby="form-heading">

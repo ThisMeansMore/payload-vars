@@ -8,7 +8,7 @@ The latest five releases are detailed below. Older releases have one-line summar
 
 ### Documentation
 
-- Added a browser playground with syntax-highlighted template JSON that generates a consumer-owned form and renders its values with the published package.
+- Added a browser playground with syntax-highlighted, autoformatted JSON and inline syntax feedback that generates a consumer-owned form and renders its values with the published package.
 
 ## 2.3.0 — 2026-10-13
 
