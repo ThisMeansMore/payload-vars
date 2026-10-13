@@ -24,8 +24,12 @@ test('playground example compiles, renders, and is linked from the project home'
   assert.doesNotMatch(read('docs/index.md'), /Open the playground.*Read the documentation/);
   assert.match(page, /assets\/playground\.js/);
   assert.match(page, /assets\/playground\.css/);
+  assert.match(page, /<form id="generated-form">[\s\S]*<button type="submit">Validate and render<\/button>/);
   assert.equal((page.match(/playground__panel(?: |")/g) ?? []).length, 3);
   assert.doesNotMatch(page, /id="payload-json"/);
+  const browserModule = read('docs/assets/playground.js');
+  assert.match(browserModule, /generatedForm\.addEventListener\('submit'/);
+  assert.match(browserModule, /compiled\.render\(payload\)/);
 });
 
 test('playground browser module is syntactically valid', () => {
