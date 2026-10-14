@@ -2,6 +2,13 @@
 
 Full notes for older releases. See the [changelog](CHANGELOG.md) for the latest five releases and a summary of this archive.
 
+## 2.2.6 — 2026-10-13
+
+### Added
+
+- Static allowed-value domains for required scalars (`string in [black, white]`) and constrained arrays (`string[black, white]`), including runtime validation, extracted `allowedValues`, highlighting tokens, TypeScript support, and documentation.
+- Whole-array `||` fallbacks now treat `[]` as empty, enabling concise non-empty constrained arrays such as `string[black, white] || throw`; `??` continues to preserve empty arrays.
+
 ## 2.2.5 — 2026-10-01
 
 ### Changes
