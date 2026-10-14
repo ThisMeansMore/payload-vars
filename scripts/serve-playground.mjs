@@ -15,7 +15,7 @@ const contentTypes = new Map([
   ['.svg', 'image/svg+xml'],
 ]);
 
-function isTailscaleAddress(address) {
+function isPrivateNetworkAddress(address) {
   const [first, second] = address.split('.').map(Number);
   return first === 100 && second >= 64 && second <= 127;
 }
@@ -24,7 +24,7 @@ export function playgroundUrls(bindHost = host, bindPort = port, interfaces = ne
   const path = '/playground.html';
   if (bindHost !== '0.0.0.0' && bindHost !== '::') {
     const local = bindHost === '127.0.0.1' || bindHost === 'localhost';
-    return [{ label: local ? 'Local' : isTailscaleAddress(bindHost) ? 'Tailscale' : 'Network',
+    return [{ label: local ? 'Local' : isPrivateNetworkAddress(bindHost) ? 'Private' : 'Network',
       url: `http://${bindHost}:${bindPort}${path}` }];
   }
   const addresses = new Set();
@@ -34,10 +34,10 @@ export function playgroundUrls(bindHost = host, bindPort = port, interfaces = ne
     }
   }
   const networkUrls = [...addresses].map(address => ({
-    label: isTailscaleAddress(address) ? 'Tailscale' : 'Network',
+    label: isPrivateNetworkAddress(address) ? 'Private' : 'Network',
     url: `http://${address}:${bindPort}${path}`,
   })).sort((left, right) => {
-    const labelOrder = Number(right.label === 'Tailscale') - Number(left.label === 'Tailscale');
+    const labelOrder = Number(right.label === 'Private') - Number(left.label === 'Private');
     return labelOrder || left.url.localeCompare(right.url);
   });
   return [{ label: 'Local', url: `http://localhost:${bindPort}${path}` }, ...networkUrls];

@@ -1,5 +1,5 @@
 import { PayloadTemplate } from './payload-vars/index.js';
-import { generatePayload, uiContracts } from './playground-contracts.js';
+import { generatePayload, parseControlValue, uiContracts } from './playground-contracts.js';
 import { highlightJson } from './playground-highlight.js';
 import { formatJson, parseJson } from './playground-json.js';
 
@@ -379,7 +379,6 @@ function buildForm() {
 
 function readField(contract) {
   const controls = [...generatedForm.querySelectorAll(`[data-variable="${contract.name}"]`)];
-  const isArray = contract.type.endsWith('[]');
   if (controls[0]?.type === 'checkbox') {
     return controls.filter(control => control.checked).map(control => JSON.parse(control.dataset.value));
   }
@@ -387,15 +386,7 @@ function readField(contract) {
     const selected = controls.find(control => control.checked);
     return selected?.dataset.value ? JSON.parse(selected.dataset.value) : undefined;
   }
-  const value = controls[0]?.value ?? '';
-  if (value === '') return undefined;
-  if (contract.allowedValues || contract.type === 'boolean') return JSON.parse(value);
-  if (contract.type === 'number') return Number(value);
-  if (isArray) {
-    const values = value.split(',').map(item => item.trim()).filter(Boolean);
-    return contract.type === 'number[]' ? values.map(Number) : values;
-  }
-  return value;
+  return parseControlValue(contract, controls[0]?.value ?? '');
 }
 
 function collectForm() {

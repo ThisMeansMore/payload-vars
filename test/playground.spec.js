@@ -5,7 +5,7 @@ import { spawnSync } from 'node:child_process';
 import { join, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { PayloadTemplate } from '../dist/index.js';
-import { generatePayload, uiContracts } from '../docs/assets/playground-contracts.js';
+import { generatePayload, parseControlValue, uiContracts } from '../docs/assets/playground-contracts.js';
 import { highlightJson } from '../docs/assets/playground-highlight.js';
 import { formatJson, parseJson } from '../docs/assets/playground-json.js';
 import { playgroundUrls, renderPlaygroundPage } from '../scripts/serve-playground.mjs';
@@ -32,6 +32,9 @@ test('playground example compiles, renders, and is linked from the project home'
   const headlessGenerated = generatePayload(headlessContracts, headlessPayload);
   const generated = generatePayload(contracts);
   const rendered = template.render(generated);
+  const neededFrom = contracts.find(contract => contract.name === 'neededFrom');
+  const collected = { ...generated, neededFrom: parseControlValue(neededFrom, '') };
+  const renderedWithPassthrough = template.render(collected, { passthrough: true });
   const highlighted = template.tokenizePayloadExpression();
   assert.equal(headlessContracts.length, 6);
   assert.equal(uiContracts(headlessContracts).length, 0);
@@ -56,6 +59,7 @@ test('playground example compiles, renders, and is linked from the project home'
   assert.equal(rendered.sections[0].content.Reference, '');
   assert.equal(rendered.sections[0].content.Plan, 'Starter');
   assert.deepEqual(rendered.sections[1].content.Extensions, ['Reporting']);
+  assert.equal(renderedWithPassthrough.sections[1].content['Needed from'], '');
 
   assert.match(read('README.md'), /Open the playground.*playground\.html/);
   assert.match(read('docs/_config.yml'), /header_pages:\n  - playground\.html/);
@@ -152,6 +156,17 @@ test('headless payload generation preserves key order and supplies type-safe sta
   assert.deepEqual(uiContracts(contracts).map(contract => contract.name), ['rating']);
 });
 
+test('UI controls preserve empty strings according to template fallback semantics', () => {
+  assert.equal(parseControlValue({ type: 'string' }, ''), '');
+  assert.equal(parseControlValue({ type: 'string', valueFallback: { operator: '??', action: 'omit' } }, ''), '');
+  assert.equal(parseControlValue({ type: 'string', valueFallback: { operator: '||', action: 'throw' } }, ''), undefined);
+  assert.equal(parseControlValue({ type: 'string', allowedValues: ['A'] }, ''), undefined);
+  assert.equal(parseControlValue({ type: 'number' }, ''), undefined);
+  assert.equal(parseControlValue({ type: 'string[]' }, ''), undefined);
+  assert.equal(parseControlValue({ type: 'number' }, '3.5'), 3.5);
+  assert.deepEqual(parseControlValue({ type: 'string[]' }, 'one, two'), ['one', 'two']);
+});
+
 test('playground JSON helpers format valid input and describe invalid input', () => {
   const parsed = parseJson('{"title":"Example","enabled":true}');
   assert.deepEqual(parsed, { ok: true, value: { title: 'Example', enabled: true } });
@@ -193,17 +208,17 @@ test('hosted playground package matches the browser-compatible build', () => {
   }
 });
 
-test('local playground server advertises local, Tailscale, and network addresses', () => {
+test('local playground server advertises local, private, and network addresses', () => {
   const interfaces = {
     lo0: [{ address: '127.0.0.1', family: 'IPv4', internal: true }],
-    en0: [{ address: '192.168.1.8', family: 'IPv4', internal: false }],
-    utun3: [{ address: '100.116.235.117', family: 'IPv4', internal: false }],
-    utun4: [{ address: 'fd7a:115c:a1e0::1', family: 'IPv6', internal: false }],
+    network0: [{ address: '192.0.2.10', family: 'IPv4', internal: false }],
+    private0: [{ address: '100.64.0.10', family: 'IPv4', internal: false }],
+    network1: [{ address: '2001:db8::10', family: 'IPv6', internal: false }],
   };
   assert.deepEqual(playgroundUrls('0.0.0.0', 4173, interfaces), [
     { label: 'Local', url: 'http://localhost:4173/playground.html' },
-    { label: 'Tailscale', url: 'http://100.116.235.117:4173/playground.html' },
-    { label: 'Network', url: 'http://192.168.1.8:4173/playground.html' },
+    { label: 'Private', url: 'http://100.64.0.10:4173/playground.html' },
+    { label: 'Network', url: 'http://192.0.2.10:4173/playground.html' },
   ]);
   assert.deepEqual(playgroundUrls('127.0.0.1', 5000, interfaces), [
     { label: 'Local', url: 'http://127.0.0.1:5000/playground.html' },
