@@ -1,14 +1,21 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
+import { join, relative, sep } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { PayloadTemplate } from '../dist/index.js';
 import { generatePayload, uiContracts } from '../docs/assets/playground-contracts.js';
 import { highlightJson } from '../docs/assets/playground-highlight.js';
 import { formatJson, parseJson } from '../docs/assets/playground-json.js';
-import { playgroundUrls, renderPlaygroundModule, renderPlaygroundPage } from '../scripts/serve-playground.mjs';
+import { playgroundUrls, renderPlaygroundPage } from '../scripts/serve-playground.mjs';
 
 const read = path => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
+const root = fileURLToPath(new URL('../', import.meta.url));
+const jsFiles = directory => readdirSync(directory, { withFileTypes: true }).flatMap(entry => {
+  const path = join(directory, entry.name);
+  return entry.isDirectory() ? jsFiles(path) : entry.name.endsWith('.js') ? [path] : [];
+});
 
 test('playground example compiles, renders, and is linked from the project home', () => {
   const page = read('docs/playground.html');
@@ -82,6 +89,8 @@ test('playground example compiles, renders, and is linked from the project home'
   assert.equal((page.match(/playground__panel(?: |")/g) ?? []).length, 3);
   assert.doesNotMatch(page, /id="example-payload"/);
   const browserModule = read('docs/assets/playground.js');
+  assert.match(browserModule, /import \{ PayloadTemplate \} from '\.\/payload-vars\/index\.js'/);
+  assert.doesNotMatch(browserModule, /cdn\.jsdelivr\.net|local-package/);
   assert.match(browserModule, /headlessForm\.addEventListener\('submit'/);
   assert.match(browserModule, /generatedForm\.addEventListener\('submit'/);
   assert.match(browserModule, /generatedForm\.addEventListener\('input', applyGeneratedForm\)/);
@@ -165,11 +174,23 @@ test('local playground server produces a standalone page', () => {
   assert.match(rendered, /<title>payload-vars playground<\/title>/);
   assert.doesNotMatch(rendered, /^---/);
   assert.doesNotMatch(rendered, /\{%\s*(?:end)?raw/);
-  const browserModule = renderPlaygroundModule(read('docs/assets/playground.js'));
-  assert.match(browserModule, /from '\/local-package\/index\.js'/);
-  assert.doesNotMatch(browserModule, /cdn\.jsdelivr\.net\/npm\/payload-vars/);
   assert.equal(JSON.parse(read('package.json')).scripts.playground,
     'npm run build && node --watch scripts/serve-playground.mjs');
+});
+
+test('hosted playground package matches the browser-compatible build', () => {
+  const distRoot = join(root, 'dist');
+  const hostedRoot = join(root, 'docs/assets/payload-vars');
+  const expected = jsFiles(distRoot)
+    .filter(path => !relative(distRoot, path).startsWith(`cjs${sep}`))
+    .map(path => relative(distRoot, path))
+    .sort();
+  const actual = jsFiles(hostedRoot).map(path => relative(hostedRoot, path)).sort();
+
+  assert.deepEqual(actual, expected);
+  for (const path of expected) {
+    assert.equal(readFileSync(join(hostedRoot, path), 'utf8'), readFileSync(join(distRoot, path), 'utf8'), path);
+  }
 });
 
 test('local playground server advertises local, Tailscale, and network addresses', () => {
