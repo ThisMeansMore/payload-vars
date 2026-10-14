@@ -23,6 +23,13 @@ test('date example, argument-only template, reversed order, negative and fractio
   }
 });
 
+test('passthrough excludes function-only input arguments', () => {
+  const template = new PayloadTemplate({ hoursDifference: difference });
+  assert.deepEqual(template.render({ ...dates, traceId: 'test-123' }, { passthrough: true }), {
+    traceId: 'test-123', hoursDifference: 1.5,
+  });
+});
+
 test('functions enforce date validity without separate validators', () => {
   const instance = new PayloadTemplate(difference);
   for (const date1 of ['2026-02-30T00:00:00Z', '2026-01-01', '2026-01-01T00:00:00', '2026-01-01T24:00:00Z', '2026-01-01T00:00:00+24:00']) {

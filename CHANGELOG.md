@@ -4,6 +4,12 @@ Notable changes, starting with 1.0.0. Historical dates follow Git tags.
 
 The latest five releases are detailed below. Older releases have one-line summaries linking to their full notes in the [archive](CHANGELOG-ARCHIVE.md).
 
+## Unreleased
+
+### Added
+
+- Added opt-in `render(values, { passthrough: true })` support for retaining unused JSON variables on object-shaped payloads, including a playground control.
+
 ## 2.3.1 — 2026-10-14
 
 ### Documentation

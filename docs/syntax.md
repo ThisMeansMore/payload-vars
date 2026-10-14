@@ -157,6 +157,12 @@ Omission removes an object property, a placeholder entry in a template array, or
 
 A root placeholder has no containing structure. If its `omit` fallback triggers, rendering raises `CANNOT_OMIT_ROOT`; otherwise it renders normally. `render()` always returns a JSON value on success.
 
+## Passthrough variables
+
+`render(values, { passthrough: true })` copies unused input variables onto the rendered root object. Passthrough is disabled by default. Declared variables and original-input function arguments are considered consumed; template-rendered properties take precedence over unused variables with the same name.
+
+Passthrough requires an object-shaped rendered root and JSON-compatible unused values. Other roots raise `PASSTHROUGH_REQUIRES_OBJECT_ROOT`, while an unsupported unused value raises `INVALID_PASSTHROUGH_VARIABLE`. Preserved objects and arrays are copied so the rendered payload does not retain their references.
+
 ## Whitespace and canonical contracts
 
 Whitespace between tokens is insignificant, including spaces, tabs, and newlines around names, colons, brackets, operators, and actions. Tokens themselves cannot be split (`? ?`, `| |`, and `n ull` are invalid). Placeholder delimiters remain `{{` and `}}`, and the placeholder must occupy the entire string.

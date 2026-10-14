@@ -15,15 +15,17 @@ const payloadEditor = byId('payload-json');
 const payloadHighlight = byId('payload-highlight');
 const payloadError = byId('payload-error');
 const payloadFormatProgress = byId('payload-format-progress');
+const payloadPassthrough = byId('payload-passthrough');
 const headlessForm = byId('headless-form');
 const generatedForm = byId('generated-form');
 const generatedFields = byId('generated-fields');
 const renderedOutput = byId('rendered-json');
 const renderErrors = byId('render-errors');
+const renderCall = byId('render-call');
 const contractsOutput = byId('variable-contracts');
 const contractCards = byId('contract-cards');
 const contractsCount = byId('contracts-count');
-const contractsViewToggle = byId('contracts-view-toggle');
+const contractViewButtons = [...document.querySelectorAll('[data-contract-view]')];
 const inputHeading = byId('input-heading');
 const inputBadge = byId('input-badge');
 const inputNote = byId('input-note');
@@ -34,6 +36,10 @@ const flowButtons = [...document.querySelectorAll('[data-flow]')];
 const exampleTemplates = {
   headless: JSON.parse(byId('example-headless-template').textContent),
   ui: JSON.parse(byId('example-ui-template').textContent),
+};
+const examplePayloads = {
+  headless: JSON.parse(byId('example-headless-payload').textContent),
+  ui: {},
 };
 const templateSources = Object.fromEntries(Object.entries(exampleTemplates)
   .map(([name, template]) => [name, formatJson(template)]));
@@ -404,8 +410,21 @@ function collectForm() {
 }
 
 function renderPayload() {
+  const token = (text, className) => {
+    const span = document.createElement('span');
+    span.className = className;
+    span.textContent = text;
+    return span;
+  };
+  renderCall.replaceChildren(
+    token('template', 'playground__call-instance'),
+    token('.render', 'playground__call-method'),
+    '( ', token('payload', 'playground__call-payload'),
+    ', { ', token('passthrough', 'playground__call-options'), ': ',
+    token(String(payloadPassthrough.checked), `playground__call-boolean is-${payloadPassthrough.checked}`), ' } )',
+  );
   try {
-    showRendered(compiled.render(payload));
+    showRendered(compiled.render(payload, { passthrough: payloadPassthrough.checked }));
     return true;
   } catch (error) {
     showErrors([describeError(error)]);
@@ -488,10 +507,10 @@ function setFlow(nextFlow) {
   headlessForm.hidden = !isHeadless;
   generatedForm.hidden = isHeadless;
   resetPayload.hidden = !isHeadless;
-  inputHeading.textContent = isHeadless ? 'Testing payload' : 'Testing form';
+  inputHeading.textContent = 'Payload';
   inputBadge.textContent = isHeadless ? 'JSON input' : 'Consumer UI';
   inputNote.innerHTML = isHeadless
-    ? 'Testing values for every non-derived contract returned by <code>variables()</code>. Changes render automatically.'
+    ? 'Testing values are preserved as the template changes, while newly declared variables are appended automatically. Changes render automatically.'
     : 'Testing controls for contracts carrying an <code>@ interaction</code>. Changes render automatically.';
   flowDescription.textContent = isHeadless
     ? 'Test validation and transformation by editing a generated payload directly.'
@@ -509,7 +528,7 @@ function setFlow(nextFlow) {
 function resetExample() {
   templateSources[flow] = formatJson(exampleTemplates[flow]);
   templateEditor.value = templateSources[flow];
-  payload = {};
+  payload = { ...examplePayloads[flow] };
   flowPayloads[flow] = payload;
   compiled = undefined;
   compileTemplate();
@@ -520,7 +539,7 @@ function resetVariablePayload() {
     setStatus('Enter a valid template first.', 'error');
     return;
   }
-  payload = generatePayload(contracts);
+  payload = generatePayload(contracts, examplePayloads[flow]);
   flowPayloads[flow] = payload;
   refreshInput();
   const rendered = renderPayload();
@@ -571,15 +590,16 @@ generatedForm.addEventListener('submit', event => {
 });
 generatedForm.addEventListener('input', applyGeneratedForm);
 
-byId('reset-template').addEventListener('click', resetExample);
+byId('reset-demo').addEventListener('click', resetExample);
 resetPayload.addEventListener('click', resetVariablePayload);
-contractsViewToggle.addEventListener('click', () => {
-  const showRaw = contractsOutput.hidden;
+contractViewButtons.forEach(button => button.addEventListener('click', () => {
+  const showRaw = button.dataset.contractView === 'raw';
   contractsOutput.hidden = !showRaw;
   contractCards.hidden = showRaw;
-  contractsViewToggle.setAttribute('aria-pressed', String(showRaw));
-  contractsViewToggle.textContent = showRaw ? 'View cards' : 'View raw JSON';
-});
+  for (const option of contractViewButtons) {
+    option.setAttribute('aria-pressed', String(option === button));
+  }
+}));
 flowButtons.forEach(button => button.addEventListener('click', () => setFlow(button.dataset.flow)));
 templateEditor.addEventListener('input', () => {
   templateSources[flow] = templateEditor.value;
@@ -610,6 +630,10 @@ payloadEditor.addEventListener('input', () => {
   }, editorIdleDelay);
 });
 payloadEditor.addEventListener('scroll', syncPayloadScroll);
+payloadPassthrough.addEventListener('change', () => {
+  if (flow === 'headless') applyHeadlessPayload();
+  else applyGeneratedForm();
+});
 
 templateEditorShell.classList.add('is-highlighted');
 payloadEditorShell.classList.add('is-highlighted');

@@ -1,7 +1,7 @@
 import type { PayloadTemplateOptions } from './plugins.js';
 import { tokenizePayloadExpression } from './tokenize-payload-expression.js';
 import type { PayloadTemplateVariables } from './payload-template-input.types.js';
-import type { JsonValue, JsonTemplateValue, PayloadVariable, TokenizedPayloadExpression } from './payload-template.types.js';
+import type { JsonValue, JsonTemplateValue, PayloadRenderOptions, PayloadVariable, TokenizedPayloadExpression } from './payload-template.types.js';
 import { buildContract, type Contract } from './template-internal.js';
 import { renderContract } from './render-internal.js';
 
@@ -73,8 +73,8 @@ export class PayloadTemplate<const T extends JsonTemplateValue = JsonTemplateVal
     return result;
   }
 
-  /** Render with fresh runtime values using the already validated contract. */
-  render(variables: PayloadTemplateVariables<T, P>): JsonValue {
-    return renderContract(this.#contract, variables);
+  /** Render with fresh runtime values. Unused variables are discarded unless `passthrough` is true. */
+  render(variables: PayloadTemplateVariables<T, P>, options: PayloadRenderOptions = {}): JsonValue {
+    return renderContract(this.#contract, variables, options);
   }
 }

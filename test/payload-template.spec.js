@@ -83,4 +83,35 @@ describe('template snapshots and reuse', () => {
     assert.equal(reads, 1);
   });
 
+  test('optionally passes unused JSON variables through an object result', () => {
+    const template = new PayloadTemplate({ name: '{{name:string}}', fixed: 'template' });
+    const metadata = { nested: { enabled: true } };
+    const input = JSON.parse('{"name":"Ada","debugId":"test-123","fixed":"input","__proto__":{"safe":true}}');
+    input.metadata = metadata;
+
+    assert.deepEqual(template.render(input), { name: 'Ada', fixed: 'template' });
+    const rendered = template.render(input, { passthrough: true });
+    const expected = JSON.parse('{"debugId":"test-123","__proto__":{"safe":true},"metadata":{"nested":{"enabled":true}},"name":"Ada","fixed":"template"}');
+    assert.deepEqual(rendered, expected);
+    assert.equal(Object.getPrototypeOf(rendered), Object.prototype);
+    assert.equal(Object.getOwnPropertyDescriptor(rendered, '__proto__').value.safe, true);
+    assert.notEqual(rendered.metadata, metadata);
+    assert.notEqual(rendered.metadata.nested, metadata.nested);
+  });
+
+  test('passthrough reports unsupported roots and non-JSON variables', () => {
+    assert.throws(() => new PayloadTemplate(['{{name:string}}']).render({ name: 'Ada', extra: true }, { passthrough: true }), error => {
+      assert.equal(error.issue.code, 'PASSTHROUGH_REQUIRES_OBJECT_ROOT');
+      assert.equal(error.issue.actualType, 'array');
+      return true;
+    });
+    assert.throws(() => new PayloadTemplate({ name: '{{name:string}}' })
+      .render({ name: 'Ada', extra: undefined }, { passthrough: true }), error => {
+      assert.equal(error.issue.code, 'INVALID_PASSTHROUGH_VARIABLE');
+      assert.equal(error.issue.variableName, 'extra');
+      assert.equal(error.issue.actualType, 'undefined');
+      return true;
+    });
+  });
+
 });
