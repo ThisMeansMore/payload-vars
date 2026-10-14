@@ -8,7 +8,7 @@ The latest five releases are detailed below. Older releases have one-line summar
 
 ### Documentation
 
-- Added a browser playground with syntax-highlighted, autoformatted JSON and inline syntax feedback that generates a consumer-owned form and renders its values with the published package.
+- Added a browser playground with headless JSON and interaction-driven UI flows, syntax highlighting, autoformatting, inline feedback, and a dependency-free local preview server.
 
 ## 2.3.0 — 2026-10-13
 

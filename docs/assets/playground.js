@@ -1,4 +1,5 @@
 import { PayloadTemplate } from 'https://cdn.jsdelivr.net/npm/payload-vars@2/dist/index.js';
+import { generatePayload, uiContracts } from './playground-contracts.js';
 import { highlightJson } from './playground-highlight.js';
 import { formatJson, parseJson } from './playground-json.js';
 
@@ -7,20 +8,46 @@ const templateEditorShell = byId('template-editor');
 const templateEditor = byId('template-json');
 const templateHighlight = byId('template-highlight');
 const templateError = byId('template-error');
+const templateFormatProgress = byId('template-format-progress');
+const templateWrapLines = byId('template-wrap-lines');
+const payloadEditorShell = byId('payload-editor');
+const payloadEditor = byId('payload-json');
+const payloadHighlight = byId('payload-highlight');
+const payloadError = byId('payload-error');
+const payloadFormatProgress = byId('payload-format-progress');
+const headlessForm = byId('headless-form');
 const generatedForm = byId('generated-form');
 const generatedFields = byId('generated-fields');
 const renderedOutput = byId('rendered-json');
+const renderErrors = byId('render-errors');
 const contractsOutput = byId('variable-contracts');
+const contractCards = byId('contract-cards');
+const contractsCount = byId('contracts-count');
+const contractsViewToggle = byId('contracts-view-toggle');
+const inputHeading = byId('input-heading');
+const inputBadge = byId('input-badge');
+const inputNote = byId('input-note');
+const flowDescription = byId('flow-description');
 const status = byId('playground-status');
-const exampleTemplate = JSON.parse(byId('example-template').textContent);
-const examplePayload = JSON.parse(byId('example-payload').textContent);
+const resetPayload = byId('reset-payload');
+const flowButtons = [...document.querySelectorAll('[data-flow]')];
+const exampleTemplates = {
+  headless: JSON.parse(byId('example-headless-template').textContent),
+  ui: JSON.parse(byId('example-ui-template').textContent),
+};
+const templateSources = Object.fromEntries(Object.entries(exampleTemplates)
+  .map(([name, template]) => [name, formatJson(template)]));
+const flowPayloads = { headless: {}, ui: {} };
+const editorIdleDelay = 3000;
 
+let flow = 'headless';
 let compiled;
 let rawTemplate;
 let contracts = [];
 let payload = {};
 let expressionTokens = new Map();
-let jsonFeedbackTimer;
+let templateFeedbackTimer;
+let payloadFeedbackTimer;
 
 const sameValue = (left, right) => JSON.stringify(left) === JSON.stringify(right);
 
@@ -34,36 +61,178 @@ function syncTemplateScroll() {
   templateHighlight.scrollLeft = templateEditor.scrollLeft;
 }
 
+function highlightPayload() {
+  payloadHighlight.innerHTML = `${highlightJson(payloadEditor.value)}\n`;
+  syncPayloadScroll();
+}
+
+function syncPayloadScroll() {
+  payloadHighlight.scrollTop = payloadEditor.scrollTop;
+  payloadHighlight.scrollLeft = payloadEditor.scrollLeft;
+}
+
+function startFormatCountdown(progress) {
+  progress.style.setProperty('--playground-format-delay', `${editorIdleDelay}ms`);
+  progress.hidden = false;
+  progress.classList.remove('is-running');
+  void progress.offsetWidth;
+  progress.classList.add('is-running');
+}
+
+function stopFormatCountdown(progress) {
+  progress.classList.remove('is-running');
+  progress.hidden = true;
+}
+
+function writePayload(value) {
+  clearTimeout(payloadFeedbackTimer);
+  stopFormatCountdown(payloadFormatProgress);
+  payloadEditor.value = formatJson(value);
+  highlightPayload();
+}
+
 function setStatus(message, state = '') {
   status.textContent = message;
   status.dataset.state = state;
 }
 
-function setTemplateError(message = '') {
-  templateError.textContent = message;
-  templateEditor.setAttribute('aria-invalid', String(Boolean(message)));
-  if (message) templateEditorShell.dataset.state = 'error';
-  else delete templateEditorShell.dataset.state;
+function setEditorError(editor, messageElement, message = '') {
+  messageElement.textContent = message;
+  editor.setAttribute('aria-invalid', String(Boolean(message)));
+  editor.classList.toggle('has-error', Boolean(message));
 }
 
 function readTemplateJson({ format = false } = {}) {
   const result = parseJson(templateEditor.value);
   if (!result.ok) {
     const message = `Invalid JSON: ${result.message}`;
-    setTemplateError(message);
+    setEditorError(templateEditor, templateError, message);
+    templateEditorShell.dataset.state = 'error';
     return { ...result, message };
   }
   if (format) {
     templateEditor.value = formatJson(result.value);
     highlightTemplate();
   }
-  setTemplateError();
+  setEditorError(templateEditor, templateError);
+  delete templateEditorShell.dataset.state;
+  return result;
+}
+
+function readPayloadJson({ format = false } = {}) {
+  const result = parseJson(payloadEditor.value);
+  if (!result.ok) {
+    const message = `Invalid JSON: ${result.message}`;
+    setEditorError(payloadEditor, payloadError, message);
+    payloadEditorShell.dataset.state = 'error';
+    return { ...result, message };
+  }
+  if (result.value === null || Array.isArray(result.value) || typeof result.value !== 'object') {
+    const message = 'Payload JSON must be an object.';
+    setEditorError(payloadEditor, payloadError, message);
+    payloadEditorShell.dataset.state = 'error';
+    return { ok: false, message };
+  }
+  if (format) writePayload(result.value);
+  setEditorError(payloadEditor, payloadError);
+  delete payloadEditorShell.dataset.state;
   return result;
 }
 
 function describeError(error) {
-  const code = error?.issue?.code;
-  return `${code ? `${code}: ` : ''}${error instanceof Error ? error.message : String(error)}`;
+  const issue = error?.issue;
+  if (!issue?.code) return error instanceof Error ? error.message : String(error);
+
+  const locations = issue.valuePath ? [issue.valuePath]
+    : issue.path ? [issue.path]
+      : Array.isArray(issue.templatePaths) ? issue.templatePaths : [];
+  const summary = `${issue.code}${locations.length ? ` at ${locations.join(', ')}` : ''}`;
+  const details = [];
+  if (issue.variableName) details.push(`variable ${JSON.stringify(issue.variableName)}`);
+  if (issue.declaredType) details.push(`declared type ${JSON.stringify(issue.declaredType)}`);
+  if (issue.expectedType) details.push(`expected ${JSON.stringify(issue.expectedType)}`);
+  if (issue.actualType) details.push(`received ${JSON.stringify(issue.actualType)}`);
+  if (issue.operation) details.push(`operation ${JSON.stringify(issue.operation)}`);
+  if (issue.argumentName) details.push(`argument ${JSON.stringify(issue.argumentName)}`);
+  if (issue.referencePath) details.push(`reference ${issue.referencePath}`);
+  if (issue.placeholder) details.push(`placeholder ${JSON.stringify(issue.placeholder)}`);
+  if (issue.declaration) details.push(`declaration ${JSON.stringify(issue.declaration)}`);
+
+  const explanation = error instanceof Error && error.message !== issue.code ? error.message : '';
+  return [summary, details.join('; '), explanation].filter(Boolean).join(' — ');
+}
+
+function showRendered(value) {
+  renderedOutput.innerHTML = highlightJson(formatJson(value));
+  renderedOutput.hidden = false;
+  renderedOutput.dataset.state = 'success';
+  renderErrors.hidden = true;
+  renderErrors.replaceChildren();
+}
+
+function showErrors(messages) {
+  renderErrors.replaceChildren(...messages.map(message => {
+    const item = document.createElement('li');
+    item.textContent = message;
+    return item;
+  }));
+  renderErrors.hidden = false;
+  renderedOutput.hidden = true;
+  renderedOutput.textContent = '';
+  renderedOutput.dataset.state = 'error';
+}
+
+function contractFact(label, value) {
+  const wrapper = document.createElement('div');
+  const term = document.createElement('dt');
+  const detail = document.createElement('dd');
+  term.textContent = label;
+  detail.textContent = value;
+  wrapper.append(term, detail);
+  return wrapper;
+}
+
+function contractFallback(contract) {
+  const descriptions = [];
+  if (contract.memberFallback) {
+    descriptions.push(`items: ${contract.memberFallback.operator} ${contract.memberFallback.action}`);
+  }
+  if (contract.valueFallback) {
+    const scope = contract.type.endsWith('[]') ? 'array' : 'value';
+    descriptions.push(`${scope}: ${contract.valueFallback.operator} ${contract.valueFallback.action}`);
+  }
+  return descriptions.join('; ') || 'None';
+}
+
+function createContractCard(contract) {
+  const card = document.createElement('article');
+  card.className = 'playground__contract-card';
+  const heading = document.createElement('div');
+  heading.className = 'playground__contract-card-heading';
+  const name = document.createElement('code');
+  name.textContent = contract.name;
+  const type = document.createElement('span');
+  type.textContent = contract.type;
+  heading.append(name, type);
+
+  const facts = document.createElement('dl');
+  facts.append(
+    contractFact('Input', contract.derived ? 'Derived' : isRequired(contract) ? 'Required' : 'Optional'),
+    contractFact('Fallback', contractFallback(contract)),
+    contractFact('Values', contract.allowedValues?.map(String).join(', ') || 'Any valid value'),
+    contractFact('Interaction', contract.interaction ? `@ ${contract.interaction}` : 'None'),
+    contractFact('Path', contract.paths.length === 1 ? contract.paths[0]
+      : `${contract.paths[0]} +${contract.paths.length - 1} more`),
+  );
+  card.title = contract.paths.join('\n');
+  card.append(heading, facts);
+  return card;
+}
+
+function renderContracts(items) {
+  contractsCount.textContent = `· ${items.length}`;
+  contractsOutput.textContent = formatJson(items);
+  contractCards.replaceChildren(...items.map(createContractCard));
 }
 
 function pathLabel(path, fallback) {
@@ -126,7 +295,7 @@ function createField(contract, currentValue) {
   }
   const meta = document.createElement('span');
   meta.className = 'playground__meta';
-  meta.textContent = `${contract.type} · ${required ? 'required' : 'optional'}${contract.interaction ? ` · @ ${contract.interaction}` : ''}`;
+  meta.textContent = `${contract.type} · ${required ? 'required' : 'optional'} · @ ${contract.interaction}`;
   field.append(label, meta);
 
   const isArray = contract.type.endsWith('[]');
@@ -146,7 +315,7 @@ function createField(contract, currentValue) {
   let control;
   if (contract.allowedValues?.length) {
     control = document.createElement('select');
-    if (!isRequired(contract)) control.append(new Option('No value', ''));
+    if (!required) control.append(new Option('No value', ''));
     contract.allowedValues.forEach(value => control.append(new Option(String(value), JSON.stringify(value))));
     control.value = currentValue === undefined ? '' : JSON.stringify(currentValue);
   } else if (contract.interaction === 'text.multiline') {
@@ -155,7 +324,7 @@ function createField(contract, currentValue) {
     control.value = currentValue ?? '';
   } else if (contract.type === 'boolean') {
     control = document.createElement('select');
-    if (!isRequired(contract)) control.append(new Option('No value', ''));
+    if (!required) control.append(new Option('No value', ''));
     control.append(new Option('True', 'true'), new Option('False', 'false'));
     control.value = currentValue === undefined ? '' : String(currentValue);
   } else {
@@ -178,8 +347,16 @@ function createField(contract, currentValue) {
 
 function buildForm() {
   generatedFields.replaceChildren();
+  const visibleContracts = uiContracts(contracts);
+  if (!visibleContracts.length) {
+    const empty = document.createElement('p');
+    empty.className = 'playground__empty';
+    empty.textContent = 'No UI controls. Add an @ interaction to a template variable.';
+    generatedFields.append(empty);
+    return;
+  }
   const groups = new Map();
-  for (const contract of contracts.filter(item => !item.derived)) {
+  for (const contract of visibleContracts) {
     const title = sectionTitle(contract.paths[0]);
     if (!groups.has(title)) groups.set(title, []);
     groups.get(title).push(contract);
@@ -216,98 +393,224 @@ function readField(contract) {
 }
 
 function collectForm() {
-  const next = Object.create(null);
-  for (const contract of contracts.filter(item => !item.derived)) {
+  const next = { ...payload };
+  for (const contract of uiContracts(contracts)) {
     const value = readField(contract);
-    if (value !== undefined) next[contract.name] = value;
+    if (value === undefined) delete next[contract.name];
+    else next[contract.name] = value;
   }
   payload = next;
+  writePayload(payload);
 }
 
 function renderPayload() {
   try {
-    const rendered = compiled.render(payload);
-    renderedOutput.textContent = formatJson(rendered);
-    renderedOutput.dataset.state = 'success';
+    showRendered(compiled.render(payload));
     return true;
   } catch (error) {
-    renderedOutput.textContent = describeError(error);
-    renderedOutput.dataset.state = 'error';
+    showErrors([describeError(error)]);
     return false;
   }
 }
 
-function compileTemplate() {
-  clearTimeout(jsonFeedbackTimer);
-  const parsed = readTemplateJson({ format: true });
+function refreshInput() {
+  writePayload(payload);
+  setEditorError(payloadEditor, payloadError);
+  delete payloadEditorShell.dataset.state;
+  buildForm();
+}
+
+function clearCompiled(message) {
+  compiled = undefined;
+  contracts = [];
+  expressionTokens = new Map();
+  generatedFields.replaceChildren();
+  renderContracts([]);
+  showErrors([message]);
+  setStatus(message, 'error');
+}
+
+function compileTemplate({ format = true } = {}) {
+  clearTimeout(templateFeedbackTimer);
+  stopFormatCountdown(templateFormatProgress);
+  if (compiled && flow === 'headless') {
+    const currentPayload = readPayloadJson();
+    if (currentPayload.ok) payload = currentPayload.value;
+  } else if (compiled) collectForm();
+  const parsed = readTemplateJson({ format });
   if (!parsed.ok) {
-    compiled = undefined;
-    contracts = [];
-    expressionTokens = new Map();
-    generatedFields.replaceChildren();
-    contractsOutput.textContent = '';
-    renderedOutput.textContent = parsed.message;
-    renderedOutput.dataset.state = 'error';
-    setStatus(parsed.message, 'error');
+    clearCompiled(parsed.message);
     return;
   }
   try {
     rawTemplate = parsed.value;
     compiled = new PayloadTemplate(rawTemplate);
     rawTemplate = compiled.toJSON();
-    templateEditor.value = formatJson(rawTemplate);
-    expressionTokens = new Map(compiled.tokenizePayloadExpression().map(item => [item.expression, item.tokens]));
+    const tokenized = compiled.tokenizePayloadExpression();
+    if (format) {
+      templateEditor.value = formatJson(rawTemplate);
+      expressionTokens = new Map(tokenized.map(item => [item.expression, item.tokens]));
+    } else {
+      expressionTokens = new Map();
+    }
+    templateSources[flow] = templateEditor.value;
     highlightTemplate();
     contracts = compiled.variables();
-    contractsOutput.textContent = formatJson(contracts);
-    buildForm();
+    renderContracts(contracts);
+    payload = generatePayload(contracts, payload);
+    flowPayloads[flow] = payload;
+    refreshInput();
     renderPayload();
     setStatus(`${contracts.length} variable contract${contracts.length === 1 ? '' : 's'} ready.`, 'success');
   } catch (error) {
-    compiled = undefined;
-    contracts = [];
-    expressionTokens = new Map();
-    highlightTemplate();
-    generatedFields.replaceChildren();
-    contractsOutput.textContent = '';
     const message = `Invalid template: ${describeError(error)}`;
-    renderedOutput.textContent = message;
-    renderedOutput.dataset.state = 'error';
-    setTemplateError(message);
-    setStatus(message, 'error');
+    setEditorError(templateEditor, templateError, message);
+    templateEditorShell.dataset.state = 'error';
+    clearCompiled(message);
   }
 }
 
-function resetExample() {
-  templateEditor.value = formatJson(exampleTemplate);
-  payload = structuredClone(examplePayload);
+function setFlow(nextFlow) {
+  if (nextFlow === flow) return;
+  clearTimeout(templateFeedbackTimer);
+  stopFormatCountdown(templateFormatProgress);
+  templateSources[flow] = templateEditor.value;
+  if (flow === 'headless') {
+    clearTimeout(payloadFeedbackTimer);
+    stopFormatCountdown(payloadFormatProgress);
+    const parsed = readPayloadJson();
+    if (parsed.ok) payload = parsed.value;
+  } else if (compiled) collectForm();
+  flowPayloads[flow] = payload;
+  flow = nextFlow;
+  const isHeadless = flow === 'headless';
+  for (const button of flowButtons) button.setAttribute('aria-pressed', String(button.dataset.flow === flow));
+  headlessForm.hidden = !isHeadless;
+  generatedForm.hidden = isHeadless;
+  resetPayload.hidden = !isHeadless;
+  inputHeading.textContent = isHeadless ? 'Testing payload' : 'Testing form';
+  inputBadge.textContent = isHeadless ? 'JSON input' : 'Consumer UI';
+  inputNote.innerHTML = isHeadless
+    ? 'Testing values for every non-derived contract returned by <code>variables()</code>. Changes render automatically.'
+    : 'Testing controls for contracts carrying an <code>@ interaction</code>. Changes render automatically.';
+  flowDescription.textContent = isHeadless
+    ? 'Test validation and transformation by editing a generated payload directly.'
+    : 'Test the template through consumer-owned controls generated from interaction metadata.';
+  payload = flowPayloads[flow];
+  compiled = undefined;
+  rawTemplate = undefined;
+  contracts = [];
+  expressionTokens = new Map();
+  templateEditor.value = templateSources[flow];
+  highlightTemplate();
   compileTemplate();
 }
 
-generatedForm.addEventListener('submit', event => {
-  event.preventDefault();
+function resetExample() {
+  templateSources[flow] = formatJson(exampleTemplates[flow]);
+  templateEditor.value = templateSources[flow];
+  payload = {};
+  flowPayloads[flow] = payload;
+  compiled = undefined;
+  compileTemplate();
+}
+
+function resetVariablePayload() {
   if (!compiled) {
-    setStatus('Generate a valid form first.', 'error');
+    setStatus('Enter a valid template first.', 'error');
     return;
   }
-  collectForm();
+  payload = generatePayload(contracts);
+  flowPayloads[flow] = payload;
+  refreshInput();
   const rendered = renderPayload();
-  setStatus(rendered ? 'Form payload validated, transformed, and rendered.' : 'Form payload failed validation.',
+  setStatus(rendered ? 'Testing payload reset.' : 'Reset testing payload failed validation.',
     rendered ? 'success' : 'error');
+}
+
+function applyHeadlessPayload() {
+  if (!compiled) {
+    setStatus('Enter a valid template first.', 'error');
+    return false;
+  }
+  const parsed = readPayloadJson({ format: true });
+  if (!parsed.ok) {
+    showErrors([parsed.message]);
+    setStatus('Testing payload JSON is invalid.', 'error');
+    return false;
+  }
+  payload = parsed.value;
+  flowPayloads[flow] = payload;
+  const rendered = renderPayload();
+  setStatus(rendered ? 'Testing payload validated, transformed, and rendered.' : 'Testing payload failed validation.',
+    rendered ? 'success' : 'error');
+  return rendered;
+}
+
+function applyGeneratedForm() {
+  if (!compiled) {
+    setStatus('Enter a valid template first.', 'error');
+    return false;
+  }
+  collectForm();
+  flowPayloads[flow] = payload;
+  const rendered = renderPayload();
+  setStatus(rendered ? 'Testing form payload validated, transformed, and rendered.' : 'Testing form payload failed validation.',
+    rendered ? 'success' : 'error');
+  return rendered;
+}
+
+headlessForm.addEventListener('submit', event => {
+  event.preventDefault();
+  applyHeadlessPayload();
 });
-byId('compile-template').addEventListener('click', compileTemplate);
-byId('reset-example').addEventListener('click', resetExample);
+
+generatedForm.addEventListener('submit', event => {
+  event.preventDefault();
+  applyGeneratedForm();
+});
+generatedForm.addEventListener('input', applyGeneratedForm);
+
+byId('reset-template').addEventListener('click', resetExample);
+resetPayload.addEventListener('click', resetVariablePayload);
+contractsViewToggle.addEventListener('click', () => {
+  const showRaw = contractsOutput.hidden;
+  contractsOutput.hidden = !showRaw;
+  contractCards.hidden = showRaw;
+  contractsViewToggle.setAttribute('aria-pressed', String(showRaw));
+  contractsViewToggle.textContent = showRaw ? 'View cards' : 'View raw JSON';
+});
+flowButtons.forEach(button => button.addEventListener('click', () => setFlow(button.dataset.flow)));
 templateEditor.addEventListener('input', () => {
+  templateSources[flow] = templateEditor.value;
   expressionTokens = new Map();
   highlightTemplate();
-  clearTimeout(jsonFeedbackTimer);
-  jsonFeedbackTimer = setTimeout(readTemplateJson, 350);
-});
-templateEditor.addEventListener('blur', () => {
-  clearTimeout(jsonFeedbackTimer);
-  readTemplateJson({ format: true });
+  clearTimeout(templateFeedbackTimer);
+  startFormatCountdown(templateFormatProgress);
+  templateFeedbackTimer = setTimeout(() => compileTemplate({ format: true }), editorIdleDelay);
 });
 templateEditor.addEventListener('scroll', syncTemplateScroll);
+templateWrapLines.addEventListener('change', () => {
+  const wrapped = templateWrapLines.checked;
+  templateEditorShell.classList.toggle('is-wrapped', wrapped);
+  templateEditor.setAttribute('wrap', wrapped ? 'soft' : 'off');
+  if (wrapped) {
+    templateEditor.scrollLeft = 0;
+    templateHighlight.scrollLeft = 0;
+  }
+  highlightTemplate();
+});
+payloadEditor.addEventListener('input', () => {
+  highlightPayload();
+  clearTimeout(payloadFeedbackTimer);
+  startFormatCountdown(payloadFormatProgress);
+  payloadFeedbackTimer = setTimeout(() => {
+    stopFormatCountdown(payloadFormatProgress);
+    applyHeadlessPayload();
+  }, editorIdleDelay);
+});
+payloadEditor.addEventListener('scroll', syncPayloadScroll);
 
 templateEditorShell.classList.add('is-highlighted');
+payloadEditorShell.classList.add('is-highlighted');
 resetExample();

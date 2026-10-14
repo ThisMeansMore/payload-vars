@@ -44,6 +44,7 @@
   "scripts": {
     "build": "node scripts/build.mjs",
     "docs:sync": "node scripts/build.mjs --docs",
+    "playground": "node --watch scripts/serve-playground.mjs",
     "typecheck": "npm run build && npm run test:types",
     "test": "npm run build && npm run test:types && node scripts/test.mjs",
     "prepack": "npm run build",
