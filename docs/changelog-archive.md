@@ -9,6 +9,12 @@ title: Changelog archive
 
 Full notes for older releases. See the [changelog](changelog.md) for the latest five releases and a summary of this archive.
 
+## 2.2.5 — 2026-10-01
+
+### Changes
+
+- style: emojis in examples
+
 ## 2.2.4 — 2026-10-01
 
 ### Changes
