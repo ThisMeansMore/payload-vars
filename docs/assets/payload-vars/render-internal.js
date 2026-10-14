@@ -1,0 +1,243 @@
+import { matchesBaseType } from './plugins.js';
+import { isJsonValue } from './is-json-value.js';
+import { PayloadTemplateError } from './payload-template.error.js';
+import { childPath } from './template-internal.js';
+const OMIT = Symbol('omit');
+function details(declaration) {
+    return { variableName: declaration.name, declaration: declaration.declaration,
+        expectedType: declaration.type, templatePaths: [...declaration.paths] };
+}
+function actualType(value) {
+    if (value === null)
+        return 'null';
+    if (Array.isArray(value))
+        return 'array';
+    if (typeof value === 'number' && !Number.isFinite(value))
+        return 'non-finite number';
+    return typeof value;
+}
+function copyJson(value) {
+    if (Array.isArray(value))
+        return value.map(copyJson);
+    if (value !== null && typeof value === 'object') {
+        const result = {};
+        for (const key of Object.keys(value))
+            Object.defineProperty(result, key, { value: copyJson(value[key]),
+                enumerable: true, writable: true, configurable: true });
+        return result;
+    }
+    return value;
+}
+// An explicit result distinguishes a fallback-produced null from a value still needing validation.
+function fallback(value, expression, declaration, valuePath, wholeValue = false) {
+    const emptyArray = wholeValue && declaration.type.endsWith('[]') && Array.isArray(value) && value.length === 0;
+    const matches = expression?.operator === '??' ? value === null || value === undefined
+        : expression?.operator === '||' && (!value || emptyArray);
+    if (!expression || !matches)
+        return;
+    if (expression.action === 'throw') {
+        throw new PayloadTemplateError({ code: 'FALLBACK_THROW', ...details(declaration), operator: expression.operator,
+            ...(valuePath === undefined ? {} : { valuePath }) });
+    }
+    return { value: expression.action === 'omit' ? OMIT : null };
+}
+function validate(value, declaration, plugins) {
+    const result = fallback(value, declaration.valueFallback, declaration, undefined, true);
+    if (result)
+        return result.value;
+    const fail = (bad, valuePath) => {
+        throw new PayloadTemplateError({ code: 'INVALID_VARIABLE_TYPE', ...details(declaration),
+            actualType: actualType(bad), ...(valuePath === undefined ? {} : { valuePath }) });
+    };
+    const primitive = (item, type, path) => {
+        if (type === 'string' && typeof item === 'string')
+            return item;
+        if (type === 'number' && typeof item === 'number' && Number.isFinite(item))
+            return item;
+        if (type === 'boolean' && typeof item === 'boolean')
+            return item;
+        return fail(item, path);
+    };
+    const allowed = (item, path) => {
+        if (!declaration.allowedValues || declaration.allowedValues.includes(item))
+            return item;
+        throw new PayloadTemplateError({ code: 'VALUE_NOT_ALLOWED', ...details(declaration),
+            ...(path === undefined ? {} : { valuePath: path }) });
+    };
+    const operations = (initial, ops, type, valuePath) => {
+        let current = initial;
+        const steps = ops ?? [];
+        for (let index = 0; index < steps.length; index++) {
+            const op = steps[index];
+            if (op.name === 'core.omit')
+                continue;
+            const issue = { ...details(declaration), kind: op.kind, operation: op.name,
+                ...(valuePath === undefined ? {} : { valuePath }) };
+            // Validators see an immutable snapshot; transformers may edit their own copy.
+            const input = Array.isArray(current) ? [...current] : current;
+            if (op.kind === 'validator' && Array.isArray(input))
+                Object.freeze(input);
+            let next;
+            try {
+                next = plugins[op.kind].get(op.name)(input);
+            }
+            catch {
+                throw new PayloadTemplateError({ code: 'PLUGIN_EXECUTION_FAILED', ...issue });
+            }
+            if (op.kind === 'validator') {
+                if (op.operator === '?') {
+                    let success;
+                    let alternative;
+                    if (steps[index + 1]?.kind === 'transformer' && steps[index + 1]?.operator !== '~')
+                        success = steps[++index];
+                    if (steps[index + 1]?.operator === '~')
+                        alternative = steps[++index];
+                    const selected = next === true ? success : alternative;
+                    if (selected)
+                        current = operations(current, [selected], type, valuePath);
+                    continue;
+                }
+                if (next !== true)
+                    throw new PayloadTemplateError({ code: 'VALIDATION_FAILED', ...issue });
+                continue;
+            }
+            const matches = (item, base) => typeof item === base
+                && (base !== 'number' || Number.isFinite(item));
+            const array = type.endsWith('[]');
+            // Existing member fallback nulls may survive, but plugins cannot create new ones.
+            const nulls = (items) => items.filter(item => item === null).length;
+            const valid = array ? Array.isArray(next) && Array.from(next).every(item => item === null || matches(item, type.slice(0, -2)))
+                && nulls(next) <= nulls(current) : matches(next, type);
+            if (!valid)
+                throw new PayloadTemplateError({ code: 'INVALID_TRANSFORMER_RESULT', ...issue });
+            current = Array.isArray(next) ? [...next] : next;
+        }
+        return current;
+    };
+    if (!declaration.type.endsWith('[]'))
+        return operations(allowed(primitive(value, declaration.type)), declaration.valueOperations, declaration.type);
+    if (!Array.isArray(value))
+        return fail(value);
+    const output = [];
+    for (let index = 0; index < value.length; index++) {
+        const path = `$[${index}]`;
+        const member = fallback(value[index], declaration.memberFallback, declaration, path);
+        if (member) {
+            if (member.value !== OMIT)
+                output.push(member.value);
+        }
+        else
+            output.push(operations(allowed(primitive(value[index], declaration.type.slice(0, -2), path), path), declaration.memberOperations, declaration.type.slice(0, -2), path));
+    }
+    return operations(output, declaration.valueOperations, declaration.type);
+}
+export function renderContract(contract, variables, options = {}) {
+    // Snapshot original inputs separately from the per-location evaluation cache.
+    const inputs = new Map(Object.getOwnPropertyNames(variables).map(name => {
+        const value = variables[name];
+        return [name, Array.isArray(value) ? [...value] : value];
+    }));
+    const evaluated = new Map();
+    function evaluate(path) {
+        if (evaluated.has(path))
+            return evaluated.get(path);
+        const declaration = contract.locations.get(path);
+        let source;
+        if (declaration.function) {
+            const fn = contract.plugins.function.get(declaration.function.name);
+            const issue = { ...details(declaration), operation: declaration.function.name };
+            const args = declaration.function.arguments.map((name, index) => {
+                const referencePath = name.startsWith('$.') ? undefined : name.startsWith('[') ? `$${name}` : `$.${name}`;
+                const input = referencePath === undefined ? inputs.get(name.slice(2)) : evaluate(referencePath);
+                if (!matchesBaseType(input, fn.argumentTypes[index]))
+                    throw new PayloadTemplateError({
+                        code: 'INVALID_FUNCTION_ARGUMENT', ...issue, argumentName: name, argumentIndex: index,
+                        source: referencePath === undefined ? 'input' : 'property',
+                        ...(referencePath === undefined ? {} : { referencePath }),
+                        reason: input === OMIT ? 'omitted' : input === null ? 'null' : 'invalid-type',
+                    });
+                return Array.isArray(input) ? [...input] : input;
+            });
+            const execute = fn.execute;
+            try {
+                source = execute(...args);
+            }
+            catch {
+                throw new PayloadTemplateError({ code: 'PLUGIN_EXECUTION_FAILED', kind: 'function', ...issue });
+            }
+            // Async callbacks are unsupported; consume rejections before reporting the invalid result.
+            if (source instanceof Promise)
+                void source.catch(() => { });
+            if (!matchesBaseType(source, fn.resultType))
+                throw new PayloadTemplateError({ code: 'INVALID_FUNCTION_RESULT', ...issue });
+        }
+        else {
+            const present = inputs.has(declaration.name);
+            if (!present && !declaration.valueFallback)
+                throw new PayloadTemplateError({ code: 'MISSING_VARIABLE', ...details(declaration) });
+            source = present ? inputs.get(declaration.name) : undefined;
+        }
+        const result = validate(source, declaration, contract.plugins);
+        evaluated.set(path, result);
+        return result;
+    }
+    function render(value, path) {
+        const declaration = contract.locations.get(path);
+        if (declaration) {
+            const result = evaluate(path);
+            return declaration.valueOperations?.some(op => op.name === 'core.omit') ? OMIT : result;
+        }
+        if (Array.isArray(value)) {
+            const result = [];
+            value.forEach((item, index) => {
+                const rendered = render(item, `${path}[${index}]`);
+                if (rendered !== OMIT)
+                    result.push(rendered);
+            });
+            return result;
+        }
+        if (value !== null && typeof value === 'object') {
+            const result = {};
+            for (const key of Object.keys(value)) {
+                const rendered = render(value[key], childPath(path, key));
+                if (rendered !== OMIT)
+                    Object.defineProperty(result, key, { value: rendered,
+                        enumerable: true, writable: true, configurable: true });
+            }
+            return result;
+        }
+        return value;
+    }
+    const result = render(contract.template, '$');
+    if (result === OMIT)
+        throw new PayloadTemplateError({ code: 'CANNOT_OMIT_ROOT', ...details(contract.locations.get('$')) });
+    if (!options.passthrough)
+        return result;
+    if (result === null || Array.isArray(result) || typeof result !== 'object') {
+        throw new PayloadTemplateError({ code: 'PASSTHROUGH_REQUIRES_OBJECT_ROOT', actualType: actualType(result) });
+    }
+    const consumed = new Set();
+    for (const declaration of contract.declarations.values()) {
+        if (!declaration.function)
+            consumed.add(declaration.name);
+        else
+            for (const argument of declaration.function.arguments) {
+                if (argument.startsWith('$.'))
+                    consumed.add(argument.slice(2));
+            }
+    }
+    const output = {};
+    for (const name of Object.keys(variables)) {
+        if (consumed.has(name) || Object.prototype.hasOwnProperty.call(result, name))
+            continue;
+        const value = inputs.get(name);
+        if (!isJsonValue(value)) {
+            throw new PayloadTemplateError({ code: 'INVALID_PASSTHROUGH_VARIABLE', variableName: name, actualType: actualType(value) });
+        }
+        Object.defineProperty(output, name, { value: copyJson(value), enumerable: true, writable: true, configurable: true });
+    }
+    for (const key of Object.keys(result))
+        Object.defineProperty(output, key, { value: result[key],
+            enumerable: true, writable: true, configurable: true });
+    return output;
+}

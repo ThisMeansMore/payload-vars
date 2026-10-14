@@ -1,0 +1,119 @@
+import { argumentReferenceSource, variableNameSource, operationNameSource, typeSource, actionSource, operatorSource } from './expression-syntax.js';
+const variablePattern = new RegExp(`^${variableNameSource}$`);
+const argumentPattern = new RegExp(`^${argumentReferenceSource}$`);
+const operationPattern = new RegExp(`^${operationNameSource}$`);
+const typePattern = new RegExp(`^(${typeSource})$`);
+const actionPattern = new RegExp(`^(${actionSource})$`);
+const operatorPattern = new RegExp(`^(${operatorSource})$`);
+export function tokenizePayloadExpression(expression) {
+    const tokens = [];
+    let position = 'outside';
+    let conditional;
+    // Whole word/operator runs avoid highlighting valid prefixes of invalid text.
+    // The final alternative consumes any code point, including lone surrogates.
+    const pieces = /\s+|\{\{|\}\}|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?|[A-Za-z0-9_$.]+(?:\[[0-9]+\](?:\.[A-Za-z0-9_]+)*)*|\[[0-9]+\](?:\.[A-Za-z0-9_]+|\[[0-9]+\])*|[?|]+|[^]/gu;
+    for (const match of expression.matchAll(pieces)) {
+        const text = match[0];
+        const start = match.index;
+        let kind = 'unknown';
+        if (/^\s+$/.test(text)) {
+            kind = 'whitespace';
+        }
+        else if (text === '{{' || text === '}}') {
+            kind = 'delimiter';
+            position = text === '{{' ? 'variable' : 'outside';
+            conditional = undefined;
+        }
+        else if (position !== 'outside') {
+            if (position === 'tail' && text === 'in') {
+                kind = 'keyword';
+                position = 'allowedOpen';
+            }
+            else if (text === '@' && (position === 'tail' || position === 'arrayEnd' || position === 'end')) {
+                kind = 'operator';
+                position = 'interaction';
+            }
+            else if (position === 'interaction' && /^[a-z]+(?:\.[a-z]+)?$/.test(text)) {
+                kind = 'interaction';
+                position = 'end';
+            }
+            else if (text === '=' && (position === 'tail' || position === 'arrayEnd')) {
+                kind = 'operator';
+                position = 'function';
+            }
+            else if (position === 'function' && operationPattern.test(text)) {
+                kind = 'function';
+                position = 'call';
+            }
+            else if (position === 'call' && text === '(') {
+                kind = 'punctuation';
+                position = 'argument';
+            }
+            else if (position === 'argument' && argumentPattern.test(text)) {
+                kind = 'variable';
+                position = 'argumentEnd';
+            }
+            else if (position === 'argumentEnd' && text === ',') {
+                kind = 'punctuation';
+                position = 'argument';
+            }
+            else if (position === 'allowedSeparator' && text === ',') {
+                kind = 'punctuation';
+                position = 'allowedValue';
+            }
+            else if ((position === 'argument' || position === 'argumentEnd') && text === ')') {
+                kind = 'punctuation';
+                position = 'arrayEnd';
+            }
+            else if (text === ':' || text === '[' || text === ']') {
+                kind = 'punctuation';
+                conditional = undefined;
+                if (text === ':' && (position === 'colon' || position === 'variable'))
+                    position = 'type';
+                else if (text === '[' && position === 'tail')
+                    position = 'member';
+                else if (text === '[' && position === 'allowedOpen')
+                    position = 'allowedValue';
+                else if (text === ']' && (position === 'member' || position === 'memberAction' || position === 'memberEnd' || position === 'allowedSeparator'))
+                    position = 'arrayEnd';
+            }
+            else if (position === 'variable' && variablePattern.test(text)) {
+                kind = 'variable';
+                position = 'colon';
+            }
+            else if (position === 'type' && /^[A-Za-z0-9_$]+$/.test(text)) {
+                if (typePattern.test(text))
+                    kind = 'type';
+                position = 'tail';
+            }
+            else if ((text === '!' || text === '?' || text === '>' || (text === '~' && conditional !== undefined)) && (position === 'tail' || position === 'arrayEnd' || position === 'member')) {
+                kind = 'operator';
+                conditional = text === '?' ? 'validator' : text === '>' && conditional === 'validator' ? 'success' : undefined;
+                const validator = text === '!' || text === '?';
+                position = position === 'member' ? (validator ? 'memberValidator' : 'memberTransformer')
+                    : (validator ? 'valueValidator' : 'valueTransformer');
+            }
+            else if (operationPattern.test(text) && (position === 'memberValidator' || position === 'memberTransformer'
+                || position === 'valueValidator' || position === 'valueTransformer')) {
+                kind = position.endsWith('Validator') ? 'validator' : 'transformer';
+                position = position.startsWith('member') ? 'member' : 'arrayEnd';
+            }
+            else if (operatorPattern.test(text) && (position === 'tail' || position === 'arrayEnd' || position === 'member')) {
+                kind = 'operator';
+                position = position === 'member' ? 'memberAction' : 'valueAction';
+                conditional = undefined;
+            }
+            else if (actionPattern.test(text) && (position === 'memberAction' || position === 'valueAction')) {
+                kind = 'action';
+                position = position === 'memberAction' ? 'memberEnd' : 'end';
+            }
+            else if (position === 'allowedValue' || position === 'member'
+                || (position === 'allowedSeparator' && text !== ']' && text !== ',')) {
+                kind = 'value';
+                position = 'allowedSeparator';
+            }
+        }
+        tokens.push({ kind, text, start, end: start + text.length });
+    }
+    return tokens;
+}

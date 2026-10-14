@@ -1,4 +1,4 @@
-import { PayloadTemplate } from 'https://cdn.jsdelivr.net/npm/payload-vars@2/dist/index.js';
+import { PayloadTemplate } from './payload-vars/index.js';
 import { generatePayload, uiContracts } from './playground-contracts.js';
 import { highlightJson } from './playground-highlight.js';
 import { formatJson, parseJson } from './playground-json.js';
