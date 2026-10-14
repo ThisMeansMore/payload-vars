@@ -9,6 +9,12 @@ title: Changelog archive
 
 Full notes for older releases. See the [changelog](changelog.md) for the latest five releases and a summary of this archive.
 
+## 2.2.4 — 2026-10-01
+
+### Changes
+
+- style: better example page layout
+
 ## 2.2.3 — 2026-09-29
 
 ### Changes
