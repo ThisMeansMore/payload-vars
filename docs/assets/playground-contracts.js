@@ -2,6 +2,20 @@ export const inputContracts = contracts => contracts.filter(contract => !contrac
 
 export const uiContracts = contracts => inputContracts(contracts).filter(contract => contract.interaction);
 
+export function parseControlValue(contract, value) {
+  if (value === '') {
+    if (contract.allowedValues || contract.type === 'boolean') return undefined;
+    return contract.type === 'string' && contract.valueFallback?.operator !== '||' ? '' : undefined;
+  }
+  if (contract.allowedValues || contract.type === 'boolean') return JSON.parse(value);
+  if (contract.type === 'number') return Number(value);
+  if (contract.type.endsWith('[]')) {
+    const values = value.split(',').map(item => item.trim()).filter(Boolean);
+    return contract.type === 'number[]' ? values.map(Number) : values;
+  }
+  return value;
+}
+
 function initialValue(contract) {
   const isArray = contract.type.endsWith('[]');
   if (contract.allowedValues?.length) {
