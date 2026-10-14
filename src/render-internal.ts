@@ -1,7 +1,8 @@
 import { matchesBaseType } from './plugins.js';
 import type { PayloadOperation, PluginRegistries } from './plugins.js';
+import { isJsonValue } from './is-json-value.js';
 import { PayloadTemplateError } from './payload-template.error.js';
-import type { FallbackExpression, JsonValue } from './payload-template.types.js';
+import type { FallbackExpression, JsonValue, PayloadRenderOptions } from './payload-template.types.js';
 import { childPath, type Contract, type Declaration } from './template-internal.js';
 
 const OMIT = Symbol('omit');
@@ -16,6 +17,17 @@ function actualType(value: unknown): string {
   if (Array.isArray(value)) return 'array';
   if (typeof value === 'number' && !Number.isFinite(value)) return 'non-finite number';
   return typeof value;
+}
+
+function copyJson(value: JsonValue): JsonValue {
+  if (Array.isArray(value)) return value.map(copyJson);
+  if (value !== null && typeof value === 'object') {
+    const result: Record<string, JsonValue> = {};
+    for (const key of Object.keys(value)) Object.defineProperty(result, key, { value: copyJson(value[key]!),
+      enumerable: true, writable: true, configurable: true });
+    return result;
+  }
+  return value;
 }
 
 // An explicit result distinguishes a fallback-produced null from a value still needing validation.
@@ -106,7 +118,8 @@ function validate(value: unknown, declaration: Declaration, plugins: PluginRegis
   return operations(output, declaration.valueOperations, declaration.type);
 }
 
-export function renderContract(contract: Contract, variables: Readonly<Record<string, unknown>>): JsonValue {
+export function renderContract(contract: Contract, variables: Readonly<Record<string, unknown>>,
+  options: PayloadRenderOptions = {}): JsonValue {
   // Snapshot original inputs separately from the per-location evaluation cache.
   const inputs = new Map(Object.getOwnPropertyNames(variables).map(name => {
     const value = variables[name];
@@ -173,5 +186,27 @@ export function renderContract(contract: Contract, variables: Readonly<Record<st
   }
   const result = render(contract.template, '$');
   if (result === OMIT) throw new PayloadTemplateError({ code: 'CANNOT_OMIT_ROOT', ...details(contract.locations.get('$')!) });
-  return result;
+  if (!options.passthrough) return result;
+  if (result === null || Array.isArray(result) || typeof result !== 'object') {
+    throw new PayloadTemplateError({ code: 'PASSTHROUGH_REQUIRES_OBJECT_ROOT', actualType: actualType(result) });
+  }
+  const consumed = new Set<string>();
+  for (const declaration of contract.declarations.values()) {
+    if (!declaration.function) consumed.add(declaration.name);
+    else for (const argument of declaration.function.arguments) {
+      if (argument.startsWith('$.')) consumed.add(argument.slice(2));
+    }
+  }
+  const output: Record<string, JsonValue> = {};
+  for (const name of Object.keys(variables)) {
+    if (consumed.has(name) || Object.prototype.hasOwnProperty.call(result, name)) continue;
+    const value = inputs.get(name);
+    if (!isJsonValue(value)) {
+      throw new PayloadTemplateError({ code: 'INVALID_PASSTHROUGH_VARIABLE', variableName: name, actualType: actualType(value) });
+    }
+    Object.defineProperty(output, name, { value: copyJson(value), enumerable: true, writable: true, configurable: true });
+  }
+  for (const key of Object.keys(result)) Object.defineProperty(output, key, { value: result[key]!,
+    enumerable: true, writable: true, configurable: true });
+  return output;
 }

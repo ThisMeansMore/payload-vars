@@ -6,6 +6,9 @@ const strict = new PayloadTemplate({
   products: '{{products:string[]}}', quantities: '{{quantities:number[]}}',
 });
 strict.render({ orderId: 'id', amount: 0, enabled: false, products: ['a'], quantities: [1], unused: 42 });
+strict.render({ orderId: 'id', amount: 0, enabled: false, products: ['a'], quantities: [1], unused: 42 }, { passthrough: true });
+// @ts-expect-error Passthrough is boolean when provided.
+strict.render({ orderId: 'id', amount: 0, enabled: false, products: [], quantities: [] }, { passthrough: 'yes' });
 strict.render({ orderId: '', amount: 1, enabled: true, products: [] as readonly string[], quantities: [0] as const });
 // @ts-expect-error Missing required variables in nested structures.
 strict.render({ orderId: 'id' });

@@ -17,21 +17,23 @@ permalink: /playground.html
     </div>
     <span id="playground-status" class="playground__status" role="status" aria-live="polite"></span>
   </div>
-  <p id="flow-description" class="playground__flow-description">Test validation and transformation by editing a generated payload directly.</p>
+  <p class="playground__flow-description">
+    <span id="flow-description">Test validation and transformation by editing a generated payload directly.</span>
+    Click on
+    <button id="reset-demo" class="playground__text-action" type="button"
+      aria-label="Restore the demo" title="Restore the demo template and testing payload">Demo</button>
+    to restore the example template and testing payload.
+  </p>
 
   <div class="playground__grid">
     <section class="playground__panel playground__panel--code" aria-labelledby="template-heading">
       <div class="playground__panel-heading">
         <div>
           <p class="playground__step">01</p>
-          <div class="playground__title-line">
-            <h2 id="template-heading">Template JSON</h2>
-            <button id="reset-template" class="playground__text-action" type="button"
-              aria-label="Reset the template example" title="Restore the original example template and regenerate its payload">Reset</button>
-          </div>
+          <h2 id="template-heading">Template</h2>
         </div>
         <div class="playground__panel-actions">
-          <label class="playground__wrap-lines" title="Wrap long template lines inside the editor">
+          <label class="playground__panel-toggle" title="Wrap long template lines inside the editor">
             <input id="template-wrap-lines" type="checkbox" checked> Wrap lines
           </label>
           <span class="playground__panel-badge">Editable</span>
@@ -55,14 +57,19 @@ permalink: /playground.html
         <div>
           <p class="playground__step">02</p>
           <div class="playground__title-line">
-            <h2 id="input-heading">Testing payload</h2>
+            <h2 id="input-heading">Payload</h2>
             <button id="reset-payload" class="playground__text-action" type="button"
               aria-label="Reset the testing payload" title="Regenerate testing values from the current template">Reset</button>
           </div>
         </div>
-        <span id="input-badge" class="playground__panel-badge">JSON input</span>
+        <div class="playground__panel-actions">
+          <label class="playground__panel-toggle" title="Keep unused testing variables in the rendered root object">
+            <input id="payload-passthrough" type="checkbox"> Passthrough
+          </label>
+          <span id="input-badge" class="playground__panel-badge">JSON input</span>
+        </div>
       </div>
-      <p id="input-note" class="playground__note">Testing values for every non-derived contract returned by <code>variables()</code>. Changes render automatically.</p>
+      <p id="input-note" class="playground__note">Testing values are preserved as the template changes, while newly declared variables are appended automatically. Changes render automatically.</p>
       <form id="headless-form" novalidate>
         <label class="visually-hidden" for="payload-json">Variable payload JSON</label>
         <div id="payload-editor" class="playground__code-editor playground__code-editor--payload">
@@ -84,11 +91,13 @@ permalink: /playground.html
       <div class="playground__panel-heading">
         <div>
           <p class="playground__step">03</p>
-          <h2 id="rendered-heading">Rendered payload</h2>
+          <h2 id="rendered-heading">Rendered</h2>
         </div>
-        <span class="playground__panel-badge">template.render()</span>
+        <span id="render-call" class="playground__panel-badge playground__render-call">
+          <span class="playground__call-instance">template</span><span class="playground__call-method">.render</span>( <span class="playground__call-payload">payload</span>, { <span class="playground__call-options">passthrough</span>: <span class="playground__call-boolean is-false">false</span> } )
+        </span>
       </div>
-      <p class="playground__note">The active input is passed directly to <code>render()</code>. Failed rendering is shown as an error list.</p>
+      <p class="playground__note">The active input and passthrough option are passed directly to <code>render()</code>. Failed rendering is shown as an error list.</p>
       <pre id="rendered-json" tabindex="0"></pre>
       <ul id="render-errors" class="playground__errors" tabindex="0" aria-label="Rendering errors" hidden></ul>
     </section>
@@ -100,8 +109,10 @@ permalink: /playground.html
         <h2 id="contracts-heading">Variable contracts <span id="contracts-count"></span></h2>
         <p>Metadata returned by <code>variables()</code>, summarized for quick inspection.</p>
       </div>
-      <button id="contracts-view-toggle" class="playground__text-action" type="button"
-        aria-pressed="false" title="Switch between contract cards and exact JSON output">View raw JSON</button>
+      <div class="playground__view-switch" role="group" aria-label="Variable contract view">
+        <button type="button" data-contract-view="cards" aria-pressed="true">View cards</button>
+        <button type="button" data-contract-view="raw" aria-pressed="false">View raw JSON</button>
+      </div>
     </div>
     <div id="contract-cards" class="playground__contract-grid"></div>
     <pre id="variable-contracts" tabindex="0" hidden></pre>
@@ -112,6 +123,10 @@ permalink: /playground.html
 
 <script id="example-headless-template" type="application/json">
 {
+  "static": {
+    "note": "Rendered directly from the template",
+    "enabled": true
+  },
   "request": {
     "id": "{{requestId:string}}",
     "plan": "{{plan:string in [Starter, Growth, Enterprise]}}",
@@ -120,6 +135,12 @@ permalink: /playground.html
   },
   "priority": "{{priority:number in [1, 2, 3, 4, 5] ?? omit}}",
   "notes": "{{notes:string ?? omit}}"
+}
+</script>
+
+<script id="example-headless-payload" type="application/json">
+{
+  "unused": "Rendered only with passthrough"
 }
 </script>
 

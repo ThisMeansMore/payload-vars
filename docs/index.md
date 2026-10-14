@@ -50,7 +50,7 @@ The template provides these methods:
 | --- | --- |
 | `variables()` | Variable contracts in first occurrence order, with matching declarations deduplicated. |
 | `toJSON()` | A copy of the normalized template. |
-| `render(values)` | The payload with runtime values filled in. |
+| `render(values, options?)` | The payload with runtime values filled in; `passthrough` can retain unused variables. |
 | `tokenizePayloadExpression()` | Highlighting tokens for each normalized placeholder occurrence. |
 
 Inspect the normalized template:
@@ -98,6 +98,19 @@ const payload = template.render({
 ```
 
 `template.toJSON()` returns the normalized template; `render()` returns the payload with values filled in.
+
+Unused input variables are discarded by default. Set `passthrough: true` to copy them onto an object-shaped rendered payload:
+
+```js
+template.render({
+  orderId: 'ORD-123',
+  products: ['A'],
+  debugId: 'test-123',
+}, { passthrough: true });
+// { debugId: 'test-123', orderId: 'ORD-123', products: ['A'] }
+```
+
+Template properties win when an unused variable has the same name. Passthrough values must be valid JSON values, and passthrough requires the rendered root to be an object. The option defaults to `false`.
 
 ### Allowed values
 

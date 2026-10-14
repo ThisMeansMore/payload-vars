@@ -3,6 +3,11 @@ export type JsonPrimitive = string | number | boolean | null;
 export type JsonValue = JsonPrimitive | JsonObject | JsonValue[];
 export interface JsonObject { [key: string]: JsonValue }
 
+export interface PayloadRenderOptions {
+  /** Copy unused input variables onto the rendered root object. Defaults to false. */
+  readonly passthrough?: boolean;
+}
+
 /** JSON template input, including deeply readonly literal templates. */
 export type JsonTemplateValue = JsonPrimitive | { readonly [key: string]: JsonTemplateValue } | readonly JsonTemplateValue[];
 
@@ -60,7 +65,9 @@ export type PayloadTemplateIssue =
   | (RuntimeIssue & { code: 'INVALID_VARIABLE_TYPE'; actualType: string; valuePath?: string })
   | (RuntimeIssue & { code: 'VALUE_NOT_ALLOWED'; valuePath?: string })
   | (RuntimeIssue & { code: 'FALLBACK_THROW'; operator: FallbackExpression['operator']; valuePath?: string })
-  | (RuntimeIssue & { code: 'CANNOT_OMIT_ROOT' });
+  | (RuntimeIssue & { code: 'CANNOT_OMIT_ROOT' })
+  | { code: 'PASSTHROUGH_REQUIRES_OBJECT_ROOT'; actualType: string }
+  | { code: 'INVALID_PASSTHROUGH_VARIABLE'; variableName: string; actualType: string };
 
 export type PayloadExpressionTokenKind =
   | 'delimiter' | 'variable' | 'punctuation' | 'type'

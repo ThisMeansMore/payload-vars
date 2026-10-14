@@ -5,6 +5,9 @@ import { extname, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const docsRoot = fileURLToPath(new URL('../docs/', import.meta.url));
+const distRoot = fileURLToPath(new URL('../dist/', import.meta.url));
+const publishedPackageUrl = 'https://cdn.jsdelivr.net/npm/payload-vars@2/dist/index.js';
+const localPackageUrl = '/local-package/index.js';
 const host = process.env.PAYLOAD_VARS_PLAYGROUND_HOST ?? '0.0.0.0';
 const port = Number(process.env.PAYLOAD_VARS_PLAYGROUND_PORT ?? 4173);
 const contentTypes = new Map([
@@ -61,6 +64,10 @@ export function renderPlaygroundPage(source) {
 </html>`;
 }
 
+export function renderPlaygroundModule(source) {
+  return source.replace(publishedPackageUrl, localPackageUrl);
+}
+
 async function respond(request, response) {
   const url = new URL(request.url ?? '/', `http://${request.headers.host ?? host}`);
   if (url.pathname === '/') {
@@ -75,14 +82,18 @@ async function respond(request, response) {
     response.writeHead(400).end('Bad request');
     return;
   }
-  const filePath = resolve(docsRoot, relativePath);
-  if (!filePath.startsWith(`${resolve(docsRoot)}${sep}`)) {
+  const localPackage = relativePath.startsWith('local-package/');
+  const root = localPackage ? distRoot : docsRoot;
+  if (localPackage) relativePath = relativePath.slice('local-package/'.length);
+  const filePath = resolve(root, relativePath);
+  if (!filePath.startsWith(`${resolve(root)}${sep}`)) {
     response.writeHead(403).end('Forbidden');
     return;
   }
   try {
     let content = await readFile(filePath);
     if (relativePath === 'playground.html') content = renderPlaygroundPage(content.toString());
+    if (!localPackage && relativePath === 'assets/playground.js') content = renderPlaygroundModule(content.toString());
     response.writeHead(200, {
       'cache-control': 'no-store',
       'content-type': contentTypes.get(extname(filePath)) ?? 'application/octet-stream',
