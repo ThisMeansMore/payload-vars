@@ -8,49 +8,76 @@ permalink: /playground.html
 
 {% raw %}
 <div class="playground">
-  <header class="playground__intro">
-    <p class="playground__eyebrow">payload-vars playground</p>
-    <h1>From JSON template to form to payload.</h1>
-    <p>Edit the template, inspect its variable contracts, collect values with a small consumer-owned form, and render the final JSON. Everything runs locally in your browser.</p>
-  </header>
+  <p class="playground__eyebrow">payload-vars playground</p>
 
-  <div class="playground__actions" aria-label="Playground actions">
-    <button id="compile-template" type="button">Generate form</button>
-    <button id="reset-example" class="button-secondary" type="button">Reset example</button>
+  <div class="playground__toolbar">
+    <div class="playground__flow-switch" role="group" aria-label="Playground flow">
+      <button id="flow-headless" type="button" data-flow="headless" aria-pressed="true">Headless</button>
+      <button id="flow-ui" type="button" data-flow="ui" aria-pressed="false">UI form</button>
+    </div>
     <span id="playground-status" class="playground__status" role="status" aria-live="polite"></span>
   </div>
+  <p id="flow-description" class="playground__flow-description">Test validation and transformation by editing a generated payload directly.</p>
 
   <div class="playground__grid">
     <section class="playground__panel playground__panel--code" aria-labelledby="template-heading">
       <div class="playground__panel-heading">
         <div>
           <p class="playground__step">01</p>
-          <h2 id="template-heading">Template JSON</h2>
+          <div class="playground__title-line">
+            <h2 id="template-heading">Template JSON</h2>
+            <button id="reset-template" class="playground__text-action" type="button"
+              aria-label="Reset the template example" title="Restore the original example template and regenerate its payload">Reset</button>
+          </div>
         </div>
-        <span>Editable</span>
+        <div class="playground__panel-actions">
+          <label class="playground__wrap-lines" title="Wrap long template lines inside the editor">
+            <input id="template-wrap-lines" type="checkbox" checked> Wrap lines
+          </label>
+          <span class="playground__panel-badge">Editable</span>
+        </div>
       </div>
+      <p class="playground__note">Validated by <code>PayloadTemplate</code> after editing pauses.</p>
       <label class="visually-hidden" for="template-json">Template JSON</label>
-      <div id="template-editor" class="playground__code-editor">
+      <div id="template-editor" class="playground__code-editor is-wrapped">
         <pre id="template-highlight" aria-hidden="true"></pre>
-        <textarea id="template-json" spellcheck="false" autocomplete="off" wrap="off"
+        <textarea id="template-json" spellcheck="false" autocomplete="off" wrap="soft"
           aria-describedby="template-error" aria-invalid="false"></textarea>
       </div>
       <p id="template-error" class="playground__editor-message" role="alert" aria-live="polite"></p>
+      <div id="template-format-progress" class="playground__format-progress" aria-hidden="true" hidden>
+        <span></span>
+      </div>
     </section>
 
-    <section class="playground__panel" aria-labelledby="form-heading">
+    <section class="playground__panel" aria-labelledby="input-heading">
       <div class="playground__panel-heading">
         <div>
           <p class="playground__step">02</p>
-          <h2 id="form-heading">Generated form</h2>
+          <div class="playground__title-line">
+            <h2 id="input-heading">Testing payload</h2>
+            <button id="reset-payload" class="playground__text-action" type="button"
+              aria-label="Reset the testing payload" title="Regenerate testing values from the current template">Reset</button>
+          </div>
         </div>
-        <span>Consumer UI</span>
+        <span id="input-badge" class="playground__panel-badge">JSON input</span>
       </div>
-      <p class="playground__note">This demo owns a tiny interaction dictionary. payload-vars only supplies contracts.</p>
-      <form id="generated-form" novalidate>
-        <div id="generated-fields"></div>
-        <button type="submit">Validate and render</button>
+      <p id="input-note" class="playground__note">Testing values for every non-derived contract returned by <code>variables()</code>. Changes render automatically.</p>
+      <form id="headless-form" novalidate>
+        <label class="visually-hidden" for="payload-json">Variable payload JSON</label>
+        <div id="payload-editor" class="playground__code-editor playground__code-editor--payload">
+          <pre id="payload-highlight" aria-hidden="true"></pre>
+          <textarea id="payload-json" spellcheck="false" autocomplete="off" wrap="off"
+            aria-describedby="payload-error" aria-invalid="false"></textarea>
+        </div>
+        <p id="payload-error" class="playground__editor-message" role="alert" aria-live="polite"></p>
       </form>
+      <form id="generated-form" novalidate hidden>
+        <div id="generated-fields"></div>
+      </form>
+      <div id="payload-format-progress" class="playground__format-progress" aria-hidden="true" hidden>
+        <span></span>
+      </div>
     </section>
 
     <section class="playground__panel playground__panel--code" aria-labelledby="rendered-heading">
@@ -59,28 +86,51 @@ permalink: /playground.html
           <p class="playground__step">03</p>
           <h2 id="rendered-heading">Rendered payload</h2>
         </div>
-        <span>template.render()</span>
+        <span class="playground__panel-badge">template.render()</span>
       </div>
-      <p class="playground__note">Submitting the form passes its values directly to the package. Validation and transformation errors appear here too.</p>
+      <p class="playground__note">The active input is passed directly to <code>render()</code>. Failed rendering is shown as an error list.</p>
       <pre id="rendered-json" tabindex="0"></pre>
+      <ul id="render-errors" class="playground__errors" tabindex="0" aria-label="Rendering errors" hidden></ul>
     </section>
   </div>
 
-  <details class="playground__contracts">
-    <summary>Variable contracts returned by <code>variables()</code></summary>
-    <pre id="variable-contracts" tabindex="0"></pre>
-  </details>
+  <section class="playground__contracts" aria-labelledby="contracts-heading">
+    <div class="playground__contracts-heading">
+      <div>
+        <h2 id="contracts-heading">Variable contracts <span id="contracts-count"></span></h2>
+        <p>Metadata returned by <code>variables()</code>, summarized for quick inspection.</p>
+      </div>
+      <button id="contracts-view-toggle" class="playground__text-action" type="button"
+        aria-pressed="false" title="Switch between contract cards and exact JSON output">View raw JSON</button>
+    </div>
+    <div id="contract-cards" class="playground__contract-grid"></div>
+    <pre id="variable-contracts" tabindex="0" hidden></pre>
+  </section>
 
-  <p class="playground__footnote">The form is intentionally small and replaceable. Try changing an <code>@ interaction</code>, removing an optional value, or entering a value outside an allowed domain.</p>
+  <p class="playground__footnote">The UI form is intentionally small and replaceable. Only contracts with an <code>@ interaction</code> are exposed as controls.</p>
 </div>
 
-<script id="example-template" type="application/json">
+<script id="example-headless-template" type="application/json">
+{
+  "request": {
+    "id": "{{requestId:string}}",
+    "plan": "{{plan:string in [Starter, Growth, Enterprise]}}",
+    "seats": "{{seats:number}}",
+    "features": "{{features:string[Reporting, Audit log, Single sign-on] ?? omit}}"
+  },
+  "priority": "{{priority:number in [1, 2, 3, 4, 5] ?? omit}}",
+  "notes": "{{notes:string ?? omit}}"
+}
+</script>
+
+<script id="example-ui-template" type="application/json">
 {
   "title": "Team request",
   "sections": [
     {
       "title": "Basics",
       "content": {
+        "Reference": "{{reference:string}}",
         "Plan": "{{plan:string in [Starter, Growth, Enterprise] @ choice}}",
         "Description": "{{description:string ?? omit @ text.multiline}}"
       }
@@ -94,16 +144,6 @@ permalink: /playground.html
       }
     }
   ]
-}
-</script>
-
-<script id="example-payload" type="application/json">
-{
-  "plan": "Growth",
-  "description": "A compact form generated from the template contract.",
-  "extensions": ["Reporting", "Audit log"],
-  "neededFrom": "2026-11-01",
-  "rating": 4
 }
 </script>
 
