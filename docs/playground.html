@@ -11,21 +11,24 @@ permalink: /playground.html
   <p class="playground__eyebrow">payload-vars playground</p>
 
   <div class="playground__toolbar">
-    <div class="playground__flow-switch" role="group" aria-label="Playground flow">
-      <button id="flow-headless" type="button" data-flow="headless" aria-pressed="true">Headless</button>
-      <button id="flow-ui" type="button" data-flow="ui" aria-pressed="false">UI form</button>
+    <div class="playground__flow-switch" role="group" aria-label="Playground designer">
+      <button id="flow-headless" type="button" data-flow="headless" aria-pressed="true">1. Template Designer</button>
+      <span class="playground__flow-arrow" aria-hidden="true">→</span>
+      <button id="flow-ui" type="button" data-flow="ui" aria-pressed="false">2. Form Designer</button>
     </div>
     <span id="playground-status" class="playground__status" role="status" aria-live="polite"></span>
   </div>
   <p class="playground__flow-description">
-    <span id="flow-description">Test validation and transformation by editing a generated payload directly.</span>
-    Click on
-    <button id="reset-demo" class="playground__text-action" type="button"
-      aria-label="Restore the demo" title="Restore the demo template and testing payload">Demo</button>
-    to restore the example template and testing payload.
+    <span id="flow-description">Step 1 — Create and test a reusable template with validations and transformations.</span>
+    <span id="demo-hint">
+      Click on
+      <button id="reset-demo" class="playground__text-action" type="button"
+        aria-label="Restore the demo" title="Restore the demo template and testing payload">Demo</button>
+      to restore the example template and testing payload.
+    </span>
   </p>
 
-  <div class="playground__grid">
+  <div id="playground-grid" class="playground__grid">
     <section class="playground__panel playground__panel--code" aria-labelledby="template-heading">
       <div class="playground__panel-heading">
         <div>
@@ -34,16 +37,16 @@ permalink: /playground.html
         </div>
         <div class="playground__panel-actions">
           <label class="playground__panel-toggle" title="Wrap long template lines inside the editor">
-            <input id="template-wrap-lines" type="checkbox" checked> Wrap lines
+            <input id="template-wrap-lines" type="checkbox"> Wrap lines
           </label>
-          <span class="playground__panel-badge">Editable</span>
+          <span id="template-badge" class="playground__panel-badge">Editable</span>
         </div>
       </div>
-      <p class="playground__note">Validated by <code>PayloadTemplate</code> after editing pauses.</p>
+      <p id="template-note" class="playground__note">Validated by <code>PayloadTemplate</code> after editing pauses.</p>
       <label class="visually-hidden" for="template-json">Template JSON</label>
-      <div id="template-editor" class="playground__code-editor is-wrapped">
+      <div id="template-editor" class="playground__code-editor">
         <pre id="template-highlight" aria-hidden="true"></pre>
-        <textarea id="template-json" spellcheck="false" autocomplete="off" wrap="soft"
+        <textarea id="template-json" spellcheck="false" autocomplete="off" wrap="off"
           aria-describedby="template-error" aria-invalid="false"></textarea>
       </div>
       <p id="template-error" class="playground__editor-message" role="alert" aria-live="polite"></p>
@@ -52,10 +55,31 @@ permalink: /playground.html
       </div>
     </section>
 
-    <section class="playground__panel" aria-labelledby="input-heading">
+    <section id="ui-form-panel" class="playground__panel playground__panel--code" aria-labelledby="ui-form-heading" hidden>
       <div class="playground__panel-heading">
         <div>
           <p class="playground__step">02</p>
+          <h2 id="ui-form-heading">UI form</h2>
+        </div>
+        <span class="playground__panel-badge playground__panel-badge--mock">template.createUiForm()</span>
+      </div>
+      <p class="playground__note">After validation, this editor shows <code>form.toJSON()</code>. Missing field IDs are generated automatically.</p>
+      <label class="visually-hidden" for="ui-form-json">UI form JSON</label>
+      <div id="ui-form-editor" class="playground__code-editor playground__code-editor--ui-form">
+        <pre id="ui-form-highlight" aria-hidden="true"></pre>
+        <textarea id="ui-form-json" spellcheck="false" autocomplete="off" wrap="off"
+          aria-describedby="ui-form-error" aria-invalid="false"></textarea>
+      </div>
+      <p id="ui-form-error" class="playground__editor-message" role="alert" aria-live="polite"></p>
+      <div id="ui-form-format-progress" class="playground__format-progress" aria-hidden="true" hidden>
+        <span></span>
+      </div>
+    </section>
+
+    <section class="playground__panel" aria-labelledby="input-heading">
+      <div class="playground__panel-heading">
+        <div>
+          <p id="input-step" class="playground__step">02</p>
           <div class="playground__title-line">
             <h2 id="input-heading">Payload</h2>
             <button id="reset-payload" class="playground__text-action" type="button"
@@ -79,9 +103,38 @@ permalink: /playground.html
         </div>
         <p id="payload-error" class="playground__editor-message" role="alert" aria-live="polite"></p>
       </form>
-      <form id="generated-form" novalidate hidden>
-        <div id="generated-fields"></div>
-      </form>
+      <div id="generated-preview" hidden>
+        <div class="playground__controls-scroll">
+          <div class="playground__mock-app">
+            <div class="playground__mock-app-bar">
+              <span class="playground__mock-app-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+              <span>Consumer application preview</span>
+            </div>
+            <div class="playground__mock-app-content">
+              <form id="generated-form" novalidate>
+                <div id="generated-fields"></div>
+              </form>
+            </div>
+          </div>
+          <section class="playground__additional-payload" aria-labelledby="additional-payload-heading">
+            <div class="playground__additional-payload-heading">
+              <h3 id="additional-payload-heading">Additional payload</h3>
+              <span class="playground__panel-badge">Application state</span>
+            </div>
+            <p class="playground__note">Merged before submission for partial-form context and passthrough values. Visible controls win on duplicate keys.</p>
+            <label class="visually-hidden" for="additional-payload-json">Additional payload JSON</label>
+            <div id="additional-payload-editor" class="playground__code-editor playground__code-editor--additional">
+              <pre id="additional-payload-highlight" aria-hidden="true"></pre>
+              <textarea id="additional-payload-json" spellcheck="false" autocomplete="off" wrap="off"
+                aria-describedby="additional-payload-error" aria-invalid="false"></textarea>
+            </div>
+            <p id="additional-payload-error" class="playground__editor-message" role="alert" aria-live="polite"></p>
+            <div id="additional-payload-format-progress" class="playground__format-progress" aria-hidden="true" hidden>
+              <span></span>
+            </div>
+          </section>
+        </div>
+      </div>
       <div id="payload-format-progress" class="playground__format-progress" aria-hidden="true" hidden>
         <span></span>
       </div>
@@ -90,14 +143,14 @@ permalink: /playground.html
     <section class="playground__panel playground__panel--code" aria-labelledby="rendered-heading">
       <div class="playground__panel-heading">
         <div>
-          <p class="playground__step">03</p>
+          <p id="rendered-step" class="playground__step">03</p>
           <h2 id="rendered-heading">Rendered</h2>
         </div>
         <span id="render-call" class="playground__panel-badge playground__render-call">
           <span class="playground__call-instance">template</span><span class="playground__call-method">.render</span>( <span class="playground__call-payload">payload</span>, { <span class="playground__call-options">passthrough</span>: <span class="playground__call-boolean is-false">false</span> } )
         </span>
       </div>
-      <p class="playground__note">The active input and passthrough option are passed directly to <code>render()</code>. Failed rendering is shown as an error list.</p>
+      <p id="rendered-note" class="playground__note">The active input and passthrough option are passed directly to <code>render()</code>. Failed rendering is shown as an error list.</p>
       <pre id="rendered-json" tabindex="0"></pre>
       <ul id="render-errors" class="playground__errors" tabindex="0" aria-label="Rendering errors" hidden></ul>
     </section>
@@ -106,8 +159,8 @@ permalink: /playground.html
   <section class="playground__contracts" aria-labelledby="contracts-heading">
     <div class="playground__contracts-heading">
       <div>
-        <h2 id="contracts-heading">Variable contracts <span id="contracts-count"></span></h2>
-        <p>Metadata returned by <code>variables()</code>, summarized for quick inspection.</p>
+        <h2 id="contracts-heading"><span id="contracts-heading-text">Variable contracts</span> <span id="contracts-count"></span></h2>
+        <p id="contracts-description">Metadata returned by <code>variables()</code>, summarized for quick inspection.</p>
       </div>
       <div class="playground__view-switch" role="group" aria-label="Variable contract view">
         <button type="button" data-contract-view="cards" aria-pressed="true">View cards</button>
@@ -118,23 +171,22 @@ permalink: /playground.html
     <pre id="variable-contracts" tabindex="0" hidden></pre>
   </section>
 
-  <p class="playground__footnote">The UI form is intentionally small and replaceable. Only contracts with an <code>@ interaction</code> are exposed as controls.</p>
+  <p id="playground-footnote" class="playground__footnote">Template Designer focuses on payload validation, transformation, fallbacks, and rendering.</p>
 </div>
 
 <script id="example-headless-template" type="application/json">
 {
   "static": {
-    "note": "Rendered directly from the template",
-    "enabled": true
+    "note": "Rendered by the payload template"
   },
   "request": {
-    "id": "{{requestId:string}}",
+    "reference": "{{reference:string}}",
     "plan": "{{plan:string in [Starter, Growth, Enterprise]}}",
-    "seats": "{{seats:number}}",
-    "features": "{{features:string[Reporting, Audit log, Single sign-on] ?? omit}}"
-  },
-  "priority": "{{priority:number in [1, 2, 3, 4, 5] ?? omit}}",
-  "notes": "{{notes:string ?? omit}}"
+    "description": "{{description:string ?? omit}}",
+    "extensions": "{{extensions:string[Reporting, Audit log, Single sign-on] || throw}}",
+    "neededFrom": "{{neededFrom:string}}",
+    "rating": "{{rating:number in [1, 2, 3, 4, 5] ?? omit}}"
+  }
 }
 </script>
 
@@ -146,25 +198,47 @@ permalink: /playground.html
 
 <script id="example-ui-template" type="application/json">
 {
+  "static": {
+    "note": "Rendered by the payload template"
+  },
+  "request": {
+    "reference": "{{reference:string}}",
+    "plan": "{{plan:string in [Starter, Growth, Enterprise]}}",
+    "description": "{{description:string ?? omit}}",
+    "extensions": "{{extensions:string[Reporting, Audit log, Single sign-on] || throw}}",
+    "neededFrom": "{{neededFrom:string}}",
+    "rating": "{{rating:number in [1, 2, 3, 4, 5] ?? omit}}"
+  }
+}
+</script>
+
+<script id="example-ui-form" type="application/json">
+{
   "title": "Team request",
   "sections": [
     {
       "title": "Basics",
-      "content": {
-        "Reference": "{{reference:string}}",
-        "Plan": "{{plan:string in [Starter, Growth, Enterprise] @ choice}}",
-        "Description": "{{description:string ?? omit @ text.multiline}}"
-      }
+      "fields": [
+        { "label": "Plan", "variable": "plan", "ui": "choice" },
+        { "label": "Description", "variable": "description", "ui": "text.multiline" }
+      ]
     },
     {
       "title": "Preferences",
-      "content": {
-        "Extensions": "{{extensions:string[Reporting, Audit log, Single sign-on] || throw @ choice}}",
-        "Needed from": "{{neededFrom:string @ date.picker}}",
-        "Rating": "{{rating:number in [1, 2, 3, 4, 5] ?? omit @ rating.stars}}"
-      }
+      "fields": [
+        { "label": "Extensions", "variable": "extensions", "ui": "choice" },
+        { "label": "Needed from", "variable": "neededFrom", "ui": "date.picker" },
+        { "label": "Rating", "variable": "rating", "ui": "rating.stars" }
+      ]
     }
   ]
+}
+</script>
+
+<script id="example-ui-payload" type="application/json">
+{
+  "reference": "Supplied by application state",
+  "notInTemplate": "Rendered only with passthrough"
 }
 </script>
 

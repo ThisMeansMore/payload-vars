@@ -1,15 +1,30 @@
 import { PayloadTemplate } from './payload-vars/index.js';
-import { generatePayload, parseControlValue, uiContracts } from './playground-contracts.js';
+import { generatePayload, parseControlValue } from './playground-contracts.js';
 import { highlightJson } from './playground-highlight.js';
 import { formatJson, parseJson } from './playground-json.js';
+import { createPlaygroundUiForm } from './playground-ui-form.js';
 
 const byId = id => document.getElementById(id);
+const playgroundGrid = byId('playground-grid');
 const templateEditorShell = byId('template-editor');
 const templateEditor = byId('template-json');
 const templateHighlight = byId('template-highlight');
 const templateError = byId('template-error');
 const templateFormatProgress = byId('template-format-progress');
 const templateWrapLines = byId('template-wrap-lines');
+const templateNote = byId('template-note');
+const templateBadge = byId('template-badge');
+const uiFormPanel = byId('ui-form-panel');
+const uiFormEditorShell = byId('ui-form-editor');
+const uiFormEditor = byId('ui-form-json');
+const uiFormHighlight = byId('ui-form-highlight');
+const uiFormError = byId('ui-form-error');
+const uiFormFormatProgress = byId('ui-form-format-progress');
+const additionalPayloadEditorShell = byId('additional-payload-editor');
+const additionalPayloadEditor = byId('additional-payload-json');
+const additionalPayloadHighlight = byId('additional-payload-highlight');
+const additionalPayloadError = byId('additional-payload-error');
+const additionalPayloadFormatProgress = byId('additional-payload-format-progress');
 const payloadEditorShell = byId('payload-editor');
 const payloadEditor = byId('payload-json');
 const payloadHighlight = byId('payload-highlight');
@@ -17,19 +32,28 @@ const payloadError = byId('payload-error');
 const payloadFormatProgress = byId('payload-format-progress');
 const payloadPassthrough = byId('payload-passthrough');
 const headlessForm = byId('headless-form');
+const generatedPreview = byId('generated-preview');
 const generatedForm = byId('generated-form');
 const generatedFields = byId('generated-fields');
 const renderedOutput = byId('rendered-json');
 const renderErrors = byId('render-errors');
 const renderCall = byId('render-call');
+const renderedNote = byId('rendered-note');
+const renderedStep = byId('rendered-step');
 const contractsOutput = byId('variable-contracts');
 const contractCards = byId('contract-cards');
 const contractsCount = byId('contracts-count');
+const contractsHeadingText = byId('contracts-heading-text');
+const contractsDescription = byId('contracts-description');
 const contractViewButtons = [...document.querySelectorAll('[data-contract-view]')];
 const inputHeading = byId('input-heading');
+const inputStep = byId('input-step');
 const inputBadge = byId('input-badge');
 const inputNote = byId('input-note');
 const flowDescription = byId('flow-description');
+const demoHint = byId('demo-hint');
+const playgroundFootnote = byId('playground-footnote');
+const flowSwitch = document.querySelector('.playground__flow-switch');
 const status = byId('playground-status');
 const resetPayload = byId('reset-payload');
 const flowButtons = [...document.querySelectorAll('[data-flow]')];
@@ -39,42 +63,58 @@ const exampleTemplates = {
 };
 const examplePayloads = {
   headless: JSON.parse(byId('example-headless-payload').textContent),
-  ui: {},
+  ui: JSON.parse(byId('example-ui-payload').textContent),
 };
+const exampleUiForm = JSON.parse(byId('example-ui-form').textContent);
 const templateSources = Object.fromEntries(Object.entries(exampleTemplates)
   .map(([name, template]) => [name, formatJson(template)]));
-const flowPayloads = { headless: {}, ui: {} };
+const flowPayloads = {
+  headless: { ...examplePayloads.headless },
+  ui: { ...examplePayloads.ui },
+};
 const editorIdleDelay = 3000;
 
 let flow = 'headless';
 let compiled;
-let rawTemplate;
+let uiForm;
+let uiFields = [];
+let uiFormSource = formatJson(exampleUiForm);
+let formValues = {};
+let additionalPayload = { ...examplePayloads.ui };
 let contracts = [];
 let payload = {};
 let expressionTokens = new Map();
 let templateFeedbackTimer;
+let uiFormFeedbackTimer;
+let additionalPayloadFeedbackTimer;
 let payloadFeedbackTimer;
 
 const sameValue = (left, right) => JSON.stringify(left) === JSON.stringify(right);
+const isRequired = contract => contract.required ?? (!contract.valueFallback || contract.valueFallback.action === 'throw');
+
+function syncEditorScroll(highlight, editor) {
+  highlight.scrollTop = editor.scrollTop;
+  highlight.scrollLeft = editor.scrollLeft;
+}
 
 function highlightTemplate() {
   templateHighlight.innerHTML = `${highlightJson(templateEditor.value, expressionTokens)}\n`;
-  syncTemplateScroll();
+  syncEditorScroll(templateHighlight, templateEditor);
 }
 
-function syncTemplateScroll() {
-  templateHighlight.scrollTop = templateEditor.scrollTop;
-  templateHighlight.scrollLeft = templateEditor.scrollLeft;
+function highlightUiForm() {
+  uiFormHighlight.innerHTML = `${highlightJson(uiFormEditor.value)}\n`;
+  syncEditorScroll(uiFormHighlight, uiFormEditor);
 }
 
 function highlightPayload() {
   payloadHighlight.innerHTML = `${highlightJson(payloadEditor.value)}\n`;
-  syncPayloadScroll();
+  syncEditorScroll(payloadHighlight, payloadEditor);
 }
 
-function syncPayloadScroll() {
-  payloadHighlight.scrollTop = payloadEditor.scrollTop;
-  payloadHighlight.scrollLeft = payloadEditor.scrollLeft;
+function highlightAdditionalPayload() {
+  additionalPayloadHighlight.innerHTML = `${highlightJson(additionalPayloadEditor.value)}\n`;
+  syncEditorScroll(additionalPayloadHighlight, additionalPayloadEditor);
 }
 
 function startFormatCountdown(progress) {
@@ -97,6 +137,13 @@ function writePayload(value) {
   highlightPayload();
 }
 
+function writeAdditionalPayload(value) {
+  clearTimeout(additionalPayloadFeedbackTimer);
+  stopFormatCountdown(additionalPayloadFormatProgress);
+  additionalPayloadEditor.value = formatJson(value);
+  highlightAdditionalPayload();
+}
+
 function setStatus(message, state = '') {
   status.textContent = message;
   status.dataset.state = state;
@@ -108,31 +155,35 @@ function setEditorError(editor, messageElement, message = '') {
   editor.classList.toggle('has-error', Boolean(message));
 }
 
-function readTemplateJson({ format = false } = {}) {
-  const result = parseJson(templateEditor.value);
+function readJsonEditor(editor, shell, errorElement, { format = false } = {}) {
+  const result = parseJson(editor.value);
   if (!result.ok) {
     const message = `Invalid JSON: ${result.message}`;
-    setEditorError(templateEditor, templateError, message);
-    templateEditorShell.dataset.state = 'error';
+    setEditorError(editor, errorElement, message);
+    shell.dataset.state = 'error';
     return { ...result, message };
   }
-  if (format) {
-    templateEditor.value = formatJson(result.value);
-    highlightTemplate();
-  }
-  setEditorError(templateEditor, templateError);
-  delete templateEditorShell.dataset.state;
+  if (format) editor.value = formatJson(result.value);
+  setEditorError(editor, errorElement);
+  delete shell.dataset.state;
+  return result;
+}
+
+function readTemplateJson(options) {
+  const result = readJsonEditor(templateEditor, templateEditorShell, templateError, options);
+  if (result.ok && options?.format) highlightTemplate();
+  return result;
+}
+
+function readUiFormJson(options) {
+  const result = readJsonEditor(uiFormEditor, uiFormEditorShell, uiFormError, options);
+  if (result.ok && options?.format) highlightUiForm();
   return result;
 }
 
 function readPayloadJson({ format = false } = {}) {
-  const result = parseJson(payloadEditor.value);
-  if (!result.ok) {
-    const message = `Invalid JSON: ${result.message}`;
-    setEditorError(payloadEditor, payloadError, message);
-    payloadEditorShell.dataset.state = 'error';
-    return { ...result, message };
-  }
+  const result = readJsonEditor(payloadEditor, payloadEditorShell, payloadError);
+  if (!result.ok) return result;
   if (result.value === null || Array.isArray(result.value) || typeof result.value !== 'object') {
     const message = 'Payload JSON must be an object.';
     setEditorError(payloadEditor, payloadError, message);
@@ -140,15 +191,29 @@ function readPayloadJson({ format = false } = {}) {
     return { ok: false, message };
   }
   if (format) writePayload(result.value);
-  setEditorError(payloadEditor, payloadError);
-  delete payloadEditorShell.dataset.state;
+  return result;
+}
+
+function readAdditionalPayloadJson({ format = false } = {}) {
+  const result = readJsonEditor(
+    additionalPayloadEditor,
+    additionalPayloadEditorShell,
+    additionalPayloadError,
+  );
+  if (!result.ok) return result;
+  if (result.value === null || Array.isArray(result.value) || typeof result.value !== 'object') {
+    const message = 'Additional payload JSON must be an object.';
+    setEditorError(additionalPayloadEditor, additionalPayloadError, message);
+    additionalPayloadEditorShell.dataset.state = 'error';
+    return { ok: false, message };
+  }
+  if (format) writeAdditionalPayload(result.value);
   return result;
 }
 
 function describeError(error) {
   const issue = error?.issue;
   if (!issue?.code) return error instanceof Error ? error.message : String(error);
-
   const locations = issue.valuePath ? [issue.valuePath]
     : issue.path ? [issue.path]
       : Array.isArray(issue.templatePaths) ? issue.templatePaths : [];
@@ -163,7 +228,6 @@ function describeError(error) {
   if (issue.referencePath) details.push(`reference ${issue.referencePath}`);
   if (issue.placeholder) details.push(`placeholder ${JSON.stringify(issue.placeholder)}`);
   if (issue.declaration) details.push(`declaration ${JSON.stringify(issue.declaration)}`);
-
   const explanation = error instanceof Error && error.message !== issue.code ? error.message : '';
   return [summary, details.join('; '), explanation].filter(Boolean).join(' — ');
 }
@@ -200,17 +264,14 @@ function contractFact(label, value) {
 
 function contractFallback(contract) {
   const descriptions = [];
-  if (contract.memberFallback) {
-    descriptions.push(`items: ${contract.memberFallback.operator} ${contract.memberFallback.action}`);
-  }
+  if (contract.memberFallback) descriptions.push(`items: ${contract.memberFallback.operator} ${contract.memberFallback.action}`);
   if (contract.valueFallback) {
-    const scope = contract.type.endsWith('[]') ? 'array' : 'value';
-    descriptions.push(`${scope}: ${contract.valueFallback.operator} ${contract.valueFallback.action}`);
+    descriptions.push(`${contract.type.endsWith('[]') ? 'array' : 'value'}: ${contract.valueFallback.operator} ${contract.valueFallback.action}`);
   }
   return descriptions.join('; ') || 'None';
 }
 
-function createContractCard(contract) {
+function contractCard(contract) {
   const card = document.createElement('article');
   card.className = 'playground__contract-card';
   const heading = document.createElement('div');
@@ -220,79 +281,80 @@ function createContractCard(contract) {
   const type = document.createElement('span');
   type.textContent = contract.type;
   heading.append(name, type);
-
   const facts = document.createElement('dl');
   facts.append(
     contractFact('Input', contract.derived ? 'Derived' : isRequired(contract) ? 'Required' : 'Optional'),
     contractFact('Fallback', contractFallback(contract)),
     contractFact('Values', contract.allowedValues?.map(String).join(', ') || 'Any valid value'),
     contractFact('Interaction', contract.interaction ? `@ ${contract.interaction}` : 'None'),
-    contractFact('Path', contract.paths.length === 1 ? contract.paths[0]
-      : `${contract.paths[0]} +${contract.paths.length - 1} more`),
+    contractFact('Path', contract.paths.length === 1 ? contract.paths[0] : `${contract.paths[0]} +${contract.paths.length - 1} more`),
   );
   card.title = contract.paths.join('\n');
   card.append(heading, facts);
   return card;
 }
 
-function renderContracts(items) {
+function uiFieldCard(field) {
+  const card = document.createElement('article');
+  card.className = 'playground__contract-card';
+  const heading = document.createElement('div');
+  heading.className = 'playground__contract-card-heading';
+  const label = document.createElement('code');
+  label.textContent = field.label;
+  const type = document.createElement('span');
+  type.textContent = field.ui;
+  heading.append(label, type);
+  const facts = document.createElement('dl');
+  facts.append(
+    contractFact('ID', field.id),
+    contractFact('Variable', field.variable),
+    contractFact('Input', `${field.type} · ${field.required ? 'Required' : 'Optional'}`),
+    contractFact('Values', field.allowedValues?.map(String).join(', ') || 'Any valid value'),
+  );
+  card.append(heading, facts);
+  return card;
+}
+
+function renderContracts(items, kind = 'variables') {
   contractsCount.textContent = `· ${items.length}`;
   contractsOutput.textContent = formatJson(items);
-  contractCards.replaceChildren(...items.map(createContractCard));
+  contractCards.replaceChildren(...items.map(kind === 'fields' ? uiFieldCard : contractCard));
 }
 
-function pathLabel(path, fallback) {
-  const quoted = path.match(/\[("(?:\\.|[^"\\])*")\]$/);
-  if (quoted) return JSON.parse(quoted[1]);
-  return path.match(/\.([A-Za-z_$][\w$]*)$/)?.[1] ?? fallback;
+function inputId(field, index) {
+  return index ? `${field.id}-${index}` : field.id;
 }
 
-function sectionTitle(path) {
-  const index = Number(path.match(/^\$\.sections\[(\d+)\]/)?.[1]);
-  return Number.isInteger(index) && typeof rawTemplate?.sections?.[index]?.title === 'string'
-    ? rawTemplate.sections[index].title : 'Variables';
-}
-
-function isRequired(contract) {
-  return !contract.valueFallback || contract.valueFallback.action === 'throw';
-}
-
-function inputId(name, index) {
-  return `field-${name.replace(/[^A-Za-z0-9_-]/g, '-')}-${index}`;
-}
-
-function optionControl(contract, value, index, currentValue, mode, optionalEmpty = false) {
+function optionControl(field, value, index, currentValue, mode, optionalEmpty = false) {
   const wrapper = document.createElement('div');
   wrapper.className = 'playground__option';
   const input = document.createElement('input');
-  const id = inputId(contract.name, index);
+  const id = inputId(field, index);
   input.id = id;
   input.type = mode;
-  input.name = `field-${contract.name}`;
-  input.dataset.variable = contract.name;
+  input.name = field.variable;
+  input.dataset.variable = field.variable;
   input.dataset.value = optionalEmpty ? '' : JSON.stringify(value);
   input.checked = optionalEmpty ? currentValue === undefined
     : mode === 'checkbox' ? Array.isArray(currentValue) && currentValue.some(item => sameValue(item, value))
       : sameValue(currentValue, value);
   const label = document.createElement('label');
   label.htmlFor = id;
-  label.textContent = optionalEmpty ? 'No value' : contract.interaction === 'rating.stars'
+  label.textContent = optionalEmpty ? 'No value' : field.ui === 'rating.stars'
     ? `${'★'.repeat(Number(value))} (${value})` : String(value);
   wrapper.append(input, label);
   return wrapper;
 }
 
-function createField(contract, currentValue) {
-  const field = document.createElement('div');
-  field.className = 'playground__field';
-  field.dataset.contract = contract.name;
-  const labelText = pathLabel(contract.paths[0], contract.name);
-  const required = isRequired(contract);
+function createField(field, currentValue) {
+  const wrapper = document.createElement('div');
+  wrapper.className = 'playground__field';
+  wrapper.dataset.contract = field.variable;
   const label = document.createElement('span');
   label.className = 'playground__field-label';
-  label.id = `label-${inputId(contract.name, 0)}`;
-  label.textContent = labelText;
-  if (required) {
+  label.id = `label-${field.id}`;
+  label.textContent = field.label;
+  if (field.required) {
     const marker = document.createElement('span');
     marker.className = 'playground__required';
     marker.setAttribute('aria-hidden', 'true');
@@ -301,84 +363,79 @@ function createField(contract, currentValue) {
   }
   const meta = document.createElement('span');
   meta.className = 'playground__meta';
-  meta.textContent = `${contract.type} · ${required ? 'required' : 'optional'} · @ ${contract.interaction}`;
-  field.append(label, meta);
-
-  const isArray = contract.type.endsWith('[]');
-  if (contract.allowedValues?.length && (isArray || contract.interaction === 'choice' || contract.interaction === 'rating.stars')) {
+  meta.textContent = `${field.type} · ${field.required ? 'required' : 'optional'} · ${field.ui} · id ${field.id}`;
+  wrapper.append(label, meta);
+  const isArray = field.type.endsWith('[]');
+  if (field.allowedValues?.length && (isArray || field.ui === 'choice' || field.ui === 'rating.stars')) {
     const options = document.createElement('div');
-    options.className = `playground__options${contract.interaction === 'rating.stars' ? ' playground__rating' : ''}`;
+    options.className = `playground__options${field.ui === 'rating.stars' ? ' playground__rating' : ''}`;
     options.setAttribute('role', isArray ? 'group' : 'radiogroup');
     options.setAttribute('aria-labelledby', label.id);
-    if (!isArray && !required) options.append(optionControl(contract, undefined, 0, currentValue, 'radio', true));
-    contract.allowedValues.forEach((value, index) => options.append(optionControl(
-      contract, value, index + 1, currentValue, isArray ? 'checkbox' : 'radio',
+    if (!isArray && !field.required) options.append(optionControl(field, undefined, 1, currentValue, 'radio', true));
+    field.allowedValues.forEach((value, index) => options.append(optionControl(
+      field, value, index + 2, currentValue, isArray ? 'checkbox' : 'radio',
     )));
-    field.append(options);
-    return field;
+    wrapper.append(options);
+    return wrapper;
   }
-
   let control;
-  if (contract.allowedValues?.length) {
+  if (field.allowedValues?.length) {
     control = document.createElement('select');
-    if (!required) control.append(new Option('No value', ''));
-    contract.allowedValues.forEach(value => control.append(new Option(String(value), JSON.stringify(value))));
+    if (!field.required) control.append(new Option('No value', ''));
+    field.allowedValues.forEach(value => control.append(new Option(String(value), JSON.stringify(value))));
     control.value = currentValue === undefined ? '' : JSON.stringify(currentValue);
-  } else if (contract.interaction === 'text.multiline') {
+  } else if (field.ui === 'text.multiline') {
     control = document.createElement('textarea');
     control.rows = 4;
     control.value = currentValue ?? '';
-  } else if (contract.type === 'boolean') {
+  } else if (field.type === 'boolean') {
     control = document.createElement('select');
-    if (!required) control.append(new Option('No value', ''));
+    if (!field.required) control.append(new Option('No value', ''));
     control.append(new Option('True', 'true'), new Option('False', 'false'));
     control.value = currentValue === undefined ? '' : String(currentValue);
   } else {
     control = document.createElement('input');
-    control.type = contract.interaction === 'date.picker' ? 'date' : contract.type === 'number' ? 'number' : 'text';
+    control.type = field.ui === 'date.picker' ? 'date' : field.type === 'number' ? 'number' : 'text';
     control.value = isArray && Array.isArray(currentValue) ? currentValue.join(', ') : currentValue ?? '';
-    if (contract.type === 'number') control.step = 'any';
+    if (field.type === 'number') control.step = 'any';
   }
-  control.id = inputId(contract.name, 0);
-  control.dataset.variable = contract.name;
-  control.required = required;
+  control.id = field.id;
+  control.name = field.variable;
+  control.dataset.variable = field.variable;
+  control.required = field.required;
   label.setAttribute('role', 'presentation');
   const accessibleLabel = document.createElement('label');
   accessibleLabel.className = 'visually-hidden';
   accessibleLabel.htmlFor = control.id;
-  accessibleLabel.textContent = `${labelText}${required ? ' (required)' : ''}`;
-  field.append(accessibleLabel, control);
-  return field;
+  accessibleLabel.textContent = `${field.label}${field.required ? ' (required)' : ''}`;
+  wrapper.append(accessibleLabel, control);
+  return wrapper;
 }
 
 function buildForm() {
   generatedFields.replaceChildren();
-  const visibleContracts = uiContracts(contracts);
-  if (!visibleContracts.length) {
-    const empty = document.createElement('p');
-    empty.className = 'playground__empty';
-    empty.textContent = 'No UI controls. Add an @ interaction to a template variable.';
-    generatedFields.append(empty);
-    return;
-  }
-  const groups = new Map();
-  for (const contract of visibleContracts) {
-    const title = sectionTitle(contract.paths[0]);
-    if (!groups.has(title)) groups.set(title, []);
-    groups.get(title).push(contract);
-  }
-  for (const [title, fields] of groups) {
+  if (!uiForm || !uiFields.length) return;
+  const fieldsById = new Map(uiFields.map(field => [field.id, field]));
+  const definition = uiForm.toJSON();
+  const title = document.createElement('h3');
+  title.className = 'playground__form-title';
+  title.textContent = definition.title;
+  generatedFields.append(title);
+  for (const group of definition.sections) {
     const section = document.createElement('fieldset');
     section.className = 'playground__section';
     const legend = document.createElement('legend');
-    legend.textContent = title;
-    section.append(legend, ...fields.map(contract => createField(contract, payload[contract.name])));
+    legend.textContent = group.title;
+    section.append(legend, ...group.fields.map(item => {
+      const field = fieldsById.get(item.id);
+      return createField(field, payload[field.variable]);
+    }));
     generatedFields.append(section);
   }
 }
 
-function readField(contract) {
-  const controls = [...generatedForm.querySelectorAll(`[data-variable="${contract.name}"]`)];
+function readField(field) {
+  const controls = [...generatedForm.querySelectorAll(`[data-variable="${field.variable}"]`)];
   if (controls[0]?.type === 'checkbox') {
     return controls.filter(control => control.checked).map(control => JSON.parse(control.dataset.value));
   }
@@ -386,17 +443,19 @@ function readField(contract) {
     const selected = controls.find(control => control.checked);
     return selected?.dataset.value ? JSON.parse(selected.dataset.value) : undefined;
   }
-  return parseControlValue(contract, controls[0]?.value ?? '');
+  return parseControlValue(field, controls[0]?.value ?? '');
 }
 
 function collectForm() {
-  const next = { ...payload };
-  for (const contract of uiContracts(contracts)) {
-    const value = readField(contract);
-    if (value === undefined) delete next[contract.name];
-    else next[contract.name] = value;
+  if (!uiForm) return;
+  const next = {};
+  for (const field of uiFields) {
+    const value = readField(field);
+    if (value === undefined) delete next[field.variable];
+    else next[field.variable] = value;
   }
-  payload = next;
+  formValues = next;
+  payload = { ...additionalPayload, ...formValues };
   writePayload(payload);
 }
 
@@ -407,15 +466,19 @@ function renderPayload() {
     span.textContent = text;
     return span;
   };
+  const instance = flow === 'ui' ? 'form' : 'template';
+  const method = flow === 'ui' ? '.submit' : '.render';
   renderCall.replaceChildren(
-    token('template', 'playground__call-instance'),
-    token('.render', 'playground__call-method'),
-    '( ', token('payload', 'playground__call-payload'),
-    ', { ', token('passthrough', 'playground__call-options'), ': ',
+    token(instance, 'playground__call-instance'), token(method, 'playground__call-method'),
+    '( ', token('payload', 'playground__call-payload'), ', { ',
+    token('passthrough', 'playground__call-options'), ': ',
     token(String(payloadPassthrough.checked), `playground__call-boolean is-${payloadPassthrough.checked}`), ' } )',
   );
   try {
-    showRendered(compiled.render(payload, { passthrough: payloadPassthrough.checked }));
+    const result = flow === 'ui'
+      ? uiForm.submit(payload, { passthrough: payloadPassthrough.checked })
+      : compiled.render(payload, { passthrough: payloadPassthrough.checked });
+    showRendered(result);
     return true;
   } catch (error) {
     showErrors([describeError(error)]);
@@ -427,17 +490,69 @@ function refreshInput() {
   writePayload(payload);
   setEditorError(payloadEditor, payloadError);
   delete payloadEditorShell.dataset.state;
-  buildForm();
+  if (flow === 'ui') buildForm();
 }
 
 function clearCompiled(message) {
   compiled = undefined;
+  uiForm = undefined;
+  uiFields = [];
   contracts = [];
   expressionTokens = new Map();
   generatedFields.replaceChildren();
-  renderContracts([]);
+  renderContracts([], flow === 'ui' ? 'fields' : 'variables');
   showErrors([message]);
   setStatus(message, 'error');
+}
+
+function compileUiForm({ format = true } = {}) {
+  clearTimeout(uiFormFeedbackTimer);
+  stopFormatCountdown(uiFormFormatProgress);
+  if (!compiled) return false;
+  const parsed = readUiFormJson();
+  if (!parsed.ok) {
+    uiForm = undefined;
+    uiFields = [];
+    generatedFields.replaceChildren();
+    renderContracts([], 'fields');
+    showErrors([parsed.message]);
+    setStatus(parsed.message, 'error');
+    return false;
+  }
+  try {
+    uiForm = createPlaygroundUiForm(compiled, parsed.value);
+    uiFields = uiForm.fields();
+    if (format) {
+      uiFormEditor.value = formatJson(uiForm.toJSON());
+      uiFormSource = uiFormEditor.value;
+      highlightUiForm();
+    }
+    setEditorError(uiFormEditor, uiFormError);
+    delete uiFormEditorShell.dataset.state;
+    renderContracts(uiFields, 'fields');
+    const fieldContracts = uiFields.map(field => ({ ...field, name: field.variable }));
+    const currentValues = Object.fromEntries(uiFields
+      .filter(field => Object.hasOwn(formValues, field.variable))
+      .map(field => [field.variable, formValues[field.variable]]));
+    formValues = generatePayload(fieldContracts, currentValues);
+    payload = { ...additionalPayload, ...formValues };
+    flowPayloads.ui = payload;
+    refreshInput();
+    renderPayload();
+    setStatus(`${uiFields.length} UI field contract${uiFields.length === 1 ? '' : 's'} ready.`, 'success');
+    return true;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    setEditorError(uiFormEditor, uiFormError, message);
+    uiFormEditorShell.dataset.state = 'error';
+    uiForm = undefined;
+    uiFields = [];
+    generatedFields.replaceChildren();
+    renderContracts([], 'fields');
+    showErrors([message]);
+    setStatus(message, 'error');
+    return false;
+  }
 }
 
 function compileTemplate({ format = true } = {}) {
@@ -446,29 +561,30 @@ function compileTemplate({ format = true } = {}) {
   if (compiled && flow === 'headless') {
     const currentPayload = readPayloadJson();
     if (currentPayload.ok) payload = currentPayload.value;
-  } else if (compiled) collectForm();
+  } else if (compiled && uiForm) collectForm();
   const parsed = readTemplateJson({ format });
   if (!parsed.ok) {
     clearCompiled(parsed.message);
     return;
   }
   try {
-    rawTemplate = parsed.value;
-    compiled = new PayloadTemplate(rawTemplate);
-    rawTemplate = compiled.toJSON();
+    compiled = new PayloadTemplate(parsed.value);
+    const normalizedTemplate = compiled.toJSON();
     const tokenized = compiled.tokenizePayloadExpression();
     if (format) {
-      templateEditor.value = formatJson(rawTemplate);
+      templateEditor.value = formatJson(normalizedTemplate);
       expressionTokens = new Map(tokenized.map(item => [item.expression, item.tokens]));
-    } else {
-      expressionTokens = new Map();
-    }
+    } else expressionTokens = new Map();
     templateSources[flow] = templateEditor.value;
     highlightTemplate();
     contracts = compiled.variables();
-    renderContracts(contracts);
     payload = generatePayload(contracts, payload);
     flowPayloads[flow] = payload;
+    if (flow === 'ui') {
+      compileUiForm();
+      return;
+    }
+    renderContracts(contracts);
     refreshInput();
     renderPayload();
     setStatus(`${contracts.length} variable contract${contracts.length === 1 ? '' : 's'} ready.`, 'success');
@@ -480,48 +596,98 @@ function compileTemplate({ format = true } = {}) {
   }
 }
 
+function configureFlowCopy(isHeadless) {
+  flowSwitch.classList.toggle('is-form-designer', !isHeadless);
+  byId('flow-headless').classList.toggle('is-complete', !isHeadless);
+  playgroundGrid.classList.toggle('is-ui-flow', !isHeadless);
+  uiFormPanel.hidden = isHeadless;
+  headlessForm.hidden = !isHeadless;
+  generatedPreview.hidden = isHeadless;
+  resetPayload.hidden = !isHeadless;
+  demoHint.hidden = !isHeadless;
+  templateEditor.readOnly = !isHeadless;
+  templateEditorShell.classList.toggle('is-readonly', !isHeadless);
+  templateBadge.textContent = isHeadless ? 'Editable' : 'Existing template';
+  inputStep.textContent = isHeadless ? '02' : '03';
+  renderedStep.textContent = isHeadless ? '03' : '04';
+  inputHeading.textContent = isHeadless ? 'Payload' : 'Controls';
+  inputBadge.textContent = isHeadless ? 'JSON input' : 'form.fields()';
+  inputNote.innerHTML = isHeadless
+    ? 'Testing values are preserved as the template changes, while newly declared variables are appended automatically. Changes render automatically.'
+    : 'The consumer renders controls from enriched field contracts. Each control uses its UI <code>id</code> and payload-variable <code>name</code>.';
+  templateNote.innerHTML = isHeadless
+    ? 'Validated by <code>PayloadTemplate</code> after editing pauses.'
+    : 'Immutable input created in Template Designer. Return to Step 1 to change its payload rules.';
+  renderedNote.innerHTML = isHeadless
+    ? 'The active input and passthrough option are passed directly to <code>render()</code>. Failed rendering is shown as an error list.'
+    : 'The form collects values by variable name, then <code>submit()</code> delegates validation and transformation to its template.';
+  flowDescription.textContent = isHeadless
+    ? 'Step 1 — Create and test a reusable template with validations and transformations.'
+    : 'Step 2 — Use the existing template to design a strict, consumer-owned UI form.';
+  contractsHeadingText.textContent = isHeadless ? 'Variable contracts' : 'UI field contracts';
+  contractsDescription.innerHTML = isHeadless
+    ? 'Metadata returned by <code>variables()</code>, summarized for quick inspection.'
+    : 'Proposed metadata returned by <code>form.fields()</code>, including stable UI IDs and template validation rules.';
+  playgroundFootnote.innerHTML = isHeadless
+    ? 'Template Designer focuses on payload validation, transformation, fallbacks, and rendering.'
+    : '<strong>Design mock:</strong> <code>createUiForm()</code>, <code>fields()</code>, and <code>submit()</code> illustrate a possible future API; they are not package APIs yet.';
+}
+
 function setFlow(nextFlow) {
   if (nextFlow === flow) return;
   clearTimeout(templateFeedbackTimer);
+  clearTimeout(uiFormFeedbackTimer);
+  clearTimeout(additionalPayloadFeedbackTimer);
   stopFormatCountdown(templateFormatProgress);
+  stopFormatCountdown(uiFormFormatProgress);
+  stopFormatCountdown(additionalPayloadFormatProgress);
   templateSources[flow] = templateEditor.value;
+  templateSources[nextFlow] = templateEditor.value;
   if (flow === 'headless') {
     clearTimeout(payloadFeedbackTimer);
     stopFormatCountdown(payloadFormatProgress);
     const parsed = readPayloadJson();
     if (parsed.ok) payload = parsed.value;
-  } else if (compiled) collectForm();
+  } else if (compiled && uiForm) {
+    collectForm();
+    uiFormSource = uiFormEditor.value;
+  }
   flowPayloads[flow] = payload;
   flow = nextFlow;
   const isHeadless = flow === 'headless';
   for (const button of flowButtons) button.setAttribute('aria-pressed', String(button.dataset.flow === flow));
-  headlessForm.hidden = !isHeadless;
-  generatedForm.hidden = isHeadless;
-  resetPayload.hidden = !isHeadless;
-  inputHeading.textContent = 'Payload';
-  inputBadge.textContent = isHeadless ? 'JSON input' : 'Consumer UI';
-  inputNote.innerHTML = isHeadless
-    ? 'Testing values are preserved as the template changes, while newly declared variables are appended automatically. Changes render automatically.'
-    : 'Testing controls for contracts carrying an <code>@ interaction</code>. Changes render automatically.';
-  flowDescription.textContent = isHeadless
-    ? 'Test validation and transformation by editing a generated payload directly.'
-    : 'Test the template through consumer-owned controls generated from interaction metadata.';
+  configureFlowCopy(isHeadless);
   payload = flowPayloads[flow];
   compiled = undefined;
-  rawTemplate = undefined;
+  uiForm = undefined;
+  uiFields = [];
   contracts = [];
   expressionTokens = new Map();
   templateEditor.value = templateSources[flow];
+  if (!isHeadless) {
+    uiFormEditor.value = uiFormSource;
+    writeAdditionalPayload(additionalPayload);
+  }
   highlightTemplate();
+  highlightUiForm();
   compileTemplate();
 }
 
 function resetExample() {
   templateSources[flow] = formatJson(exampleTemplates[flow]);
   templateEditor.value = templateSources[flow];
+  if (flow === 'ui') {
+    uiFormSource = formatJson(exampleUiForm);
+    uiFormEditor.value = uiFormSource;
+    formValues = {};
+    additionalPayload = { ...examplePayloads.ui };
+    writeAdditionalPayload(additionalPayload);
+    highlightUiForm();
+  }
   payload = { ...examplePayloads[flow] };
   flowPayloads[flow] = payload;
   compiled = undefined;
+  uiForm = undefined;
   compileTemplate();
 }
 
@@ -534,8 +700,7 @@ function resetVariablePayload() {
   flowPayloads[flow] = payload;
   refreshInput();
   const rendered = renderPayload();
-  setStatus(rendered ? 'Testing payload reset.' : 'Reset testing payload failed validation.',
-    rendered ? 'success' : 'error');
+  setStatus(rendered ? 'Testing payload reset.' : 'Reset testing payload failed validation.', rendered ? 'success' : 'error');
 }
 
 function applyHeadlessPayload() {
@@ -552,44 +717,53 @@ function applyHeadlessPayload() {
   payload = parsed.value;
   flowPayloads[flow] = payload;
   const rendered = renderPayload();
-  setStatus(rendered ? 'Testing payload validated, transformed, and rendered.' : 'Testing payload failed validation.',
-    rendered ? 'success' : 'error');
+  setStatus(rendered ? 'Testing payload validated, transformed, and rendered.' : 'Testing payload failed validation.', rendered ? 'success' : 'error');
   return rendered;
 }
 
 function applyGeneratedForm() {
-  if (!compiled) {
-    setStatus('Enter a valid template first.', 'error');
+  if (!compiled || !uiForm) {
+    setStatus('Enter a valid template and UI form first.', 'error');
     return false;
   }
   collectForm();
   flowPayloads[flow] = payload;
   const rendered = renderPayload();
-  setStatus(rendered ? 'Testing form payload validated, transformed, and rendered.' : 'Testing form payload failed validation.',
-    rendered ? 'success' : 'error');
+  setStatus(rendered ? 'Form payload validated, transformed, and rendered.' : 'Form payload failed validation.', rendered ? 'success' : 'error');
   return rendered;
+}
+
+function applyAdditionalPayload() {
+  if (!compiled || !uiForm) {
+    setStatus('Enter a valid template and UI form first.', 'error');
+    return false;
+  }
+  const parsed = readAdditionalPayloadJson({ format: true });
+  if (!parsed.ok) {
+    showErrors([parsed.message]);
+    setStatus('Additional payload JSON is invalid.', 'error');
+    return false;
+  }
+  additionalPayload = parsed.value;
+  return applyGeneratedForm();
 }
 
 headlessForm.addEventListener('submit', event => {
   event.preventDefault();
   applyHeadlessPayload();
 });
-
 generatedForm.addEventListener('submit', event => {
   event.preventDefault();
   applyGeneratedForm();
 });
 generatedForm.addEventListener('input', applyGeneratedForm);
-
 byId('reset-demo').addEventListener('click', resetExample);
 resetPayload.addEventListener('click', resetVariablePayload);
 contractViewButtons.forEach(button => button.addEventListener('click', () => {
   const showRaw = button.dataset.contractView === 'raw';
   contractsOutput.hidden = !showRaw;
   contractCards.hidden = showRaw;
-  for (const option of contractViewButtons) {
-    option.setAttribute('aria-pressed', String(option === button));
-  }
+  for (const option of contractViewButtons) option.setAttribute('aria-pressed', String(option === button));
 }));
 flowButtons.forEach(button => button.addEventListener('click', () => setFlow(button.dataset.flow)));
 templateEditor.addEventListener('input', () => {
@@ -600,7 +774,27 @@ templateEditor.addEventListener('input', () => {
   startFormatCountdown(templateFormatProgress);
   templateFeedbackTimer = setTimeout(() => compileTemplate({ format: true }), editorIdleDelay);
 });
-templateEditor.addEventListener('scroll', syncTemplateScroll);
+templateEditor.addEventListener('scroll', () => syncEditorScroll(templateHighlight, templateEditor));
+uiFormEditor.addEventListener('input', () => {
+  uiFormSource = uiFormEditor.value;
+  highlightUiForm();
+  clearTimeout(uiFormFeedbackTimer);
+  startFormatCountdown(uiFormFormatProgress);
+  uiFormFeedbackTimer = setTimeout(() => compileUiForm({ format: true }), editorIdleDelay);
+});
+uiFormEditor.addEventListener('scroll', () => syncEditorScroll(uiFormHighlight, uiFormEditor));
+additionalPayloadEditor.addEventListener('input', () => {
+  highlightAdditionalPayload();
+  clearTimeout(additionalPayloadFeedbackTimer);
+  startFormatCountdown(additionalPayloadFormatProgress);
+  additionalPayloadFeedbackTimer = setTimeout(() => {
+    stopFormatCountdown(additionalPayloadFormatProgress);
+    applyAdditionalPayload();
+  }, editorIdleDelay);
+});
+additionalPayloadEditor.addEventListener('scroll', () => {
+  syncEditorScroll(additionalPayloadHighlight, additionalPayloadEditor);
+});
 templateWrapLines.addEventListener('change', () => {
   const wrapped = templateWrapLines.checked;
   templateEditorShell.classList.toggle('is-wrapped', wrapped);
@@ -620,12 +814,15 @@ payloadEditor.addEventListener('input', () => {
     applyHeadlessPayload();
   }, editorIdleDelay);
 });
-payloadEditor.addEventListener('scroll', syncPayloadScroll);
+payloadEditor.addEventListener('scroll', () => syncEditorScroll(payloadHighlight, payloadEditor));
 payloadPassthrough.addEventListener('change', () => {
   if (flow === 'headless') applyHeadlessPayload();
   else applyGeneratedForm();
 });
 
 templateEditorShell.classList.add('is-highlighted');
+uiFormEditorShell.classList.add('is-highlighted');
+additionalPayloadEditorShell.classList.add('is-highlighted');
 payloadEditorShell.classList.add('is-highlighted');
+configureFlowCopy(true);
 resetExample();
