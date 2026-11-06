@@ -176,12 +176,15 @@ permalink: /playground.html
 
 <script id="example-headless-template" type="application/json">
 {
+  "_": {
+    "PlanIds": { "Starter": 101, "Growth": 202, "Enterprise": 303 }
+  },
   "static": {
     "note": "Rendered by the payload template"
   },
   "request": {
     "reference": "{{reference:string}}",
-    "plan": "{{plan:string in [Starter, Growth, Enterprise]}}",
+    "plan": "{{plan:string in [Starter, Growth, Enterprise] > lookup(PlanIds)}}",
     "description": "{{description:string ?? omit}}",
     "extensions": "{{extensions:string[Reporting, Audit log, Single sign-on] || throw}}",
     "neededFrom": "{{neededFrom:string}}",
@@ -198,12 +201,15 @@ permalink: /playground.html
 
 <script id="example-ui-template" type="application/json">
 {
+  "_": {
+    "PlanIds": { "Starter": 101, "Growth": 202, "Enterprise": 303 }
+  },
   "static": {
     "note": "Rendered by the payload template"
   },
   "request": {
     "reference": "{{reference:string}}",
-    "plan": "{{plan:string in [Starter, Growth, Enterprise]}}",
+    "plan": "{{plan:string in [Starter, Growth, Enterprise] > lookup(PlanIds)}}",
     "description": "{{description:string ?? omit}}",
     "extensions": "{{extensions:string[Reporting, Audit log, Single sign-on] || throw}}",
     "neededFrom": "{{neededFrom:string}}",

@@ -2,7 +2,8 @@ import { createRegistries } from './plugins.js';
 import { argumentReferenceSource, variableNameSource, operationNameSource, typeSource, actionSource, operatorSource } from './expression-syntax.js';
 import { PayloadTemplateError } from './payload-template.error.js';
 const identifierPattern = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
-const operationSource = String.raw `${operationNameSource}\s*`;
+const lookupSource = String.raw `lookup\s*\(\s*([A-Za-z_$][A-Za-z0-9_$]*)\s*\)`;
+const operationSource = String.raw `(?:${operationNameSource}|lookup\s*\(\s*[A-Za-z_$][A-Za-z0-9_$]*\s*\))\s*`;
 // A conditional owns at most one success transform and one alternative.
 const operationsSource = String.raw `(?:[!>]\s*${operationSource}|\?\s*${operationSource}(?:>\s*${operationSource})?(?:~\s*${operationSource})?)*`;
 const scopeSource = String.raw `(${operationsSource})(?:(${operatorSource})\s*(${actionSource})\s*)?`;
@@ -236,12 +237,13 @@ export function parsePlaceholder(value, path) {
     const valueFallback = allowedValues
         ? parsed[4] ? { operator: parsed[4], action: parsed[5] } : undefined
         : parsed[6] ? { operator: parsed[6], action: parsed[7] } : undefined;
-    const operations = (source) => Array.from(source.matchAll(new RegExp(String.raw `([!?>~])\s*(${operationNameSource})`, 'g')), match => ({ kind: match[1] === '!' || match[1] === '?' ? 'validator' : 'transformer', name: match[2],
+    const operations = (source) => Array.from(source.matchAll(new RegExp(String.raw `([!?>~])\s*(${operationNameSource}|${lookupSource})`, 'g')), match => ({ kind: match[1] === '!' || match[1] === '?' ? 'validator' : 'transformer',
+        name: match[3] ? 'lookup' : match[2], ...(match[3] ? { argument: match[3] } : {}),
         ...(match[1] === '?' || match[1] === '~' ? { operator: match[1] } : {}) }));
     const memberOperations = allowedValues ? [] : operations(parsed[2] ?? '');
     const valueOperations = operations(parsed[allowedValues ? 3 : 5] ?? '');
     const format = (ops, fallback) => [
-        ...ops.map(op => `${op.operator ?? (op.kind === 'validator' ? '!' : '>')} ${op.name}`),
+        ...ops.map(op => `${op.operator ?? (op.kind === 'validator' ? '!' : '>')} ${op.name}${op.argument ? `(${op.argument})` : ''}`),
         ...(fallback ? [`${fallback.operator} ${fallback.action}`] : []),
     ].join(' ');
     const member = format(memberOperations, memberFallback);
@@ -263,6 +265,38 @@ export function parsePlaceholder(value, path) {
 }
 export function buildContract(template, options = {}) {
     const plugins = createRegistries(options.plugins);
+    const lookupMaps = new Map();
+    let outputSource = template;
+    if (template !== null && !Array.isArray(template) && typeof template === 'object'
+        && Object.prototype.hasOwnProperty.call(template, '_')) {
+        const definitions = template._;
+        if (definitions === null || Array.isArray(definitions) || typeof definitions !== 'object') {
+            throw new PayloadTemplateError({ code: 'INVALID_LOOKUP_MAP', path: '$._' });
+        }
+        for (const [mapName, candidate] of Object.entries(definitions)) {
+            const path = childPath('$._', mapName);
+            if (!identifierPattern.test(mapName) || candidate === null || Array.isArray(candidate) || typeof candidate !== 'object') {
+                throw new PayloadTemplateError({ code: 'INVALID_LOOKUP_MAP', path });
+            }
+            const map = {};
+            for (const [key, value] of Object.entries(candidate)) {
+                const scalar = value === null || typeof value === 'string' || typeof value === 'boolean'
+                    || typeof value === 'number' && Number.isFinite(value);
+                if (!scalar || typeof value === 'string' && (value.includes('{{') || value.includes('}}'))) {
+                    throw new PayloadTemplateError({ code: 'INVALID_LOOKUP_MAP', path: childPath(path, key) });
+                }
+                Object.defineProperty(map, key, { value: value, enumerable: true, writable: false, configurable: false });
+            }
+            lookupMaps.set(mapName, Object.freeze(map));
+        }
+        const root = {};
+        for (const key of Object.keys(template))
+            if (key !== '_')
+                Object.defineProperty(root, key, {
+                    value: template[key], enumerable: true, writable: true, configurable: true,
+                });
+        outputSource = root;
+    }
     const declarations = new Map();
     const locations = new Map();
     const inputs = new Map();
@@ -278,10 +312,23 @@ export function buildContract(template, options = {}) {
             if (!found)
                 return value;
             for (const op of [...(found.memberOperations ?? []), ...(found.valueOperations ?? [])]) {
+                if (op.name === 'lookup')
+                    continue;
                 if (!plugins[op.kind].has(op.name))
                     throw new PayloadTemplateError({
                         code: 'UNKNOWN_PLUGIN_OPERATION', path, variableName: found.name, kind: op.kind, operation: op.name,
                     });
+            }
+            for (const [scope, ops] of [['member', found.memberOperations ?? []], ['value', found.valueOperations ?? []]]) {
+                ops.forEach((op, index) => {
+                    if (op.name !== 'lookup')
+                        return;
+                    if (scope !== 'value' || op.kind !== 'transformer' || op.operator || index !== ops.length - 1 || !lookupMaps.has(op.argument)) {
+                        if (!lookupMaps.has(op.argument))
+                            throw new PayloadTemplateError({ code: 'UNKNOWN_LOOKUP_MAP', path, mapName: op.argument });
+                        throw new PayloadTemplateError({ code: 'INVALID_LOOKUP_OPERATION', path, mapName: op.argument });
+                    }
+                });
             }
             for (const [scope, ops] of [['member', found.memberOperations ?? []], ['value', found.valueOperations ?? []]]) {
                 ops.forEach((op, index) => {
@@ -328,7 +375,18 @@ export function buildContract(template, options = {}) {
         }
         return value;
     }
-    const normalizedTemplate = visit(template, '$');
+    const normalizedOutputTemplate = visit(outputSource, '$');
+    let normalizedTemplate = normalizedOutputTemplate;
+    if (outputSource !== template) {
+        const root = {};
+        Object.defineProperty(root, '_', { value: visit(template._, '$._'),
+            enumerable: true, writable: true, configurable: true });
+        for (const key of Object.keys(normalizedOutputTemplate))
+            Object.defineProperty(root, key, {
+                value: normalizedOutputTemplate[key], enumerable: true, writable: true, configurable: true,
+            });
+        normalizedTemplate = root;
+    }
     const dependencies = new Map();
     for (const [path, declaration] of locations) {
         const fn = declaration.function;
@@ -366,5 +424,5 @@ export function buildContract(template, options = {}) {
     }
     for (const path of locations.keys())
         check(path, []);
-    return { template: normalizedTemplate, declarations, locations, plugins };
+    return { template: normalizedTemplate, outputTemplate: normalizedOutputTemplate, lookupMaps, declarations, locations, plugins };
 }

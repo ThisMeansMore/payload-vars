@@ -41,7 +41,7 @@ function fallback(value, expression, declaration, valuePath, wholeValue = false)
     }
     return { value: expression.action === 'omit' ? OMIT : null };
 }
-function validate(value, declaration, plugins) {
+function validate(value, declaration, contract) {
     const result = fallback(value, declaration.valueFallback, declaration, undefined, true);
     if (result)
         return result.value;
@@ -71,6 +71,16 @@ function validate(value, declaration, plugins) {
             const op = steps[index];
             if (op.name === 'core.omit')
                 continue;
+            if (op.name === 'lookup') {
+                const map = contract.lookupMaps.get(op.argument);
+                const key = String(current);
+                if (Object.prototype.hasOwnProperty.call(map, key))
+                    return copyJson(map[key]);
+                const missing = fallback(undefined, declaration.valueFallback, declaration, valuePath, true);
+                if (missing)
+                    return missing.value;
+                throw new PayloadTemplateError({ code: 'MISSING_LOOKUP_KEY', ...details(declaration), mapName: op.argument, key });
+            }
             const issue = { ...details(declaration), kind: op.kind, operation: op.name,
                 ...(valuePath === undefined ? {} : { valuePath }) };
             // Validators see an immutable snapshot; transformers may edit their own copy.
@@ -79,7 +89,7 @@ function validate(value, declaration, plugins) {
                 Object.freeze(input);
             let next;
             try {
-                next = plugins[op.kind].get(op.name)(input);
+                next = contract.plugins[op.kind].get(op.name)(input);
             }
             catch {
                 throw new PayloadTemplateError({ code: 'PLUGIN_EXECUTION_FAILED', ...issue });
@@ -177,7 +187,7 @@ export function renderContract(contract, variables, options = {}) {
                 throw new PayloadTemplateError({ code: 'MISSING_VARIABLE', ...details(declaration) });
             source = present ? inputs.get(declaration.name) : undefined;
         }
-        const result = validate(source, declaration, contract.plugins);
+        const result = validate(source, declaration, contract);
         evaluated.set(path, result);
         return result;
     }
@@ -208,7 +218,7 @@ export function renderContract(contract, variables, options = {}) {
         }
         return value;
     }
-    const result = render(contract.template, '$');
+    const result = render(contract.outputTemplate, '$');
     if (result === OMIT)
         throw new PayloadTemplateError({ code: 'CANNOT_OMIT_ROOT', ...details(contract.locations.get('$')) });
     if (!options.passthrough)

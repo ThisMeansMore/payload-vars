@@ -69,7 +69,7 @@ test('playground example compiles, renders, and is linked from the project home'
   assert.match(highlightedJson, /class="token-variable">plan/);
   assert.doesNotMatch(highlightedJson, /class="token-interaction"/);
   assert.equal(rendered.request.reference, 'Supplied by application state');
-  assert.equal(rendered.request.plan, 'Starter');
+  assert.equal(rendered.request.plan, 101);
   assert.deepEqual(rendered.request.extensions, ['Reporting']);
   assert.equal(renderedWithPassthrough.request.neededFrom, '');
   assert.equal('notInTemplate' in rendered, false);

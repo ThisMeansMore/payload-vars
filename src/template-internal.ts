@@ -7,12 +7,15 @@ export interface Declaration extends PayloadVariable { paths: string[] }
 export interface Contract {
   plugins: PluginRegistries;
   template: JsonValue;
+  outputTemplate: JsonValue;
+  lookupMaps: Map<string, Readonly<Record<string, JsonValue>>>;
   declarations: Map<string, Declaration>;
   locations: Map<string, Declaration>;
 }
 
 const identifierPattern = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
-const operationSource = String.raw`${operationNameSource}\s*`;
+const lookupSource = String.raw`lookup\s*\(\s*([A-Za-z_$][A-Za-z0-9_$]*)\s*\)`;
+const operationSource = String.raw`(?:${operationNameSource}|lookup\s*\(\s*[A-Za-z_$][A-Za-z0-9_$]*\s*\))\s*`;
 // A conditional owns at most one success transform and one alternative.
 const operationsSource = String.raw`(?:[!>]\s*${operationSource}|\?\s*${operationSource}(?:>\s*${operationSource})?(?:~\s*${operationSource})?)*`;
 const scopeSource = String.raw`(${operationsSource})(?:(${operatorSource})\s*(${actionSource})\s*)?`;
@@ -192,13 +195,14 @@ export function parsePlaceholder(value: string, path: string): Declaration | und
     ? parsed[4] ? { operator: parsed[4], action: parsed[5] } as FallbackExpression : undefined
     : parsed[6] ? { operator: parsed[6], action: parsed[7] } as FallbackExpression : undefined;
   const operations = (source: string): PayloadOperation[] => Array.from(
-    source.matchAll(new RegExp(String.raw`([!?>~])\s*(${operationNameSource})`, 'g')),
-    match => ({ kind: match[1] === '!' || match[1] === '?' ? 'validator' : 'transformer', name: match[2]!,
+    source.matchAll(new RegExp(String.raw`([!?>~])\s*(${operationNameSource}|${lookupSource})`, 'g')),
+    match => ({ kind: match[1] === '!' || match[1] === '?' ? 'validator' : 'transformer',
+      name: match[3] ? 'lookup' : match[2]!, ...(match[3] ? { argument: match[3] } : {}),
       ...(match[1] === '?' || match[1] === '~' ? { operator: match[1] as '?' | '~' } : {}) }));
   const memberOperations = allowedValues ? [] : operations(parsed[2] ?? '');
   const valueOperations = operations(parsed[allowedValues ? 3 : 5] ?? '');
   const format = (ops: PayloadOperation[], fallback?: FallbackExpression) => [
-    ...ops.map(op => `${op.operator ?? (op.kind === 'validator' ? '!' : '>')} ${op.name}`),
+    ...ops.map(op => `${op.operator ?? (op.kind === 'validator' ? '!' : '>')} ${op.name}${op.argument ? `(${op.argument})` : ''}`),
     ...(fallback ? [`${fallback.operator} ${fallback.action}`] : []),
   ].join(' ');
   const member = format(memberOperations, memberFallback);
@@ -221,6 +225,36 @@ export function parsePlaceholder(value: string, path: string): Declaration | und
 
 export function buildContract(template: JsonTemplateValue, options: PayloadTemplateOptions = {}): Contract {
   const plugins = createRegistries(options.plugins);
+  const lookupMaps = new Map<string, Readonly<Record<string, JsonValue>>>();
+  let outputSource = template;
+  if (template !== null && !Array.isArray(template) && typeof template === 'object'
+    && Object.prototype.hasOwnProperty.call(template, '_')) {
+    const definitions = (template as { readonly [key: string]: JsonTemplateValue })._;
+    if (definitions === null || Array.isArray(definitions) || typeof definitions !== 'object') {
+      throw new PayloadTemplateError({ code: 'INVALID_LOOKUP_MAP', path: '$._' });
+    }
+    for (const [mapName, candidate] of Object.entries(definitions)) {
+      const path = childPath('$._', mapName);
+      if (!identifierPattern.test(mapName) || candidate === null || Array.isArray(candidate) || typeof candidate !== 'object') {
+        throw new PayloadTemplateError({ code: 'INVALID_LOOKUP_MAP', path });
+      }
+      const map: Record<string, JsonValue> = {};
+      for (const [key, value] of Object.entries(candidate)) {
+        const scalar = value === null || typeof value === 'string' || typeof value === 'boolean'
+          || typeof value === 'number' && Number.isFinite(value);
+        if (!scalar || typeof value === 'string' && (value.includes('{{') || value.includes('}}'))) {
+          throw new PayloadTemplateError({ code: 'INVALID_LOOKUP_MAP', path: childPath(path, key) });
+        }
+        Object.defineProperty(map, key, { value: value as JsonValue, enumerable: true, writable: false, configurable: false });
+      }
+      lookupMaps.set(mapName, Object.freeze(map));
+    }
+    const root: Record<string, JsonTemplateValue> = {};
+    for (const key of Object.keys(template)) if (key !== '_') Object.defineProperty(root, key, {
+      value: (template as { readonly [key: string]: JsonTemplateValue })[key]!, enumerable: true, writable: true, configurable: true,
+    });
+    outputSource = root;
+  }
   const declarations = new Map<string, Declaration>();
   const locations = new Map<string, Declaration>();
   const inputs = new Map<string, BaseType>();
@@ -234,8 +268,18 @@ export function buildContract(template: JsonTemplateValue, options: PayloadTempl
       const found = parsePlaceholder(value, path);
       if (!found) return value;
       for (const op of [...(found.memberOperations ?? []), ...(found.valueOperations ?? [])]) {
+        if (op.name === 'lookup') continue;
         if (!plugins[op.kind].has(op.name)) throw new PayloadTemplateError({
           code: 'UNKNOWN_PLUGIN_OPERATION', path, variableName: found.name, kind: op.kind, operation: op.name,
+        });
+      }
+      for (const [scope, ops] of [['member', found.memberOperations ?? []], ['value', found.valueOperations ?? []]] as const) {
+        ops.forEach((op, index) => {
+          if (op.name !== 'lookup') return;
+          if (scope !== 'value' || op.kind !== 'transformer' || op.operator || index !== ops.length - 1 || !lookupMaps.has(op.argument!)) {
+            if (!lookupMaps.has(op.argument!)) throw new PayloadTemplateError({ code: 'UNKNOWN_LOOKUP_MAP', path, mapName: op.argument! });
+            throw new PayloadTemplateError({ code: 'INVALID_LOOKUP_OPERATION', path, mapName: op.argument! });
+          }
         });
       }
       for (const [scope, ops] of [['member', found.memberOperations ?? []], ['value', found.valueOperations ?? []]] as const) {
@@ -273,7 +317,17 @@ export function buildContract(template: JsonTemplateValue, options: PayloadTempl
     }
     return value;
   }
-  const normalizedTemplate = visit(template, '$');
+  const normalizedOutputTemplate = visit(outputSource, '$');
+  let normalizedTemplate = normalizedOutputTemplate;
+  if (outputSource !== template) {
+    const root: Record<string, JsonValue> = {};
+    Object.defineProperty(root, '_', { value: visit((template as { readonly _: JsonTemplateValue })._, '$._'),
+      enumerable: true, writable: true, configurable: true });
+    for (const key of Object.keys(normalizedOutputTemplate as Record<string, JsonValue>)) Object.defineProperty(root, key, {
+      value: (normalizedOutputTemplate as Record<string, JsonValue>)[key]!, enumerable: true, writable: true, configurable: true,
+    });
+    normalizedTemplate = root;
+  }
   const dependencies = new Map<string, string[]>();
   for (const [path, declaration] of locations) {
     const fn = declaration.function;
@@ -304,5 +358,5 @@ export function buildContract(template: JsonTemplateValue, options: PayloadTempl
     complete.add(path);
   }
   for (const path of locations.keys()) check(path, []);
-  return { template: normalizedTemplate, declarations, locations, plugins };
+  return { template: normalizedTemplate, outputTemplate: normalizedOutputTemplate, lookupMaps, declarations, locations, plugins };
 }

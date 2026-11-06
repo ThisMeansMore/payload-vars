@@ -9,6 +9,7 @@ const actionPattern = new RegExp(`^(${actionSource})$`);
 const operatorPattern = new RegExp(`^(${operatorSource})$`);
 type Position = 'function' | 'call' | 'argument' | 'argumentEnd' | 'outside' | 'variable' | 'colon' | 'type' | 'tail'
   | 'memberValidator' | 'memberTransformer' | 'valueValidator' | 'valueTransformer'
+  | 'lookupCall' | 'lookupArgument' | 'lookupEnd'
   | 'member' | 'memberAction' | 'memberEnd' | 'arrayEnd' | 'valueAction' | 'end'
   | 'allowedOpen' | 'allowedValue' | 'allowedSeparator' | 'interaction';
 
@@ -46,6 +47,12 @@ export function tokenizePayloadExpression(expression: string): PayloadExpression
         kind = 'variable'; position = 'argumentEnd';
       } else if (position === 'argumentEnd' && text === ',') {
         kind = 'punctuation'; position = 'argument';
+      } else if (position === 'lookupCall' && text === '(') {
+        kind = 'punctuation'; position = 'lookupArgument';
+      } else if (position === 'lookupArgument' && variablePattern.test(text)) {
+        kind = 'value'; position = 'lookupEnd';
+      } else if (position === 'lookupEnd' && text === ')') {
+        kind = 'punctuation'; position = 'arrayEnd';
       } else if (position === 'allowedSeparator' && text === ',') {
         kind = 'punctuation'; position = 'allowedValue';
       } else if ((position === 'argument' || position === 'argumentEnd') && text === ')') {
@@ -69,10 +76,11 @@ export function tokenizePayloadExpression(expression: string): PayloadExpression
         const validator = text === '!' || text === '?';
         position = position === 'member' ? (validator ? 'memberValidator' : 'memberTransformer')
           : (validator ? 'valueValidator' : 'valueTransformer');
-      } else if (operationPattern.test(text) && (position === 'memberValidator' || position === 'memberTransformer'
+      } else if ((operationPattern.test(text) || text === 'lookup') && (position === 'memberValidator' || position === 'memberTransformer'
         || position === 'valueValidator' || position === 'valueTransformer')) {
         kind = position.endsWith('Validator') ? 'validator' : 'transformer';
-        position = position.startsWith('member') ? 'member' : 'arrayEnd';
+        position = text === 'lookup' && position === 'valueTransformer' ? 'lookupCall'
+          : position.startsWith('member') ? 'member' : 'arrayEnd';
       } else if (operatorPattern.test(text) && (position === 'tail' || position === 'arrayEnd' || position === 'member')) {
         kind = 'operator';
         position = position === 'member' ? 'memberAction' : 'valueAction';

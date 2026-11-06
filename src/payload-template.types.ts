@@ -67,7 +67,10 @@ export type PayloadTemplateIssue =
   | (RuntimeIssue & { code: 'FALLBACK_THROW'; operator: FallbackExpression['operator']; valuePath?: string })
   | (RuntimeIssue & { code: 'CANNOT_OMIT_ROOT' })
   | { code: 'PASSTHROUGH_REQUIRES_OBJECT_ROOT'; actualType: string }
-  | { code: 'INVALID_PASSTHROUGH_VARIABLE'; variableName: string; actualType: string };
+  | { code: 'INVALID_PASSTHROUGH_VARIABLE'; variableName: string; actualType: string }
+  | { code: 'INVALID_LOOKUP_MAP'; path: string }
+  | { code: 'UNKNOWN_LOOKUP_MAP' | 'INVALID_LOOKUP_OPERATION'; path: string; mapName: string }
+  | (RuntimeIssue & { code: 'MISSING_LOOKUP_KEY'; mapName: string; key: string });
 
 export type PayloadExpressionTokenKind =
   | 'delimiter' | 'variable' | 'punctuation' | 'type'

@@ -20,6 +20,27 @@ The `PayloadTemplate` constructor accepts parsed JSON values. A placeholder occu
 
 Values are never coerced. Without a fallback, missing variables fail with `MISSING_VARIABLE`; supplied `undefined`, `null`, and incompatible values fail type validation. Empty arrays remain empty unless a whole-value `||` fallback handles them. There are no separate nullable or optional types.
 
+## Template-local lookup maps
+
+The root `_` property is reserved for static named lookup maps. Each direct child is a map whose keys are JSON object keys and whose values are JSON scalars:
+
+```json
+{
+  "_": {
+    "Users": { "john@example.com": 113, "jane@example.com": 234 },
+    "Categories": { "Vacation": 1234, "Homeoffice": 3420 }
+  },
+  "user_id": "{{email:string > lookup(Users) ?? throw}}",
+  "category_event_id": "{{category:string > lookup(Categories) ?? throw}}"
+}
+```
+
+`lookup(MapName)` is a terminal whole-value transformer. It uses the validated input value as the JSON object key and returns the mapped `string`, finite `number`, `boolean`, or `null` without coercing the result. A missing key is distinct from a mapped falsy value, so `0`, `false`, `""`, and `null` are returned normally. The expression fallback handles a missing key; without one, rendering raises `MISSING_LOOKUP_KEY`.
+
+Map names use identifier syntax. Map definitions cannot contain containers, placeholders, derived expressions, or references to other maps. Invalid definitions and unknown map names fail during construction. The registry is snapshotted with the compiled template and has no shared mutable render state.
+
+Only the root `_` is reserved. Nested `_` properties are ordinary output. `render()` excludes the root registry, `toJSON()` retains it, and `variables()` ignores it. Templates without `_` behave unchanged.
+
 ## Allowed values
 
 Use a comma-separated domain to restrict a scalar or every member of an array:
