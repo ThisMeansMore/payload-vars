@@ -68,7 +68,7 @@ function validate(value: unknown, declaration: Declaration, contract: Contract):
     for (let index = 0; index < steps.length; index++) {
       const op = steps[index]!;
       if (op.name === 'core.omit') continue;
-      if (op.name === 'lookup') {
+      if (op.name === 'core.lookup') {
         const map = contract.lookupMaps.get(op.argument!)!;
         const key = String(current);
         if (Object.prototype.hasOwnProperty.call(map, key)) return copyJson(map[key]!);

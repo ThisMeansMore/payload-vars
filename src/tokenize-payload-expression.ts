@@ -76,10 +76,10 @@ export function tokenizePayloadExpression(expression: string): PayloadExpression
         const validator = text === '!' || text === '?';
         position = position === 'member' ? (validator ? 'memberValidator' : 'memberTransformer')
           : (validator ? 'valueValidator' : 'valueTransformer');
-      } else if ((operationPattern.test(text) || text === 'lookup') && (position === 'memberValidator' || position === 'memberTransformer'
+      } else if (operationPattern.test(text) && (position === 'memberValidator' || position === 'memberTransformer'
         || position === 'valueValidator' || position === 'valueTransformer')) {
         kind = position.endsWith('Validator') ? 'validator' : 'transformer';
-        position = text === 'lookup' && position === 'valueTransformer' ? 'lookupCall'
+        position = text === 'core.lookup' && position === 'valueTransformer' ? 'lookupCall'
           : position.startsWith('member') ? 'member' : 'arrayEnd';
       } else if (operatorPattern.test(text) && (position === 'tail' || position === 'arrayEnd' || position === 'member')) {
         kind = 'operator';

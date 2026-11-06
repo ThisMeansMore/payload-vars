@@ -30,12 +30,12 @@ The root `_` property is reserved for static named lookup maps. Each direct chil
     "Users": { "john@example.com": 113, "jane@example.com": 234 },
     "Categories": { "Vacation": 1234, "Homeoffice": 3420 }
   },
-  "user_id": "{{email:string > lookup(Users) ?? throw}}",
-  "category_event_id": "{{category:string > lookup(Categories) ?? throw}}"
+  "user_id": "{{email:string > core.lookup(Users) ?? throw}}",
+  "category_event_id": "{{category:string > core.lookup(Categories) ?? throw}}"
 }
 ```
 
-`lookup(MapName)` is a terminal whole-value transformer. It uses the validated input value as the JSON object key and returns the mapped `string`, finite `number`, `boolean`, or `null` without coercing the result. A missing key is distinct from a mapped falsy value, so `0`, `false`, `""`, and `null` are returned normally. The expression fallback handles a missing key; without one, rendering raises `MISSING_LOOKUP_KEY`.
+`core.lookup(MapName)` is a terminal whole-value transformer. It uses the validated input value as the JSON object key and returns the mapped `string`, finite `number`, `boolean`, or `null` without coercing the result. A missing key is distinct from a mapped falsy value, so `0`, `false`, `""`, and `null` are returned normally. The expression fallback handles a missing key; without one, rendering raises `MISSING_LOOKUP_KEY`.
 
 Map names use identifier syntax. Map definitions cannot contain containers, placeholders, derived expressions, or references to other maps. Invalid definitions and unknown map names fail during construction. The registry is snapshotted with the compiled template and has no shared mutable render state.
 

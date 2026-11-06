@@ -155,7 +155,7 @@ TypeScript infers `render()` inputs from literal templates. Use `as const` on se
 
 ## Template-local lookup maps
 
-Put static value-to-ID mappings under the reserved root `_` property and resolve them with `> lookup(MapName)`. This is useful when an external API expects internal IDs while your application works with readable values:
+Put static value-to-ID mappings under the reserved root `_` property and resolve them with `> core.lookup(MapName)`. This is useful when an external API expects internal IDs while your application works with readable values:
 
 ```js
 const webhook = new PayloadTemplate({
@@ -163,8 +163,8 @@ const webhook = new PayloadTemplate({
     FingeraUsers: { 'john@example.com': 113, 'jane@example.com': 234 },
     FingeraCategories: { Vacation: 1234, Homeoffice: 3420 },
   },
-  user_id: '{{email:string > lookup(FingeraUsers) ?? throw}}',
-  category_event_id: '{{category:string > lookup(FingeraCategories) ?? throw}}',
+  user_id: '{{email:string > core.lookup(FingeraUsers) ?? throw}}',
+  category_event_id: '{{category:string > core.lookup(FingeraCategories) ?? throw}}',
 });
 
 webhook.render({ email: 'john@example.com', category: 'Vacation' });

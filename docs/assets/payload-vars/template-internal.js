@@ -2,8 +2,8 @@ import { createRegistries } from './plugins.js';
 import { argumentReferenceSource, variableNameSource, operationNameSource, typeSource, actionSource, operatorSource } from './expression-syntax.js';
 import { PayloadTemplateError } from './payload-template.error.js';
 const identifierPattern = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
-const lookupSource = String.raw `lookup\s*\(\s*([A-Za-z_$][A-Za-z0-9_$]*)\s*\)`;
-const operationSource = String.raw `(?:${operationNameSource}|lookup\s*\(\s*[A-Za-z_$][A-Za-z0-9_$]*\s*\))\s*`;
+const lookupSource = String.raw `core\.lookup\s*\(\s*([A-Za-z_$][A-Za-z0-9_$]*)\s*\)`;
+const operationSource = String.raw `(?:core\.lookup\s*\(\s*[A-Za-z_$][A-Za-z0-9_$]*\s*\)|${operationNameSource})\s*`;
 // A conditional owns at most one success transform and one alternative.
 const operationsSource = String.raw `(?:[!>]\s*${operationSource}|\?\s*${operationSource}(?:>\s*${operationSource})?(?:~\s*${operationSource})?)*`;
 const scopeSource = String.raw `(${operationsSource})(?:(${operatorSource})\s*(${actionSource})\s*)?`;
@@ -237,8 +237,8 @@ export function parsePlaceholder(value, path) {
     const valueFallback = allowedValues
         ? parsed[4] ? { operator: parsed[4], action: parsed[5] } : undefined
         : parsed[6] ? { operator: parsed[6], action: parsed[7] } : undefined;
-    const operations = (source) => Array.from(source.matchAll(new RegExp(String.raw `([!?>~])\s*(${operationNameSource}|${lookupSource})`, 'g')), match => ({ kind: match[1] === '!' || match[1] === '?' ? 'validator' : 'transformer',
-        name: match[3] ? 'lookup' : match[2], ...(match[3] ? { argument: match[3] } : {}),
+    const operations = (source) => Array.from(source.matchAll(new RegExp(String.raw `([!?>~])\s*(${lookupSource}|${operationNameSource})`, 'g')), match => ({ kind: match[1] === '!' || match[1] === '?' ? 'validator' : 'transformer',
+        name: match[3] ? 'core.lookup' : match[2], ...(match[3] ? { argument: match[3] } : {}),
         ...(match[1] === '?' || match[1] === '~' ? { operator: match[1] } : {}) }));
     const memberOperations = allowedValues ? [] : operations(parsed[2] ?? '');
     const valueOperations = operations(parsed[allowedValues ? 3 : 5] ?? '');
@@ -312,7 +312,7 @@ export function buildContract(template, options = {}) {
             if (!found)
                 return value;
             for (const op of [...(found.memberOperations ?? []), ...(found.valueOperations ?? [])]) {
-                if (op.name === 'lookup')
+                if (op.name === 'core.lookup')
                     continue;
                 if (!plugins[op.kind].has(op.name))
                     throw new PayloadTemplateError({
@@ -321,7 +321,7 @@ export function buildContract(template, options = {}) {
             }
             for (const [scope, ops] of [['member', found.memberOperations ?? []], ['value', found.valueOperations ?? []]]) {
                 ops.forEach((op, index) => {
-                    if (op.name !== 'lookup')
+                    if (op.name !== 'core.lookup')
                         return;
                     if (scope !== 'value' || op.kind !== 'transformer' || op.operator || index !== ops.length - 1 || !lookupMaps.has(op.argument)) {
                         if (!lookupMaps.has(op.argument))
