@@ -2,6 +2,12 @@
 
 Full notes for older releases. See the [changelog](CHANGELOG.md) for the latest five releases and a summary of this archive.
 
+## 2.3.0 — 2026-10-13
+
+### Added
+
+- Consumer-defined `@ interaction` hints are preserved as opaque `interaction` strings in variable contracts without changing rendering or validation.
+
 ## 2.2.7 — 2026-10-13
 
 ### Documentation
