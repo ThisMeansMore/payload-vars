@@ -184,7 +184,7 @@ permalink: /playground.html
   },
   "request": {
     "reference": "{{reference:string}}",
-    "plan": "{{plan:string in [Starter, Growth, Enterprise] > lookup(PlanIds)}}",
+    "plan": "{{plan:string in [Starter, Growth, Enterprise] > core.lookup(PlanIds)}}",
     "description": "{{description:string ?? omit}}",
     "extensions": "{{extensions:string[Reporting, Audit log, Single sign-on] || throw}}",
     "neededFrom": "{{neededFrom:string}}",
@@ -209,7 +209,7 @@ permalink: /playground.html
   },
   "request": {
     "reference": "{{reference:string}}",
-    "plan": "{{plan:string in [Starter, Growth, Enterprise] > lookup(PlanIds)}}",
+    "plan": "{{plan:string in [Starter, Growth, Enterprise] > core.lookup(PlanIds)}}",
     "description": "{{description:string ?? omit}}",
     "extensions": "{{extensions:string[Reporting, Audit log, Single sign-on] || throw}}",
     "neededFrom": "{{neededFrom:string}}",

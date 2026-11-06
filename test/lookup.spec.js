@@ -10,8 +10,8 @@ describe('template-local lookup maps', () => {
       Users: { 'john@example.com': 113, nobody: 0 },
       Categories: { Vacation: 1234, Disabled: false, Empty: '', Nothing: null },
     },
-    user_id: '{{email:string > lookup(Users) ?? throw}}',
-    category_event_id: '{{category:string > lookup(Categories) ?? throw}}',
+    user_id: '{{email:string > core.lookup(Users) ?? throw}}',
+    category_event_id: '{{category:string > core.lookup(Categories) ?? throw}}',
     nested: { _: { remains: true } },
   };
 
@@ -31,10 +31,10 @@ describe('template-local lookup maps', () => {
   });
 
   test('uses existing fallbacks for missing keys and reports unhandled misses', () => {
-    assert.equal(new PayloadTemplate({ _: { M: {} }, value: '{{x:string > lookup(M) ?? null}}' }).render({ x: 'x' }).value, null);
-    assert.deepEqual(new PayloadTemplate({ _: { M: {} }, value: '{{x:string > lookup(M) ?? omit}}' }).render({ x: 'x' }), {});
-    assert.throws(() => new PayloadTemplate({ _: { M: {} }, value: '{{x:string > lookup(M) ?? throw}}' }).render({ x: 'x' }), issue('FALLBACK_THROW'));
-    assert.throws(() => new PayloadTemplate({ _: { M: {} }, value: '{{x:string > lookup(M)}}' }).render({ x: 'x' }), issue('MISSING_LOOKUP_KEY'));
+    assert.equal(new PayloadTemplate({ _: { M: {} }, value: '{{x:string > core.lookup(M) ?? null}}' }).render({ x: 'x' }).value, null);
+    assert.deepEqual(new PayloadTemplate({ _: { M: {} }, value: '{{x:string > core.lookup(M) ?? omit}}' }).render({ x: 'x' }), {});
+    assert.throws(() => new PayloadTemplate({ _: { M: {} }, value: '{{x:string > core.lookup(M) ?? throw}}' }).render({ x: 'x' }), issue('FALLBACK_THROW'));
+    assert.throws(() => new PayloadTemplate({ _: { M: {} }, value: '{{x:string > core.lookup(M)}}' }).render({ x: 'x' }), issue('MISSING_LOOKUP_KEY'));
   });
 
   test('rejects invalid maps and references at compilation', () => {
@@ -42,11 +42,12 @@ describe('template-local lookup maps', () => {
       { M: { x: undefined } }, { M: { x: '{{value:string}}' } }]) {
       assert.throws(() => new PayloadTemplate({ _: registry }), issue('INVALID_LOOKUP_MAP'));
     }
-    assert.throws(() => new PayloadTemplate({ value: '{{x:string > lookup(M)}}' }), issue('UNKNOWN_LOOKUP_MAP'));
+    assert.throws(() => new PayloadTemplate({ value: '{{x:string > core.lookup(M)}}' }), issue('UNKNOWN_LOOKUP_MAP'));
+    assert.throws(() => new PayloadTemplate({ _: { M: { x: 1 } }, value: '{{x:string > lookup(M)}}' }), issue('INVALID_FALLBACK_SYNTAX'));
   });
 
   test('keeps repeated and concurrent renders isolated', async () => {
-    const template = new PayloadTemplate({ _: { M: { a: 1, b: 2 } }, value: '{{x:string > lookup(M)}}' });
+    const template = new PayloadTemplate({ _: { M: { a: 1, b: 2 } }, value: '{{x:string > core.lookup(M)}}' });
     const results = await Promise.all(Array.from({ length: 20 }, (_, index) => Promise.resolve().then(() =>
       template.render({ x: index % 2 ? 'a' : 'b' }))));
     assert.deepEqual(results.map(result => result.value), Array.from({ length: 20 }, (_, index) => index % 2 ? 1 : 2));
@@ -58,12 +59,12 @@ describe('template-local lookup maps', () => {
   });
 
   test('normalizes and tokenizes lookup calls', () => {
-    const template = new PayloadTemplate({ _: { Values: { x: 1 } }, value: '{{x:string>lookup ( Values )}}' });
-    assert.equal(template.toJSON().value, '{{x:string > lookup(Values)}}');
+    const template = new PayloadTemplate({ _: { Values: { x: 1 } }, value: '{{x:string>core.lookup ( Values )}}' });
+    assert.equal(template.toJSON().value, '{{x:string > core.lookup(Values)}}');
     assert.deepEqual(template.tokenizePayloadExpression()[0].tokens
       .filter(token => token.text.trim()).map(token => [token.kind, token.text]), [
       ['delimiter', '{{'], ['variable', 'x'], ['punctuation', ':'], ['type', 'string'],
-      ['operator', '>'], ['transformer', 'lookup'], ['punctuation', '('], ['value', 'Values'],
+      ['operator', '>'], ['transformer', 'core.lookup'], ['punctuation', '('], ['value', 'Values'],
       ['punctuation', ')'], ['delimiter', '}}'],
     ]);
   });

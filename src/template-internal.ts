@@ -14,8 +14,8 @@ export interface Contract {
 }
 
 const identifierPattern = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
-const lookupSource = String.raw`lookup\s*\(\s*([A-Za-z_$][A-Za-z0-9_$]*)\s*\)`;
-const operationSource = String.raw`(?:${operationNameSource}|lookup\s*\(\s*[A-Za-z_$][A-Za-z0-9_$]*\s*\))\s*`;
+const lookupSource = String.raw`core\.lookup\s*\(\s*([A-Za-z_$][A-Za-z0-9_$]*)\s*\)`;
+const operationSource = String.raw`(?:core\.lookup\s*\(\s*[A-Za-z_$][A-Za-z0-9_$]*\s*\)|${operationNameSource})\s*`;
 // A conditional owns at most one success transform and one alternative.
 const operationsSource = String.raw`(?:[!>]\s*${operationSource}|\?\s*${operationSource}(?:>\s*${operationSource})?(?:~\s*${operationSource})?)*`;
 const scopeSource = String.raw`(${operationsSource})(?:(${operatorSource})\s*(${actionSource})\s*)?`;
@@ -195,9 +195,9 @@ export function parsePlaceholder(value: string, path: string): Declaration | und
     ? parsed[4] ? { operator: parsed[4], action: parsed[5] } as FallbackExpression : undefined
     : parsed[6] ? { operator: parsed[6], action: parsed[7] } as FallbackExpression : undefined;
   const operations = (source: string): PayloadOperation[] => Array.from(
-    source.matchAll(new RegExp(String.raw`([!?>~])\s*(${operationNameSource}|${lookupSource})`, 'g')),
+    source.matchAll(new RegExp(String.raw`([!?>~])\s*(${lookupSource}|${operationNameSource})`, 'g')),
     match => ({ kind: match[1] === '!' || match[1] === '?' ? 'validator' : 'transformer',
-      name: match[3] ? 'lookup' : match[2]!, ...(match[3] ? { argument: match[3] } : {}),
+      name: match[3] ? 'core.lookup' : match[2]!, ...(match[3] ? { argument: match[3] } : {}),
       ...(match[1] === '?' || match[1] === '~' ? { operator: match[1] as '?' | '~' } : {}) }));
   const memberOperations = allowedValues ? [] : operations(parsed[2] ?? '');
   const valueOperations = operations(parsed[allowedValues ? 3 : 5] ?? '');
@@ -268,14 +268,14 @@ export function buildContract(template: JsonTemplateValue, options: PayloadTempl
       const found = parsePlaceholder(value, path);
       if (!found) return value;
       for (const op of [...(found.memberOperations ?? []), ...(found.valueOperations ?? [])]) {
-        if (op.name === 'lookup') continue;
+        if (op.name === 'core.lookup') continue;
         if (!plugins[op.kind].has(op.name)) throw new PayloadTemplateError({
           code: 'UNKNOWN_PLUGIN_OPERATION', path, variableName: found.name, kind: op.kind, operation: op.name,
         });
       }
       for (const [scope, ops] of [['member', found.memberOperations ?? []], ['value', found.valueOperations ?? []]] as const) {
         ops.forEach((op, index) => {
-          if (op.name !== 'lookup') return;
+          if (op.name !== 'core.lookup') return;
           if (scope !== 'value' || op.kind !== 'transformer' || op.operator || index !== ops.length - 1 || !lookupMaps.has(op.argument!)) {
             if (!lookupMaps.has(op.argument!)) throw new PayloadTemplateError({ code: 'UNKNOWN_LOOKUP_MAP', path, mapName: op.argument! });
             throw new PayloadTemplateError({ code: 'INVALID_LOOKUP_OPERATION', path, mapName: op.argument! });
