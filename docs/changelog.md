@@ -11,6 +11,12 @@ Notable changes, starting with 1.0.0. Historical dates follow Git tags.
 
 The latest five releases are detailed below. Older releases have one-line summaries linking to their full notes in the [archive](changelog-archive.md).
 
+## 2.5.0 — 2026-11-06
+
+### Changes
+
+- feat: add template-local lookup maps (#26)
+
 ## 2.4.1 — 2026-10-14
 
 ### Fixed
@@ -37,15 +43,9 @@ The latest five releases are detailed below. Older releases have one-line summar
 
 - Consumer-defined `@ interaction` hints are preserved as opaque `interaction` strings in variable contracts without changing rendering or validation.
 
-## 2.2.7 — 2026-10-13
-
-### Documentation
-
-- Added a form-oriented static-values example covering mandatory and optional single and multiple values.
-- Changed releases to use a guarded release branch and PR before tag-only publication from `main`, with actionable GitHub, npm login, registry, and Pages recovery checks.
-
 ## Older releases
 
+- [2.2.7 — 2026-10-13](changelog-archive.md#227--2026-10-13) — Added a form-oriented static-values example covering mandatory and optional single and multiple values.
 - [2.2.6 — 2026-10-13](changelog-archive.md#226--2026-10-13) — Static allowed-value domains for required scalars (`string in [black, white]`) and constrained arrays (`string[black, white]`), including runtime validation, extracted `allowedValues`, highlighting tokens, TypeScript support, and documentation.
 - [2.2.5 — 2026-10-01](changelog-archive.md#225--2026-10-01) — style: emojis in examples
 - [2.2.4 — 2026-10-01](changelog-archive.md#224--2026-10-01) — style: better example page layout
