@@ -160,11 +160,11 @@ Put static value-to-ID mappings under the reserved root `_` property and resolve
 ```js
 const webhook = new PayloadTemplate({
   _: {
-    FingeraUsers: { 'john@example.com': 113, 'jane@example.com': 234 },
-    FingeraCategories: { Vacation: 1234, Homeoffice: 3420 },
+    ExampleServiceUsers: { 'john@example.com': 113, 'jane@example.com': 234 },
+    ExampleServiceCategories: { Vacation: 1234, Homeoffice: 3420 },
   },
-  user_id: '{{email:string > core.lookup(FingeraUsers) ?? throw}}',
-  category_event_id: '{{category:string > core.lookup(FingeraCategories) ?? throw}}',
+  user_id: '{{email:string > core.lookup(ExampleServiceUsers) ?? throw}}',
+  category_event_id: '{{category:string > core.lookup(ExampleServiceCategories) ?? throw}}',
 });
 
 webhook.render({ email: 'john@example.com', category: 'Vacation' });
