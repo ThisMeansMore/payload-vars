@@ -2,6 +2,13 @@
 
 Full notes for older releases. See the [changelog](CHANGELOG.md) for the latest five releases and a summary of this archive.
 
+## 2.2.7 — 2026-10-13
+
+### Documentation
+
+- Added a form-oriented static-values example covering mandatory and optional single and multiple values.
+- Changed releases to use a guarded release branch and PR before tag-only publication from `main`, with actionable GitHub, npm login, registry, and Pages recovery checks.
+
 ## 2.2.6 — 2026-10-13
 
 ### Added
