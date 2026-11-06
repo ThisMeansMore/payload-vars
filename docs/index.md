@@ -153,6 +153,26 @@ Placeholders occupy an entire string. Types are `string`, `number`, `boolean`, `
 
 TypeScript infers `render()` inputs from literal templates. Use `as const` on separately declared templates to preserve their literal types; see [TypeScript input inference](development.md#typescript-input-inference).
 
+## Template-local lookup maps
+
+Put static value-to-ID mappings under the reserved root `_` property and resolve them with `> lookup(MapName)`. This is useful when an external API expects internal IDs while your application works with readable values:
+
+```js
+const webhook = new PayloadTemplate({
+  _: {
+    FingeraUsers: { 'john@example.com': 113, 'jane@example.com': 234 },
+    FingeraCategories: { Vacation: 1234, Homeoffice: 3420 },
+  },
+  user_id: '{{email:string > lookup(FingeraUsers) ?? throw}}',
+  category_event_id: '{{category:string > lookup(FingeraCategories) ?? throw}}',
+});
+
+webhook.render({ email: 'john@example.com', category: 'Vacation' });
+// { user_id: 113, category_event_id: 1234 }
+```
+
+`render()` removes the root registry, `toJSON()` preserves it, and `variables()` ignores its static contents. Lookup results retain their JSON scalar type, including `0`, `false`, `""`, and `null`.
+
 ## Plugins: your rules, inside plain JSON
 
 **Validate an email. Extract its domain. Turn calendar dates into UTC timestamps. All in the template.**

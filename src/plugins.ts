@@ -33,6 +33,8 @@ export interface PayloadTemplateOptions { plugins?: readonly PayloadVarsPlugin[]
 export interface PayloadOperation {
   kind: 'validator' | 'transformer';
   name: string;
+  /** Argument used by renderer-owned operations such as lookup(mapName). */
+  argument?: string;
   /** Conditional validator or alternative transformer; absent for ! and >. */
   operator?: '?' | '~';
 }

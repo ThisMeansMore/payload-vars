@@ -1,5 +1,5 @@
 import { matchesBaseType } from './plugins.js';
-import type { PayloadOperation, PluginRegistries } from './plugins.js';
+import type { PayloadOperation } from './plugins.js';
 import { isJsonValue } from './is-json-value.js';
 import { PayloadTemplateError } from './payload-template.error.js';
 import type { FallbackExpression, JsonValue, PayloadRenderOptions } from './payload-template.types.js';
@@ -44,7 +44,7 @@ function fallback(value: unknown, expression: FallbackExpression | undefined,
   return { value: expression.action === 'omit' ? OMIT : null };
 }
 
-function validate(value: unknown, declaration: Declaration, plugins: PluginRegistries): RenderedValue {
+function validate(value: unknown, declaration: Declaration, contract: Contract): RenderedValue {
   const result = fallback(value, declaration.valueFallback, declaration, undefined, true);
   if (result) return result.value;
   const fail = (bad: unknown, valuePath?: string): never => {
@@ -68,6 +68,14 @@ function validate(value: unknown, declaration: Declaration, plugins: PluginRegis
     for (let index = 0; index < steps.length; index++) {
       const op = steps[index]!;
       if (op.name === 'core.omit') continue;
+      if (op.name === 'lookup') {
+        const map = contract.lookupMaps.get(op.argument!)!;
+        const key = String(current);
+        if (Object.prototype.hasOwnProperty.call(map, key)) return copyJson(map[key]!);
+        const missing = fallback(undefined, declaration.valueFallback, declaration, valuePath, true);
+        if (missing) return missing.value as unknown as JsonValue;
+        throw new PayloadTemplateError({ code: 'MISSING_LOOKUP_KEY', ...details(declaration), mapName: op.argument!, key });
+      }
       const issue = { ...details(declaration), kind: op.kind, operation: op.name,
         ...(valuePath === undefined ? {} : { valuePath }) };
       // Validators see an immutable snapshot; transformers may edit their own copy.
@@ -75,7 +83,7 @@ function validate(value: unknown, declaration: Declaration, plugins: PluginRegis
       if (op.kind === 'validator' && Array.isArray(input)) Object.freeze(input);
       let next: unknown;
       try {
-        next = plugins[op.kind].get(op.name)!(input as never);
+        next = contract.plugins[op.kind].get(op.name)!(input as never);
       } catch {
         throw new PayloadTemplateError({ code: 'PLUGIN_EXECUTION_FAILED', ...issue });
       }
@@ -155,7 +163,7 @@ export function renderContract(contract: Contract, variables: Readonly<Record<st
       if (!present && !declaration.valueFallback) throw new PayloadTemplateError({ code: 'MISSING_VARIABLE', ...details(declaration) });
       source = present ? inputs.get(declaration.name) : undefined;
     }
-    const result = validate(source, declaration, contract.plugins);
+    const result = validate(source, declaration, contract);
     evaluated.set(path, result);
     return result;
   }
@@ -184,7 +192,7 @@ export function renderContract(contract: Contract, variables: Readonly<Record<st
     }
     return value;
   }
-  const result = render(contract.template, '$');
+  const result = render(contract.outputTemplate, '$');
   if (result === OMIT) throw new PayloadTemplateError({ code: 'CANNOT_OMIT_ROOT', ...details(contract.locations.get('$')!) });
   if (!options.passthrough) return result;
   if (result === null || Array.isArray(result) || typeof result !== 'object') {
