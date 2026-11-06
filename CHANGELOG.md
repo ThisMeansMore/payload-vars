@@ -4,6 +4,12 @@ Notable changes, starting with 1.0.0. Historical dates follow Git tags.
 
 The latest five releases are detailed below. Older releases have one-line summaries linking to their full notes in the [archive](CHANGELOG-ARCHIVE.md).
 
+## 2.5.1 — 2026-11-06
+
+### Changes
+
+- fix: namespace lookup under core (#28)
+
 ## 2.5.0 — 2026-11-06
 
 ### Changes
@@ -30,14 +36,9 @@ The latest five releases are detailed below. Older releases have one-line summar
 
 - Added a browser playground with headless JSON and interaction-driven UI flows, syntax highlighting, autoformatting, inline feedback, and a dependency-free local preview server.
 
-## 2.3.0 — 2026-10-13
-
-### Added
-
-- Consumer-defined `@ interaction` hints are preserved as opaque `interaction` strings in variable contracts without changing rendering or validation.
-
 ## Older releases
 
+- [2.3.0 — 2026-10-13](CHANGELOG-ARCHIVE.md#230--2026-10-13) — Consumer-defined `@ interaction` hints are preserved as opaque `interaction` strings in variable contracts without changing rendering or validation.
 - [2.2.7 — 2026-10-13](CHANGELOG-ARCHIVE.md#227--2026-10-13) — Added a form-oriented static-values example covering mandatory and optional single and multiple values.
 - [2.2.6 — 2026-10-13](CHANGELOG-ARCHIVE.md#226--2026-10-13) — Static allowed-value domains for required scalars (`string in [black, white]`) and constrained arrays (`string[black, white]`), including runtime validation, extracted `allowedValues`, highlighting tokens, TypeScript support, and documentation.
 - [2.2.5 — 2026-10-01](CHANGELOG-ARCHIVE.md#225--2026-10-01) — style: emojis in examples
