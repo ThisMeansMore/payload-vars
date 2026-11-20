@@ -120,6 +120,10 @@ export function tokenizePayloadExpression(expression) {
                 kind = 'action';
                 position = position === 'memberAction' ? 'memberEnd' : 'end';
             }
+            else if (position === 'valueAction' && (/^['"]/.test(text) || /^-?\d/.test(text))) {
+                kind = 'value';
+                position = 'arrayEnd';
+            }
             else if (position === 'allowedValue' || position === 'member'
                 || (position === 'allowedSeparator' && text !== ']' && text !== ',')) {
                 kind = 'value';

@@ -35,16 +35,20 @@ function fallback(value, expression, declaration, valuePath, wholeValue = false)
         : expression?.operator === '||' && (!value || emptyArray);
     if (!expression || !matches)
         return;
-    if (expression.action === 'throw') {
+    if ('action' in expression && expression.action === 'throw') {
         throw new PayloadTemplateError({ code: 'FALLBACK_THROW', ...details(declaration), operator: expression.operator,
             ...(valuePath === undefined ? {} : { valuePath }) });
     }
+    if ('value' in expression)
+        return { value: expression.value };
     return { value: expression.action === 'omit' ? OMIT : null };
 }
 function validate(value, declaration, contract) {
     const result = fallback(value, declaration.valueFallback, declaration, undefined, true);
-    if (result)
+    if (result && declaration.valueFallback && !('value' in declaration.valueFallback))
         return result.value;
+    if (result)
+        value = result.value;
     const fail = (bad, valuePath) => {
         throw new PayloadTemplateError({ code: 'INVALID_VARIABLE_TYPE', ...details(declaration),
             actualType: actualType(bad), ...(valuePath === undefined ? {} : { valuePath }) });
@@ -76,7 +80,8 @@ function validate(value, declaration, contract) {
                 const key = String(current);
                 if (Object.prototype.hasOwnProperty.call(map, key))
                     return copyJson(map[key]);
-                const missing = fallback(undefined, declaration.valueFallback, declaration, valuePath, true);
+                const missing = declaration.valueFallback && 'value' in declaration.valueFallback ? undefined
+                    : fallback(undefined, declaration.valueFallback, declaration, valuePath, true);
                 if (missing)
                     return missing.value;
                 throw new PayloadTemplateError({ code: 'MISSING_LOOKUP_KEY', ...details(declaration), mapName: op.argument, key });

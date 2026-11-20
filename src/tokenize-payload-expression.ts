@@ -88,6 +88,8 @@ export function tokenizePayloadExpression(expression: string): PayloadExpression
       } else if (actionPattern.test(text) && (position === 'memberAction' || position === 'valueAction')) {
         kind = 'action';
         position = position === 'memberAction' ? 'memberEnd' : 'end';
+      } else if (position === 'valueAction' && (/^['"]/.test(text) || /^-?\d/.test(text))) {
+        kind = 'value'; position = 'arrayEnd';
       } else if (position === 'allowedValue' || position === 'member'
         || (position === 'allowedSeparator' && text !== ']' && text !== ',')) {
         kind = 'value'; position = 'allowedSeparator';

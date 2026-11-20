@@ -26,6 +26,24 @@ const placeholderPattern = new RegExp(String.raw`^\{\{\s*(${variableNameSource})
 const supportedTypePattern = new RegExp(String.raw`^(${typeSource})\b`);
 const interactionNamePattern = /^[a-z]+(?:\.[a-z]+)?$/;
 
+function extractConstantFallback(source: string): { expression: string; fallback?: FallbackExpression } {
+  const stringMatch = /^string\s*\?\?\s*("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*')([\s\S]*)$/.exec(source);
+  if (stringMatch) {
+    const values = parseAllowedValues(stringMatch[1]!, 'string');
+    if (values?.length === 1 && /^\s*(?:[!?>]|$)/.test(stringMatch[2]!)) {
+      return { expression: `string${stringMatch[2]!}`, fallback: { operator: '??', value: values[0] as string } };
+    }
+  }
+  const numberMatch = /^number\s*\?\?\s*([0-9]+)([\s\S]*)$/.exec(source);
+  if (numberMatch && /^\s*(?:[!?>]|$)/.test(numberMatch[2]!)) {
+    const value = Number(numberMatch[1]);
+    if (Number.isSafeInteger(value)) {
+      return { expression: `number${numberMatch[2]!}`, fallback: { operator: '??', value } };
+    }
+  }
+  return { expression: source };
+}
+
 export function childPath(path: string, key: string): string {
   return identifierPattern.test(key) ? `${path}.${key}` : `${path}[${JSON.stringify(key)}]`;
 }
@@ -170,6 +188,8 @@ export function parsePlaceholder(value: string, path: string): Declaration | und
     derived = { name: call[1]!, arguments: args };
     expression = prefix + call[3]!;
   }
+  const constant = extractConstantFallback(expression);
+  expression = constant.expression;
   const scalarAllowed = scalarAllowedPattern.exec(expression);
   const arrayAllowedCandidate = scalarAllowed ? undefined : arrayAllowedPattern.exec(expression);
   const allowedMatch = scalarAllowed ?? arrayAllowedCandidate;
@@ -191,9 +211,13 @@ export function parsePlaceholder(value: string, path: string): Declaration | und
     throw new PayloadTemplateError({ code: 'UNSUPPORTED_TYPE', path, variableName: name, declaredType: 'boolean[]' });
   }
   const memberFallback = !allowedValues && parsed[3] ? { operator: parsed[3], action: parsed[4] } as FallbackExpression : undefined;
-  const valueFallback = allowedValues
+  const actionFallback = allowedValues
     ? parsed[4] ? { operator: parsed[4], action: parsed[5] } as FallbackExpression : undefined
     : parsed[6] ? { operator: parsed[6], action: parsed[7] } as FallbackExpression : undefined;
+  if (constant.fallback && actionFallback) {
+    throw new PayloadTemplateError({ code: 'INVALID_FALLBACK_SYNTAX', path, variableName: name, placeholder: value });
+  }
+  const valueFallback = constant.fallback ?? actionFallback;
   const operations = (source: string): PayloadOperation[] => Array.from(
     source.matchAll(new RegExp(String.raw`([!?>~])\s*(${lookupSource}|${operationNameSource})`, 'g')),
     match => ({ kind: match[1] === '!' || match[1] === '?' ? 'validator' : 'transformer',
@@ -203,10 +227,14 @@ export function parsePlaceholder(value: string, path: string): Declaration | und
   const valueOperations = operations(parsed[allowedValues ? 3 : 5] ?? '');
   const format = (ops: PayloadOperation[], fallback?: FallbackExpression) => [
     ...ops.map(op => `${op.operator ?? (op.kind === 'validator' ? '!' : '>')} ${op.name}${op.argument ? `(${op.argument})` : ''}`),
-    ...(fallback ? [`${fallback.operator} ${fallback.action}`] : []),
+    ...(fallback ? [`${fallback.operator} ${'value' in fallback
+      ? typeof fallback.value === 'string' ? JSON.stringify(fallback.value) : String(fallback.value)
+      : fallback.action}`] : []),
   ].join(' ');
   const member = format(memberOperations, memberFallback);
-  const whole = format(valueOperations, valueFallback);
+  const whole = constant.fallback
+    ? `${format([], constant.fallback)}${valueOperations.length ? ` ${format(valueOperations)}` : ''}`
+    : format(valueOperations, valueFallback);
   const domain = allowedValues?.map(formatAllowedValue).join(', ');
   const canonical = parsed[1] + (allowedValues ? (array ? `[ ${domain} ]` : ` in [ ${domain} ]`)
     : array ? member ? `[ ${member} ]` : '[]' : '') + (derived ? ` = ${derived.name}(${derived.arguments.join(',')})` : '')

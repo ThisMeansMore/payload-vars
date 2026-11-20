@@ -32,21 +32,23 @@ function copyJson(value: JsonValue): JsonValue {
 
 // An explicit result distinguishes a fallback-produced null from a value still needing validation.
 function fallback(value: unknown, expression: FallbackExpression | undefined,
-  declaration: Declaration, valuePath?: string, wholeValue = false): { value: null | typeof OMIT } | undefined {
+  declaration: Declaration, valuePath?: string, wholeValue = false): { value: JsonValue | typeof OMIT } | undefined {
   const emptyArray = wholeValue && declaration.type.endsWith('[]') && Array.isArray(value) && value.length === 0;
   const matches = expression?.operator === '??' ? value === null || value === undefined
     : expression?.operator === '||' && (!value || emptyArray);
   if (!expression || !matches) return;
-  if (expression.action === 'throw') {
+  if ('action' in expression && expression.action === 'throw') {
     throw new PayloadTemplateError({ code: 'FALLBACK_THROW', ...details(declaration), operator: expression.operator,
       ...(valuePath === undefined ? {} : { valuePath }) });
   }
+  if ('value' in expression) return { value: expression.value };
   return { value: expression.action === 'omit' ? OMIT : null };
 }
 
 function validate(value: unknown, declaration: Declaration, contract: Contract): RenderedValue {
   const result = fallback(value, declaration.valueFallback, declaration, undefined, true);
-  if (result) return result.value;
+  if (result && declaration.valueFallback && !('value' in declaration.valueFallback)) return result.value;
+  if (result) value = result.value;
   const fail = (bad: unknown, valuePath?: string): never => {
     throw new PayloadTemplateError({ code: 'INVALID_VARIABLE_TYPE', ...details(declaration),
       actualType: actualType(bad), ...(valuePath === undefined ? {} : { valuePath }) });
@@ -72,7 +74,8 @@ function validate(value: unknown, declaration: Declaration, contract: Contract):
         const map = contract.lookupMaps.get(op.argument!)!;
         const key = String(current);
         if (Object.prototype.hasOwnProperty.call(map, key)) return copyJson(map[key]!);
-        const missing = fallback(undefined, declaration.valueFallback, declaration, valuePath, true);
+        const missing = declaration.valueFallback && 'value' in declaration.valueFallback ? undefined
+          : fallback(undefined, declaration.valueFallback, declaration, valuePath, true);
         if (missing) return missing.value as unknown as JsonValue;
         throw new PayloadTemplateError({ code: 'MISSING_LOOKUP_KEY', ...details(declaration), mapName: op.argument!, key });
       }
