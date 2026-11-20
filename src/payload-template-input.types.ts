@@ -15,7 +15,7 @@ type ParseActionWithInteraction<S extends string, Operator extends '??' | '||'> 
   ? { operator: Operator; action: A } : never;
 type ParseNullishFallback<S extends string> = ParseActionWithInteraction<S, '??'> extends infer F
   ? [F] extends [never]
-    ? Trim<S> extends `"${string}` | `'${string}` | `${number}${string}` ? { operator: '??'; action: 'value' } : never
+    ? Trim<S> extends `'${string}` | `${number}${string}` ? { operator: '??'; action: 'value' } : never
     : F
   : never;
 type ParseFallback<S extends string> = Trim<S> extends `??${infer Rest}` ? ParseNullishFallback<Rest>

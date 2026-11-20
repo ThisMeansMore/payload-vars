@@ -27,7 +27,7 @@ const supportedTypePattern = new RegExp(String.raw`^(${typeSource})\b`);
 const interactionNamePattern = /^[a-z]+(?:\.[a-z]+)?$/;
 
 function extractConstantFallback(source: string): { expression: string; fallback?: FallbackExpression } {
-  const stringMatch = /^string\s*\?\?\s*("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*')([\s\S]*)$/.exec(source);
+  const stringMatch = /^string\s*\?\?\s*('(?:\\.|[^'\\])*')([\s\S]*)$/.exec(source);
   if (stringMatch) {
     const values = parseAllowedValues(stringMatch[1]!, 'string');
     if (values?.length === 1 && /^\s*(?:[!?>]|$)/.test(stringMatch[2]!)) {
@@ -42,6 +42,10 @@ function extractConstantFallback(source: string): { expression: string; fallback
     }
   }
   return { expression: source };
+}
+
+function formatConstantString(value: string): string {
+  return `'${value.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}'`;
 }
 
 export function childPath(path: string, key: string): string {
@@ -86,7 +90,7 @@ function parseAllowedValues(source: string, type: string): AllowedValue[] | unde
       } else if (part.startsWith("'")) {
         if (!part.endsWith("'")) return undefined;
         const inner = part.slice(1, -1);
-        if (/\\(?![\\'])/.test(inner)) return undefined;
+        if (!/^(?:[^\\]|\\[\\'])*$/.test(inner)) return undefined;
         values.push(inner.replace(/\\([\\'])/g, '$1'));
       } else {
         if (!/^[A-Za-z0-9_$.-]+(?:\s+[A-Za-z0-9_$.-]+)*$/.test(part)) return undefined;
@@ -228,7 +232,7 @@ export function parsePlaceholder(value: string, path: string): Declaration | und
   const format = (ops: PayloadOperation[], fallback?: FallbackExpression) => [
     ...ops.map(op => `${op.operator ?? (op.kind === 'validator' ? '!' : '>')} ${op.name}${op.argument ? `(${op.argument})` : ''}`),
     ...(fallback ? [`${fallback.operator} ${'value' in fallback
-      ? typeof fallback.value === 'string' ? JSON.stringify(fallback.value) : String(fallback.value)
+      ? typeof fallback.value === 'string' ? formatConstantString(fallback.value) : String(fallback.value)
       : fallback.action}`] : []),
   ].join(' ');
   const member = format(memberOperations, memberFallback);

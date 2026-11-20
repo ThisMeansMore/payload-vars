@@ -72,7 +72,8 @@ describe('syntax highlighting', () => {
     for (const name of ['string', 'number', 'boolean', 'null', 'omit', 'throw', '_name1']) {
       assert.equal(tokenize(`{{${name}:boolean}}`)[1].kind, 'variable');
     }
-    for (const expression of ['{{x:null}}', '{{x:string omit}}', '{{x:string ?? boolean}}', '{{x:string ?? null throw}}']) {
+    for (const expression of ['{{x:null}}', '{{x:string omit}}', '{{x:string ?? boolean}}',
+      '{{x:string ?? null throw}}', '{{x:string ?? "default"}}']) {
       assert.ok(coverage(expression).some(t => t.kind === 'unknown'));
     }
   });
