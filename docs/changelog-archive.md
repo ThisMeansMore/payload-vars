@@ -9,6 +9,12 @@ title: Changelog archive
 
 Full notes for older releases. See the [changelog](changelog.md) for the latest five releases and a summary of this archive.
 
+## 2.3.1 — 2026-10-14
+
+### Documentation
+
+- Added a browser playground with headless JSON and interaction-driven UI flows, syntax highlighting, autoformatting, inline feedback, and a dependency-free local preview server.
+
 ## 2.3.0 — 2026-10-13
 
 ### Added
