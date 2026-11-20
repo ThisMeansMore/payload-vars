@@ -8,13 +8,19 @@ type Whitespace = ' ' | '\t' | '\n' | '\r' | '\v' | '\f' | '\u00a0' | '\u1680'
   | '\u205f' | '\u3000' | '\ufeff';
 type Trim<S extends string> = S extends `${Whitespace}${infer Rest}` ? Trim<Rest>
   : S extends `${infer Rest}${Whitespace}` ? Trim<Rest> : S;
-type Action = 'null' | 'omit' | 'throw';
+type Action = 'null' | 'omit' | 'throw' | 'value';
 type Fallback = { operator: '??' | '||'; action: Action };
 type Interactionless<S extends string> = S extends `${infer Value}@${string}` ? Trim<Value> : Trim<S>;
 type ParseActionWithInteraction<S extends string, Operator extends '??' | '||'> = Interactionless<S> extends infer A extends Action
   ? { operator: Operator; action: A } : never;
-type ParseFallback<S extends string> = Trim<S> extends `??${infer Rest}` ? ParseActionWithInteraction<Rest, '??'>
-  : Trim<S> extends `||${infer Rest}` ? ParseActionWithInteraction<Rest, '||'> : never;
+type ParseNullishFallback<S extends string> = ParseActionWithInteraction<S, '??'> extends infer F
+  ? [F] extends [never]
+    ? Trim<S> extends `"${string}` | `'${string}` | `${number}${string}` ? { operator: '??'; action: 'value' } : never
+    : F
+  : never;
+type ParseFallback<S extends string> = Trim<S> extends `??${infer Rest}` ? ParseNullishFallback<Rest>
+  : Trim<S> extends `||${infer Rest}` ? ParseActionWithInteraction<Rest, '||'>
+  : never;
 type Primitive<S extends string> = S extends 'string' ? string : S extends 'number' ? number
   : S extends 'boolean' ? boolean : never;
 type Nullish = null | undefined;

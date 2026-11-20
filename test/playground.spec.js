@@ -43,7 +43,7 @@ test('playground example compiles, renders, and is linked from the project home'
   const collected = { ...generated, neededFrom: parseControlValue(neededFrom, '') };
   const renderedWithPassthrough = form.submit(collected, { passthrough: true });
   const highlighted = template.tokenizePayloadExpression();
-  assert.equal(headlessContracts.length, 6);
+  assert.equal(headlessContracts.length, 8);
   assert.deepEqual(headlessTemplate.toJSON(), template.toJSON());
   assert.equal(uiContracts(headlessContracts).length, 0);
   assert.equal('sections' in headlessTemplate.toJSON(), false);
@@ -54,14 +54,14 @@ test('playground example compiles, renders, and is linked from the project home'
   assert.equal('unused' in headlessTemplate.render(headlessGenerated), false);
   assert.equal(headlessTemplate.render(headlessGenerated, { passthrough: true }).unused,
     'Rendered only with passthrough');
-  assert.equal(contracts.length, 6);
+  assert.equal(contracts.length, 8);
   assert.equal(uiContracts(contracts).length, 0);
   assert.equal(form.fields().length, 5);
   assert.ok(!form.fields().some(field => field.variable === 'reference'));
   assert.match(form.fields()[0].id, /^ui_/);
   assert.equal(form.fields()[0].variable, 'plan');
   assert.equal(form.fields()[0].ui, 'choice');
-  assert.equal(highlighted.length, 6);
+  assert.equal(highlighted.length, 8);
   assert.ok(!highlighted.flatMap(item => item.tokens).some(token => token.kind === 'interaction'));
   const tokenMap = new Map(highlighted.map(item => [item.expression, item.tokens]));
   const highlightedJson = highlightJson(JSON.stringify(template.toJSON(), null, 2), tokenMap);
@@ -71,6 +71,8 @@ test('playground example compiles, renders, and is linked from the project home'
   assert.equal(rendered.request.reference, 'Supplied by application state');
   assert.equal(rendered.request.plan, 101);
   assert.deepEqual(rendered.request.extensions, ['Reporting']);
+  assert.equal(rendered.request.from_date, '2026-01-01T00:00:00.000Z');
+  assert.equal(rendered.request.hours, 8);
   assert.equal(renderedWithPassthrough.request.neededFrom, '');
   assert.equal('notInTemplate' in rendered, false);
   assert.equal(renderedWithPassthrough.notInTemplate, 'Rendered only with passthrough');
@@ -144,7 +146,7 @@ test('playground example compiles, renders, and is linked from the project home'
   assert.match(browserModule, /`playground__call-boolean is-\$\{payloadPassthrough\.checked\}`/);
   assert.match(browserModule, /function renderContracts\(items, kind = 'variables'\)/);
   assert.match(browserModule, /contractFact\('Fallback', contractFallback\(contract\)\)/);
-  assert.match(browserModule, /items: \$\{contract\.memberFallback\.operator\}/);
+  assert.match(browserModule, /const format = fallback =>/);
   assert.match(browserModule, /contractViewButtons\.forEach\(button => button\.addEventListener\('click'/);
   assert.match(browserModule, /renderedOutput\.innerHTML = highlightJson\(formatJson\(value\)\)/);
   assert.match(browserModule, /issue\.code.*locations\.join\(', '\)/s);

@@ -264,9 +264,10 @@ function contractFact(label, value) {
 
 function contractFallback(contract) {
   const descriptions = [];
-  if (contract.memberFallback) descriptions.push(`items: ${contract.memberFallback.operator} ${contract.memberFallback.action}`);
+  const format = fallback => `${fallback.operator} ${'value' in fallback ? JSON.stringify(fallback.value) : fallback.action}`;
+  if (contract.memberFallback) descriptions.push(`items: ${format(contract.memberFallback)}`);
   if (contract.valueFallback) {
-    descriptions.push(`${contract.type.endsWith('[]') ? 'array' : 'value'}: ${contract.valueFallback.operator} ${contract.valueFallback.action}`);
+    descriptions.push(`${contract.type.endsWith('[]') ? 'array' : 'value'}: ${format(contract.valueFallback)}`);
   }
   return descriptions.join('; ') || 'None';
 }

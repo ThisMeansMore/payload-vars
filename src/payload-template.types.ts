@@ -14,10 +14,9 @@ export type JsonTemplateValue = JsonPrimitive | { readonly [key: string]: JsonTe
 export type BaseType = 'string' | 'number' | 'boolean' | 'string[]' | 'number[]';
 export type PayloadVariableType = BaseType;
 export type AllowedValue = string | number | boolean;
-export interface FallbackExpression {
-  operator: '??' | '||';
-  action: 'null' | 'omit' | 'throw';
-}
+export type FallbackExpression =
+  | { operator: '??' | '||'; action: 'null' | 'omit' | 'throw' }
+  | { operator: '??'; /** Typed constant fallback. */ value: string | number };
 export interface ParsedVariableExpression {
   name: string;
   type: BaseType;

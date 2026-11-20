@@ -109,6 +109,7 @@ Fallbacks run before type validation. `??` matches `null`, `undefined`, and miss
 | `null` | JSON `null`, bypassing validation for that value |
 | `omit` | Remove the containing object property or array entry |
 | `throw` | Raise a structured `PayloadTemplateError` with code `FALLBACK_THROW` |
+| a quoted string or finite number | Substitute the constant, then continue through validation and transformation |
 
 Values that do not trigger a fallback must still pass strict base-type validation.
 
@@ -119,7 +120,11 @@ Values that do not trigger a fallback must still pass strict base-type validatio
 {{enabled:boolean ?? throw}}
 {{products:string[] ?? omit}}
 {{colors:string[ black, white ] || throw}}
+{{fromDate:string ?? '2026-01-01' ! date.dateonly > date.isodatetime}}
+{{hours:number ?? 8}}
 ```
+
+Constant fallbacks use `??` and are available for scalar `string` and `number` declarations. Strings must be single- or double-quoted. Number constants contain digits only (`[0-9]+`) and must be JavaScript safe integers; decimal values are string constants. Missing, `undefined`, or `null` input is replaced by the constant before the remaining operations run. A supplied empty string or zero is preserved. Canonical declarations use double quotes for string constants.
 
 `string ?? throw` preserves `""`, `number ?? throw` preserves `0`, and `boolean ?? throw` preserves `false`. Using `|| throw` rejects each of those values and rejects an empty whole array. Member-level `||` retains ordinary falsy matching; it does not treat a nested array as a valid member.
 

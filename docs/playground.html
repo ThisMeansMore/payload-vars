@@ -188,7 +188,9 @@ permalink: /playground.html
     "description": "{{description:string ?? omit}}",
     "extensions": "{{extensions:string[Reporting, Audit log, Single sign-on] || throw}}",
     "neededFrom": "{{neededFrom:string}}",
-    "rating": "{{rating:number in [1, 2, 3, 4, 5] ?? omit}}"
+    "rating": "{{rating:number in [1, 2, 3, 4, 5] ?? omit}}",
+    "from_date": "{{fromDate:string ?? '2026-01-01' ! date.dateonly > date.isodatetime}}",
+    "hours": "{{hours:number ?? 8}}"
   }
 }
 </script>
@@ -213,7 +215,9 @@ permalink: /playground.html
     "description": "{{description:string ?? omit}}",
     "extensions": "{{extensions:string[Reporting, Audit log, Single sign-on] || throw}}",
     "neededFrom": "{{neededFrom:string}}",
-    "rating": "{{rating:number in [1, 2, 3, 4, 5] ?? omit}}"
+    "rating": "{{rating:number in [1, 2, 3, 4, 5] ?? omit}}",
+    "from_date": "{{fromDate:string ?? '2026-01-01' ! date.dateonly > date.isodatetime}}",
+    "hours": "{{hours:number ?? 8}}"
   }
 }
 </script>

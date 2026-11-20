@@ -33,6 +33,16 @@ nullish.render({ a: false });
 // @ts-expect-error Whole-array fallback does not relax members.
 nullish.render({ d: [null] });
 
+const constantFallbacks = new PayloadTemplate({
+  date: "{{date:string ?? '2026-01-01' ! date.dateonly > date.isodatetime}}",
+  hours: '{{hours:number ?? 8}}',
+});
+constantFallbacks.render({});
+constantFallbacks.render({ date: null, hours: undefined });
+constantFallbacks.render({ date: '2025-01-01', hours: 0 });
+// @ts-expect-error Constant fallbacks only admit nullish values in addition to the declared type.
+constantFallbacks.render({ date: false, hours: '8' });
+
 const falsy = new PayloadTemplate({
   a: '{{a:string||null}}', b: '{{b:number || omit}}', c: '{{c:boolean||null}}',
   d: '{{d:string[]||omit}}',

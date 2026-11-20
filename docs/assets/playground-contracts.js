@@ -30,6 +30,7 @@ function initialValue(contract) {
 export function generatePayload(contracts, current = {}) {
   const payload = { ...current };
   for (const contract of inputContracts(contracts)) {
+    if (contract.valueFallback && 'value' in contract.valueFallback) continue;
     if (!Object.hasOwn(payload, contract.name)) payload[contract.name] = initialValue(contract);
   }
   return payload;
