@@ -11,7 +11,7 @@ describe('constant fallbacks', () => {
       hours: '{{hours:number ?? 8 }}',
     });
     assert.deepEqual(template.toJSON(), {
-      from_date: '{{fromDate:string ?? "2026-01-01" ! date.dateonly > date.isodatetime}}',
+      from_date: "{{fromDate:string ?? '2026-01-01' ! date.dateonly > date.isodatetime}}",
       hours: '{{hours:number ?? 8}}',
     });
     assert.deepEqual(template.render({}), { from_date: '2026-01-01T00:00:00.000Z', hours: 8 });
@@ -33,9 +33,16 @@ describe('constant fallbacks', () => {
     }
   });
 
+  test('canonicalizes apostrophes and backslashes with single-quote escaping', () => {
+    const declaration = String.raw`{{label:string ?? 'can\'t \\ stop'}}`;
+    const template = new PayloadTemplate(declaration);
+    assert.equal(template.toJSON(), declaration);
+    assert.equal(template.render({}), String.raw`can't \ stop`);
+  });
+
   test('rejects untyped, mismatched, non-safe-integer, and competing fallbacks', () => {
     for (const expression of [
-      'string ?? default', 'string ?? 8', 'number ?? "8"', 'boolean ?? true',
+      'string ?? default', 'string ?? 8', 'string ?? "default"', 'number ?? "8"', 'boolean ?? true',
       'number || 8', 'number ?? -1', 'number ?? 1.5', 'number ?? 1e2',
       'number ?? 9007199254740992', 'number ?? Infinity', 'number ?? 8 ?? omit', 'string ?? "x" || throw',
     ]) assert.throws(() => new PayloadTemplate(`{{x:${expression}}}`), issue('INVALID_FALLBACK_SYNTAX'));

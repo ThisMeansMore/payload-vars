@@ -120,7 +120,7 @@ export function tokenizePayloadExpression(expression) {
                 kind = 'action';
                 position = position === 'memberAction' ? 'memberEnd' : 'end';
             }
-            else if (position === 'valueAction' && (/^['"]/.test(text) || /^-?\d/.test(text))) {
+            else if (position === 'valueAction' && (/^'/.test(text) || /^-?\d/.test(text))) {
                 kind = 'value';
                 position = 'arrayEnd';
             }

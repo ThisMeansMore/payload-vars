@@ -14,7 +14,7 @@ const placeholderPattern = new RegExp(String.raw `^\{\{\s*(${variableNameSource}
 const supportedTypePattern = new RegExp(String.raw `^(${typeSource})\b`);
 const interactionNamePattern = /^[a-z]+(?:\.[a-z]+)?$/;
 function extractConstantFallback(source) {
-    const stringMatch = /^string\s*\?\?\s*("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*')([\s\S]*)$/.exec(source);
+    const stringMatch = /^string\s*\?\?\s*('(?:\\.|[^'\\])*')([\s\S]*)$/.exec(source);
     if (stringMatch) {
         const values = parseAllowedValues(stringMatch[1], 'string');
         if (values?.length === 1 && /^\s*(?:[!?>]|$)/.test(stringMatch[2])) {
@@ -29,6 +29,9 @@ function extractConstantFallback(source) {
         }
     }
     return { expression: source };
+}
+function formatConstantString(value) {
+    return `'${value.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}'`;
 }
 export function childPath(path, key) {
     return identifierPattern.test(key) ? `${path}.${key}` : `${path}[${JSON.stringify(key)}]`;
@@ -93,7 +96,7 @@ function parseAllowedValues(source, type) {
                 if (!part.endsWith("'"))
                     return undefined;
                 const inner = part.slice(1, -1);
-                if (/\\(?![\\'])/.test(inner))
+                if (!/^(?:[^\\]|\\[\\'])*$/.test(inner))
                     return undefined;
                 values.push(inner.replace(/\\([\\'])/g, '$1'));
             }
@@ -268,7 +271,7 @@ export function parsePlaceholder(value, path) {
     const format = (ops, fallback) => [
         ...ops.map(op => `${op.operator ?? (op.kind === 'validator' ? '!' : '>')} ${op.name}${op.argument ? `(${op.argument})` : ''}`),
         ...(fallback ? [`${fallback.operator} ${'value' in fallback
-                ? typeof fallback.value === 'string' ? JSON.stringify(fallback.value) : String(fallback.value)
+                ? typeof fallback.value === 'string' ? formatConstantString(fallback.value) : String(fallback.value)
                 : fallback.action}`] : []),
     ].join(' ');
     const member = format(memberOperations, memberFallback);
