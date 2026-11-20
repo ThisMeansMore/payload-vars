@@ -4,6 +4,12 @@ Notable changes, starting with 1.0.0. Historical dates follow Git tags.
 
 The latest five releases are detailed below. Older releases have one-line summaries linking to their full notes in the [archive](CHANGELOG-ARCHIVE.md).
 
+## 2.5.3 — 2026-11-20
+
+### Fixed
+
+- Changed constant string fallbacks to single-quoted syntax, including explicit apostrophe and backslash escaping.
+
 ## 2.5.2 — 2026-11-20
 
 ### Changes
@@ -31,14 +37,9 @@ The latest five releases are detailed below. Older releases have one-line summar
 - Preserved valid empty string values when the generated UI form refreshes its testing payload.
 - Made local playground network labels and test fixtures provider-neutral.
 
-## 2.4.0 — 2026-10-14
-
-### Added
-
-- Added opt-in `render(values, { passthrough: true })` support for retaining unused JSON variables on object-shaped payloads, including a playground control.
-
 ## Older releases
 
+- [2.4.0 — 2026-10-14](CHANGELOG-ARCHIVE.md#240--2026-10-14) — Added opt-in `render(values, { passthrough: true })` support for retaining unused JSON variables on object-shaped payloads, including a playground control.
 - [2.3.1 — 2026-10-14](CHANGELOG-ARCHIVE.md#231--2026-10-14) — Added a browser playground with headless JSON and interaction-driven UI flows, syntax highlighting, autoformatting, inline feedback, and a dependency-free local preview server.
 - [2.3.0 — 2026-10-13](CHANGELOG-ARCHIVE.md#230--2026-10-13) — Consumer-defined `@ interaction` hints are preserved as opaque `interaction` strings in variable contracts without changing rendering or validation.
 - [2.2.7 — 2026-10-13](CHANGELOG-ARCHIVE.md#227--2026-10-13) — Added a form-oriented static-values example covering mandatory and optional single and multiple values.

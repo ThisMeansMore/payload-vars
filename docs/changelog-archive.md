@@ -9,6 +9,12 @@ title: Changelog archive
 
 Full notes for older releases. See the [changelog](changelog.md) for the latest five releases and a summary of this archive.
 
+## 2.4.0 — 2026-10-14
+
+### Added
+
+- Added opt-in `render(values, { passthrough: true })` support for retaining unused JSON variables on object-shaped payloads, including a playground control.
+
 ## 2.3.1 — 2026-10-14
 
 ### Documentation
