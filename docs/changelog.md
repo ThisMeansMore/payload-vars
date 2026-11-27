@@ -11,7 +11,7 @@ Notable changes, starting with 1.0.0. Historical dates follow Git tags.
 
 The latest five releases are detailed below. Older releases have one-line summaries linking to their full notes in the [archive](changelog-archive.md).
 
-## Unreleased
+## 2.6.0 — 2026-11-27
 
 ### Added
 
@@ -42,16 +42,9 @@ The latest five releases are detailed below. Older releases have one-line summar
 
 - feat: add template-local lookup maps (#26)
 
-## 2.4.1 — 2026-10-14
-
-### Fixed
-
-- Made the playground self-host its browser package build so deployed behavior always matches the repository commit without CDN version lag.
-- Preserved valid empty string values when the generated UI form refreshes its testing payload.
-- Made local playground network labels and test fixtures provider-neutral.
-
 ## Older releases
 
+- [2.4.1 — 2026-10-14](changelog-archive.md#241--2026-10-14) — Made the playground self-host its browser package build so deployed behavior always matches the repository commit without CDN version lag.
 - [2.4.0 — 2026-10-14](changelog-archive.md#240--2026-10-14) — Added opt-in `render(values, { passthrough: true })` support for retaining unused JSON variables on object-shaped payloads, including a playground control.
 - [2.3.1 — 2026-10-14](changelog-archive.md#231--2026-10-14) — Added a browser playground with headless JSON and interaction-driven UI flows, syntax highlighting, autoformatting, inline feedback, and a dependency-free local preview server.
 - [2.3.0 — 2026-10-13](changelog-archive.md#230--2026-10-13) — Consumer-defined `@ interaction` hints are preserved as opaque `interaction` strings in variable contracts without changing rendering or validation.

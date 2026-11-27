@@ -2,6 +2,14 @@
 
 Full notes for older releases. See the [changelog](CHANGELOG.md) for the latest five releases and a summary of this archive.
 
+## 2.4.1 — 2026-10-14
+
+### Fixed
+
+- Made the playground self-host its browser package build so deployed behavior always matches the repository commit without CDN version lag.
+- Preserved valid empty string values when the generated UI form refreshes its testing payload.
+- Made local playground network labels and test fixtures provider-neutral.
+
 ## 2.4.0 — 2026-10-14
 
 ### Added
