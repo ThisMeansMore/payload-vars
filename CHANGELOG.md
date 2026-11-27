@@ -4,6 +4,12 @@ Notable changes, starting with 1.0.0. Historical dates follow Git tags.
 
 The latest five releases are detailed below. Older releases have one-line summaries linking to their full notes in the [archive](CHANGELOG-ARCHIVE.md).
 
+## Unreleased
+
+### Added
+
+- Opt-in `unique` constructor option rejects repeated variable declaration names with both occurrence paths, while preserving full template validation and ordered extraction.
+
 ## 2.5.3 — 2026-11-20
 
 ### Fixed

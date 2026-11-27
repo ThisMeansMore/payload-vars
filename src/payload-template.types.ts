@@ -55,6 +55,7 @@ export type PayloadTemplateIssue =
   | { code: 'INVALID_FUNCTION_ARGUMENTS' | 'FUNCTION_RESULT_TYPE_MISMATCH' | 'INVALID_OMIT_OPERATION'; path: string; variableName: string; operation: string }
   | { code: 'UNKNOWN_FUNCTION_REFERENCE' | 'FUNCTION_ARGUMENT_TYPE_MISMATCH'; path: string; variableName: string; operation: string; argumentName: string; argumentIndex: number; referencePath: string; expectedType?: BaseType; actualType?: BaseType }
   | { code: 'CYCLIC_FUNCTION_REFERENCE'; path: string; templatePaths: string[] }
+  | { code: 'DUPLICATE_VARIABLE_DECLARATION'; variableName: string; path: string; firstPath: string }
   | { code: 'VARIABLE_TYPE_CONFLICT'; variableName: string; expectedType: BaseType; conflictingType: BaseType; path: string }
   | (RuntimeIssue & { code: 'INVALID_FUNCTION_ARGUMENT' | 'INVALID_FUNCTION_RESULT'; operation: string; argumentName?: string; argumentIndex?: number; source?: 'input' | 'property'; referencePath?: string; reason?: 'omitted' | 'null' | 'invalid-type' })
   | { code: 'INVALID_PLACEHOLDER'; path: string; placeholder: string }
