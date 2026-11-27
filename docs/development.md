@@ -47,7 +47,7 @@ Compilation happens once in the constructor; the internal `buildContract()` func
 
 ### Plugin configuration
 
-Pass `PayloadTemplateOptions` as the second constructor argument to register custom plugins. Built-in operations remain available regardless of this configuration. See [Plugins](plugins/guide.md#plugin-configuration) for configuration, custom callbacks, and built-ins.
+Pass `PayloadTemplateOptions` as the second constructor argument. Set `unique: true` to reject repeated declaration names with `DUPLICATE_VARIABLE_DECLARATION`, including declarations with differing contracts. It defaults to `false`. Function argument references do not count as declarations. Use `plugins` to register custom plugins. Built-in operations remain available regardless of this configuration. See [Plugins](plugins/guide.md#plugin-configuration) for configuration, custom callbacks, and built-ins.
 
 ### Normalized template
 
@@ -104,6 +104,7 @@ template.render({ products: ['C'] });            // { products: ['C'] }
 | `INVALID_PLACEHOLDER` | `path`, `placeholder` |
 | `UNSUPPORTED_TYPE` | `path`, `variableName`, `declaredType` |
 | `INVALID_FALLBACK_SYNTAX`, `INVALID_ALLOWED_VALUES_SYNTAX`, `INVALID_INTERACTION_SYNTAX` | `path`, `variableName`, `placeholder` |
+| `DUPLICATE_VARIABLE_DECLARATION` | `variableName`, `firstPath`, `path` |
 | `VARIABLE_TYPE_CONFLICT` | `variableName`, `expectedType`, `conflictingType`, `path` |
 | `INVALID_FUNCTION_ARGUMENTS`, `FUNCTION_RESULT_TYPE_MISMATCH`, `INVALID_OMIT_OPERATION` | `path`, `variableName`, `operation` |
 | `UNKNOWN_FUNCTION_REFERENCE`, `FUNCTION_ARGUMENT_TYPE_MISMATCH` | `path`, `variableName`, `operation`, `argumentName`, `argumentIndex`, `referencePath`; type mismatches also include `expectedType`, `actualType` |

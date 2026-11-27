@@ -330,6 +330,7 @@ export function buildContract(template, options = {}) {
     const declarations = new Map();
     const locations = new Map();
     const inputs = new Map();
+    const declarationPaths = new Map();
     const requireInput = (name, type, path) => {
         const previous = inputs.get(name);
         if (previous && previous !== type)
@@ -341,6 +342,14 @@ export function buildContract(template, options = {}) {
             const found = parsePlaceholder(value, path);
             if (!found)
                 return value;
+            if (options.unique) {
+                const firstPath = declarationPaths.get(found.name);
+                if (firstPath !== undefined)
+                    throw new PayloadTemplateError({
+                        code: 'DUPLICATE_VARIABLE_DECLARATION', variableName: found.name, path, firstPath,
+                    });
+                declarationPaths.set(found.name, path);
+            }
             for (const op of [...(found.memberOperations ?? []), ...(found.valueOperations ?? [])]) {
                 if (op.name === 'core.lookup')
                     continue;

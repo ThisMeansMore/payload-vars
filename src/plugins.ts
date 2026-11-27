@@ -28,8 +28,12 @@ export interface PayloadVarsPlugin {
   validators?: Record<string, PayloadValidator>;
   transformers?: Record<string, RegisteredTransformer>;
 }
-/** Custom extensions. Built-in operations are always available. */
-export interface PayloadTemplateOptions { plugins?: readonly PayloadVarsPlugin[] }
+/** Template compilation options. Built-in operations are always available. */
+export interface PayloadTemplateOptions {
+  plugins?: readonly PayloadVarsPlugin[];
+  /** Reject repeated declaration names, even when their contracts differ. Defaults to false. */
+  unique?: boolean;
+}
 export interface PayloadOperation {
   kind: 'validator' | 'transformer';
   name: string;

@@ -290,6 +290,7 @@ export function buildContract(template: JsonTemplateValue, options: PayloadTempl
   const declarations = new Map<string, Declaration>();
   const locations = new Map<string, Declaration>();
   const inputs = new Map<string, BaseType>();
+  const declarationPaths = new Map<string, string>();
   const requireInput = (name: string, type: BaseType, path: string) => {
     const previous = inputs.get(name);
     if (previous && previous !== type) throw new PayloadTemplateError({ code: 'VARIABLE_TYPE_CONFLICT', variableName: name, expectedType: previous, conflictingType: type, path });
@@ -299,6 +300,13 @@ export function buildContract(template: JsonTemplateValue, options: PayloadTempl
     if (typeof value === 'string') {
       const found = parsePlaceholder(value, path);
       if (!found) return value;
+      if (options.unique) {
+        const firstPath = declarationPaths.get(found.name);
+        if (firstPath !== undefined) throw new PayloadTemplateError({
+          code: 'DUPLICATE_VARIABLE_DECLARATION', variableName: found.name, path, firstPath,
+        });
+        declarationPaths.set(found.name, path);
+      }
       for (const op of [...(found.memberOperations ?? []), ...(found.valueOperations ?? [])]) {
         if (op.name === 'core.lookup') continue;
         if (!plugins[op.kind].has(op.name)) throw new PayloadTemplateError({

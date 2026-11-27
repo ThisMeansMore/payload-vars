@@ -202,3 +202,10 @@ void contracts;
 operations.extractVariables();
 // @ts-expect-error Compilation happens in the constructor; inspect variables with variables().
 operations.compile();
+
+const unique = new PayloadTemplate('{{name:string}}', { unique: true });
+unique.render({ name: 'Ada' });
+// @ts-expect-error Unique compilation retains render input inference.
+unique.render({ name: 123 });
+// @ts-expect-error Unique must be boolean.
+new PayloadTemplate('{{name:string}}', { unique: 'true' });

@@ -53,6 +53,23 @@ The template provides these methods:
 | `render(values, options?)` | The payload with runtime values filled in; `passthrough` can retain unused variables. |
 | `tokenizePayloadExpression()` | Highlighting tokens for each normalized placeholder occurrence. |
 
+For Forms and other consumers that require one declaration per name, enable `unique`
+in the constructor options:
+
+```js
+const form = new PayloadTemplate(rawTemplate, { unique: true });
+const fields = form.variables();
+```
+
+Construction validates the full template, including syntax, metadata, lookup maps,
+and registered operations, before returning ordered variable contracts. Repeated
+names throw `DUPLICATE_VARIABLE_DECLARATION`, even with different types, fallbacks,
+operations, or interaction hints. The issue includes `variableName`, `firstPath`,
+and the duplicate `path`. Derived declarations also participate; references to
+variables in function arguments are not declarations. `unique` defaults to `false`,
+preserving matching-declaration deduplication and independent contracts for the
+same name. Custom `plugins` can be supplied alongside `unique`.
+
 Inspect the normalized template:
 
 ```js
